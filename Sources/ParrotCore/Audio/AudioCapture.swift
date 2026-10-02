@@ -36,6 +36,10 @@ package final class AudioCapture {
     /// The recording so far, for callers that wait on the first sample.
     package var currentStats: CaptureBuffer.Stats { buffer.currentStats }
 
+    /// The 16 kHz samples recorded so far from `offset` on, while recording
+    /// continues (live text). Safe from any thread.
+    func samples(from offset: Int) -> [Float] { buffer.samples(from: offset) }
+
     private let input: CaptureInput
     private var recording = false
     private var device = InputDevice(sampleRate: 0, channels: 0)

@@ -42,6 +42,10 @@ final class DictationController {
     private var inFlight = 0
     /// What had focus when the current recording started (#38).
     private var focusAtStart: FocusSnapshot?
+    /// Whether a locked recording types text at each pause (fork addition).
+    var liveText = true
+    /// Live text for the current locked recording, if any.
+    private var live: LiveTranscription?
 
     init(
         capture: AudioCapture,
@@ -77,9 +81,25 @@ final class DictationController {
     }
 
     /// A double tap locked the recording on; capture carries on unchanged.
+    /// With live text on, segments are transcribed and typed at each pause.
     func lock() {
         guard state == .recording else { return }
-        Log.info("● locked")
+        Log.info("● locked\(liveText ? " · live text" : "")")
+        if liveText {
+            let capture = self.capture
+            let delivery = self.delivery
+            let focus = focusAtStart
+            let live = LiveTranscription(
+                samples: { capture.samples(from: $0) },
+                transcriber: transcriber,
+                context: context(),
+                processors: processors,
+                deliver: { try delivery.deliver($0, focusAtStart: focus) },
+                copy: { delivery.copyToClipboard($0) }
+            )
+            live.start()
+            self.live = live
+        }
         observers.forEach { $0.dictationLocked() }
     }
 
@@ -105,6 +125,8 @@ final class DictationController {
         } catch {
             // The route changed mid-recording: no partial capture is delivered.
             Log.error("capture failed: \(error)")
+            live?.cancel()
+            live = nil
             focusAtStart = nil
             state = inFlight > 0 ? .transcribing : .idle
             observers.forEach { $0.dictationFailed(error) }
@@ -121,6 +143,12 @@ final class DictationController {
         Log.info(String(format: "○ captured %.2fs · rms %.3f", seconds, computeRMS(samples)))
         if dumpWav, !samples.isEmpty {
             writeDump(samples)
+        }
+
+        if let live {
+            self.live = nil
+            finishLive(live, samples: samples, seconds: seconds, captureStop: captureStop, released: released, pressToFirstSample: pressToFirstSample)
+            return
         }
 
         guard !samples.isEmpty else {
@@ -177,10 +205,50 @@ final class DictationController {
     func cancel() {
         guard state == .recording else { return }
         capture.stop()
+        live?.cancel()
+        live = nil
         focusAtStart = nil
         state = inFlight > 0 ? .transcribing : .idle
         Log.info("○ discarded")
         observers.forEach { $0.dictationFailed(DictationError.cancelled) }
+    }
+
+    /// The end of a locked recording with live text: transcribe the tail,
+    /// wait for every segment, and report the dictation as one.
+    private func finishLive(
+        _ live: LiveTranscription,
+        samples: [Float],
+        seconds: TimeInterval,
+        captureStop: TimeInterval,
+        released: CFAbsoluteTime,
+        pressToFirstSample: TimeInterval?
+    ) {
+        inFlight += 1
+        Task {
+            let outcome = await live.finish(capture: samples)
+            inFlight -= 1
+            settle()
+            Log.info(String(format: "→ live: %d segments · %.1fs audio · %.2fs transcribing · %d chars", outcome.segments, outcome.audio, outcome.transcribing, outcome.chars))
+            if let error = outcome.deliveryError {
+                observers.forEach { $0.dictationFailed(error) }
+                return
+            }
+            guard outcome.chars > 0 else {
+                let error = outcome.transcriptionError ?? DictationError.noAudio
+                observers.forEach { $0.dictationFailed(error) }
+                return
+            }
+            let result = DictationResult(
+                captureDuration: seconds,
+                transcriptionTime: outcome.transcribing,
+                charCount: outcome.chars,
+                captureStop: captureStop,
+                transcriber: outcome.timings,
+                releaseToText: CFAbsoluteTimeGetCurrent() - released,
+                pressToFirstSample: pressToFirstSample
+            )
+            observers.forEach { $0.dictationFinished(result) }
+        }
     }
 
     /// After a transcription ends, return to idle unless a newer recording

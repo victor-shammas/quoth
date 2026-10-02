@@ -36,6 +36,8 @@ final class SettingsFieldTests: XCTestCase {
     func testDoubleTapLockDefaultsOnAndDecodes() throws {
         XCTAssertTrue(try decode("{}").hotkey.doubleTapLock)
         XCTAssertFalse(try decode(#"{"hotkey": {"doubleTapLock": false}}"#).hotkey.doubleTapLock)
+        XCTAssertTrue(try decode("{}").hotkey.liveText)
+        XCTAssertFalse(try decode(#"{"hotkey": {"liveText": false}}"#).hotkey.liveText)
     }
 
     func testUnknownHotkeyFallsBackToFn() throws {

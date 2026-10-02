@@ -157,6 +157,7 @@ public enum Daemon {
             delivery: TextDelivery(mode: options.injectMode),
             context: dictionaryContext
         )
+        controller.liveText = settings.current.hotkey.liveText
         switcher.controller = controller
 
         // Each setting applies itself here when it changes, from the window
@@ -166,6 +167,10 @@ public enum Daemon {
             if old.hotkey.doubleTapLock != new.hotkey.doubleTapLock {
                 monitor.setLockEnabled(new.hotkey.doubleTapLock)
                 Log.info("double-tap lock: \(new.hotkey.doubleTapLock ? "on" : "off")")
+            }
+            if old.hotkey.liveText != new.hotkey.liveText {
+                controller.liveText = new.hotkey.liveText
+                Log.info("live text: \(new.hotkey.liveText ? "on" : "off"); applies from the next lock")
             }
             if old.hotkey.key != new.hotkey.key {
                 if options.hotkey != nil {

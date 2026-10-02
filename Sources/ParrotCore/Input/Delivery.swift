@@ -47,6 +47,12 @@ final class TextDelivery {
         self.injector = TextInjector(mode: mode)
     }
 
+    /// Leaves `text` on the clipboard, for live text held back after a
+    /// focus change.
+    func copyToClipboard(_ text: String) {
+        injector.copyToClipboard(text)
+    }
+
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
     func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
         guard !text.isEmpty else { return }

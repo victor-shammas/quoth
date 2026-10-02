@@ -1,0 +1,116 @@
+import Foundation
+
+/// Where to cut a locked recording into segments for live text (fork
+/// addition). Pure, so the rules are tested without a microphone.
+///
+/// A segment ends inside the first pause of at least `minPause` that leaves
+/// it at least `minSegment` long, with half a pause of silence either side
+/// of the cut; a long pause can be cut anywhere after the minimum. With no such pause it ends at
+/// the quietest moment before `maxSegment`, since Whisper hears 30 s at a
+/// time. Loudness is the RMS of 30 ms frames, against a threshold that
+/// rises with the background noise.
+enum PauseSplitter {
+    static let sampleRate = 16_000.0
+    /// 30 ms at 16 kHz.
+    static let frameLength = 480
+    /// Segments shorter than this give Whisper too little context.
+    static let minSegment: TimeInterval = 4
+    /// A gap this long between words is a pause, not a breath inside a word.
+    static let minPause: TimeInterval = 0.6
+    /// Cut even without a pause by now.
+    static let maxSegment: TimeInterval = 25
+    /// Frames quieter than this are silence on a quiet microphone. Silent
+    /// recordings measure about 0.001; speech averages 0.06 to 0.08.
+    static let minThreshold: Float = 0.008
+    /// The threshold never rises above this, however noisy the room.
+    static let maxThreshold: Float = 0.03
+    /// How many loud frames make speech rather than a click.
+    static let minSpeechFrames = 5
+
+    struct Cut: Equatable {
+        /// Samples from the start that make up the segment.
+        var end: Int
+        /// Whether the segment holds speech. A silent one is dropped, since
+        /// Whisper invents text ("Thank you.") for silence.
+        var hasSpeech: Bool
+    }
+
+    /// The next segment of `samples`, or nil to wait for more audio.
+    static func cut(_ samples: [Float]) -> Cut? {
+        let levels = frameLevels(samples)
+        guard !levels.isEmpty else { return nil }
+        let threshold = self.threshold(levels)
+        let minFrames = frames(minSegment)
+        let pauseFrames = frames(minPause)
+        let maxFrames = frames(maxSegment)
+
+        var runStart: Int?
+        for (i, level) in levels.enumerated() {
+            if level < threshold {
+                let start = runStart ?? i
+                runStart = start
+                let cutFrame = max(start + pauseFrames / 2, minFrames)
+                if i + 1 - cutFrame >= pauseFrames / 2, i - start + 1 >= pauseFrames {
+                    return makeCut(atFrame: cutFrame, levels: levels, threshold: threshold)
+                }
+            } else {
+                runStart = nil
+            }
+        }
+
+        guard levels.count >= maxFrames else { return nil }
+        // No pause in time: cut at the quietest stretch in the second half.
+        let window = pauseFrames / 2
+        var best = maxFrames / 2
+        var bestLevel = Float.greatestFiniteMagnitude
+        for start in (maxFrames / 2)..<(maxFrames - window) {
+            let level = levels[start..<(start + window)].reduce(0, +)
+            if level < bestLevel {
+                bestLevel = level
+                best = start + window / 2
+            }
+        }
+        return makeCut(atFrame: best, levels: levels, threshold: threshold)
+    }
+
+    /// Whether `samples` hold speech, for the tail left when a lock ends.
+    static func hasSpeech(_ samples: [Float]) -> Bool {
+        let levels = frameLevels(samples)
+        return speech(in: levels[...], threshold: threshold(levels))
+    }
+
+    // MARK: - Helpers
+
+    private static func makeCut(atFrame frame: Int, levels: [Float], threshold: Float) -> Cut {
+        Cut(end: frame * frameLength, hasSpeech: speech(in: levels[..<frame], threshold: threshold))
+    }
+
+    private static func speech(in levels: ArraySlice<Float>, threshold: Float) -> Bool {
+        levels.lazy.filter { $0 >= threshold }.count >= minSpeechFrames
+    }
+
+    private static func frames(_ seconds: TimeInterval) -> Int {
+        Int(seconds * sampleRate) / frameLength
+    }
+
+    static func frameLevels(_ samples: [Float]) -> [Float] {
+        let count = samples.count / frameLength
+        guard count > 0 else { return [] }
+        return samples.withUnsafeBufferPointer { buffer in
+            (0..<count).map { i in
+                var power: Float = 0
+                for sample in buffer[(i * frameLength)..<((i + 1) * frameLength)] {
+                    power += sample * sample
+                }
+                return (power / Float(frameLength)).squareRoot()
+            }
+        }
+    }
+
+    /// 2.5 × the background noise (the 20th percentile frame), clamped.
+    static func threshold(_ levels: [Float]) -> Float {
+        guard !levels.isEmpty else { return minThreshold }
+        let floor = levels.sorted()[levels.count / 5]
+        return min(maxThreshold, max(minThreshold, floor * 2.5))
+    }
+}

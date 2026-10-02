@@ -1,0 +1,166 @@
+import Foundation
+
+/// Live text for a locked recording (fork addition): while recording runs,
+/// each segment `PauseSplitter` cuts off is transcribed and delivered, in
+/// order, so text appears at every pause instead of all at the end.
+///
+/// One instance per lock. `DictationController` starts it when a recording
+/// locks and hands it the whole capture when the lock ends; it then
+/// transcribes what is left and waits for every segment.
+///
+/// When a delivery fails, later segments are not typed: after a focus
+/// change everything from that segment on ends up on the clipboard, and
+/// after a password field nothing more is delivered. Text already typed
+/// stays, including when the recording is discarded.
+@MainActor
+final class LiveTranscription {
+    /// How often the recording is checked for a pause.
+    static let pollInterval: TimeInterval = 0.25
+
+    struct Outcome {
+        var chars = 0
+        var segments = 0
+        /// Seconds of audio transcribed.
+        var audio: TimeInterval = 0
+        /// Seconds the transcriber took, over all segments.
+        var transcribing: TimeInterval = 0
+        /// The last segment's breakdown.
+        var timings: TranscriberTimings?
+        /// The first delivery failure, which stops typing.
+        var deliveryError: Error?
+        /// The last transcription failure. Other segments still deliver.
+        var transcriptionError: Error?
+    }
+
+    /// The capture's samples from an offset on.
+    private let samples: (Int) -> [Float]
+    private let transcriber: Transcriber
+    private let context: TranscriptionContext
+    private let processors: [TranscriptProcessor]
+    /// Delivers at the cursor; throws `DeliveryError`.
+    private let deliver: (String) throws -> Void
+    /// Leaves text on the clipboard.
+    private let copy: (String) -> Void
+
+    /// Samples already cut into segments.
+    private(set) var committed = 0
+    private var chain: Task<Void, Never>?
+    private var timer: Timer?
+    private var outcome = Outcome()
+    /// Text held back after a focus change, for the clipboard.
+    private var held: [String] = []
+    private var cancelled = false
+
+    init(
+        samples: @escaping (Int) -> [Float],
+        transcriber: Transcriber,
+        context: TranscriptionContext,
+        processors: [TranscriptProcessor],
+        deliver: @escaping (String) throws -> Void,
+        copy: @escaping (String) -> Void
+    ) {
+        self.samples = samples
+        self.transcriber = transcriber
+        self.context = context
+        self.processors = processors
+        self.deliver = deliver
+        self.copy = copy
+    }
+
+    func start() {
+        let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.poll() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    /// Cuts off a segment if the audio since the last one reached a pause.
+    func poll() {
+        guard !cancelled else { return }
+        let pending = samples(committed)
+        guard let cut = PauseSplitter.cut(pending) else { return }
+        committed += cut.end
+        if cut.hasSpeech {
+            enqueue(Array(pending[..<cut.end]))
+        }
+    }
+
+    /// The lock ended: transcribe what is left of `capture` (the whole
+    /// recording) and wait for every segment.
+    func finish(capture: [Float]) async -> Outcome {
+        stopTimer()
+        if committed < capture.count {
+            let tail = Array(capture[committed...])
+            if PauseSplitter.hasSpeech(tail) { enqueue(tail) }
+            committed = capture.count
+        }
+        await chain?.value
+        if !held.isEmpty {
+            copy(held.joined(separator: " "))
+        }
+        return outcome
+    }
+
+    /// Waits for the segments cut so far.
+    func waitForSegments() async {
+        await chain?.value
+    }
+
+    /// The recording was discarded: deliver nothing more.
+    func cancel() {
+        cancelled = true
+        stopTimer()
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// Segments run one after another, so text arrives in order.
+    private func enqueue(_ audio: [Float]) {
+        let previous = chain
+        chain = Task { [weak self] in
+            await previous?.value
+            await self?.process(audio)
+        }
+    }
+
+    private func process(_ audio: [Float]) async {
+        guard !cancelled else { return }
+        let seconds = Double(audio.count) / PauseSplitter.sampleRate
+        let started = CFAbsoluteTimeGetCurrent()
+        let raw: Transcript
+        do {
+            raw = try await transcriber.transcribe(audio, context: context)
+        } catch {
+            Log.error("live segment failed: \(error)")
+            outcome.transcriptionError = error
+            return
+        }
+        let elapsed = CFAbsoluteTimeGetCurrent() - started
+        outcome.segments += 1
+        outcome.audio += seconds
+        outcome.transcribing += elapsed
+        outcome.timings = raw.timings
+        let text = processors.reduce(raw) { $1.process($0) }.text
+        // Never log the text itself.
+        Log.info(String(format: "→ live segment %.1fs · %.2fs · %d chars", seconds, elapsed, text.count))
+        guard !cancelled, !text.isEmpty else { return }
+        outcome.chars += text.count
+
+        if let failure = outcome.deliveryError {
+            if (failure as? DeliveryError) == .focusChanged { held.append(text) }
+            return
+        }
+        do {
+            try deliver(text)
+        } catch {
+            outcome.deliveryError = error
+            // The delivery copied this segment; the end copies it again with
+            // everything after it.
+            if (error as? DeliveryError) == .focusChanged { held.append(text) }
+        }
+    }
+}

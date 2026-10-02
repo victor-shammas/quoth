@@ -124,6 +124,15 @@ package final class CaptureBuffer: @unchecked Sendable {
         routeChanged = true
     }
 
+    /// A copy of the samples recorded so far from `offset` on, without
+    /// ending the recording; for live text (fork addition).
+    func samples(from offset: Int) -> [Float] {
+        lock.lock()
+        defer { lock.unlock() }
+        guard offset < samples.count else { return [] }
+        return Array(samples[offset...])
+    }
+
     var currentStats: Stats {
         lock.lock()
         defer { lock.unlock() }

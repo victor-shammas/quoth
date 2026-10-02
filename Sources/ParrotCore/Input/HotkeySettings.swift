@@ -11,6 +11,9 @@ struct HotkeySettings: Codable, Equatable {
     /// Whether a double tap of the key locks recording on, for hands-free
     /// dictation (fork addition). The next tap stops it.
     var doubleTapLock = true
+    /// Whether a locked recording types its text at each pause instead of
+    /// all at the end (fork addition).
+    var liveText = true
 
     init() {}
 
@@ -19,6 +22,7 @@ struct HotkeySettings: Codable, Equatable {
         let name = try c.decodeIfPresent(String.self, forKey: .key)
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
         doubleTapLock = try c.decodeIfPresent(Bool.self, forKey: .doubleTapLock) ?? true
+        liveText = try c.decodeIfPresent(Bool.self, forKey: .liveText) ?? true
     }
 }
 

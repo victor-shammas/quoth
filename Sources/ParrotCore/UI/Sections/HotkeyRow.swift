@@ -25,5 +25,14 @@ struct HotkeyRow: View {
             .toggleStyle(.switch)
             .labelsHidden()
         }
+        PillRow("Live text while locked") {
+            Toggle("Live text while locked", isOn: Binding(
+                get: { store.current.hotkey.liveText },
+                set: { on in store.update { $0.hotkey.liveText = on } }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+            .disabled(!store.current.hotkey.doubleTapLock)
+        }
     }
 }
