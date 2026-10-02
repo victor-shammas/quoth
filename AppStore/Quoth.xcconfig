@@ -2,7 +2,7 @@
 // is in packaging/Info.plist.
 PRODUCT_NAME = Quoth
 PRODUCT_BUNDLE_IDENTIFIER = com.victorshammas.quoth
-MARKETING_VERSION = 1.0.0
+MARKETING_VERSION = 1.0
 // Must increase with every App Store Connect upload.
 CURRENT_PROJECT_VERSION = 1
 MACOSX_DEPLOYMENT_TARGET = 14.0
@@ -11,3 +11,7 @@ MACOSX_DEPLOYMENT_TARGET = 14.0
 // is not a secret; certificates and keys never go in this repo.
 CODE_SIGN_STYLE = Automatic
 DEVELOPMENT_TEAM = JPP8RN6BJB
+
+// Apple silicon only, as the listing says: the App Store then doesn't offer
+// Quoth to Intel Macs, where the speech models run too slowly.
+ARCHS = arm64
