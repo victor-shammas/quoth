@@ -53,6 +53,8 @@ struct TranscriptionSection: View {
 
             languagePicker
 
+            DownloadedModels(selected: selectedModel)
+
             PillRow("Dictionary") {
                 Button("Open Dictionary File") { Self.openDictionary() }
                     .buttonStyle(.pill)

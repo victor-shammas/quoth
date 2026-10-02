@@ -117,7 +117,7 @@ struct Doctor: ParsableCommand {
 struct Models: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Manage transcription models.",
-        subcommands: [List.self, Download.self]
+        subcommands: [List.self, Download.self, Remove.self]
     )
 
     struct List: ParsableCommand {
@@ -131,6 +131,15 @@ struct Models: ParsableCommand {
 
         func run() throws {
             try exiting { try ModelCommands.download(id) }
+        }
+    }
+
+    struct Remove: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Delete a downloaded model; it downloads again when chosen.")
+        @Argument(help: "Model id to delete.") var id: String
+
+        func run() throws {
+            try exiting { try ModelCommands.remove(id) }
         }
     }
 }

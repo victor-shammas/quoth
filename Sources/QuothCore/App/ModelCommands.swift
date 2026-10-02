@@ -1,6 +1,7 @@
 import Foundation
 
-/// Behind `quoth models list` and `quoth models download <id>`.
+/// Behind `quoth models list`, `quoth models download <id>` and
+/// `quoth models remove <id>`.
 public enum ModelCommands {
     public static func list() {
         // Column width follows the longest id: `padding(toLength:)` truncates
@@ -13,7 +14,8 @@ public enum ModelCommands {
             let langs = "[\(m.languages.joined(separator: ","))]"
                 .padding(toLength: 9, withPad: " ", startingAt: 0)
             let size = String(format: "%5d MB", m.sizeMB)
-            print("\(star) \(id) \(size)  \(langs)  \(m.displayName)")
+            let here = WhisperKitTranscriber.isCached(m) ? "  · on this Mac" : ""
+            print("\(star) \(id) \(size)  \(langs)  \(m.displayName)\(here)")
         }
     }
 
@@ -32,5 +34,19 @@ public enum ModelCommands {
         }
         sem.wait()
         if let e = capturedError { throw e }
+    }
+
+    /// Deletes a downloaded model; it downloads again when chosen.
+    public static func remove(_ id: String) throws {
+        guard let m = ModelRegistry.find(id) else {
+            print("unknown model: \(id)")
+            throw SilentExit(1)
+        }
+        guard let bytes = WhisperKitTranscriber.diskBytes(m) else {
+            print("\(id) is not downloaded")
+            return
+        }
+        try WhisperKitTranscriber.deleteDownload(m)
+        print("✓ deleted \(id) (\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)))")
     }
 }

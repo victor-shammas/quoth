@@ -233,6 +233,40 @@ extension WhisperKitTranscriber {
         return FileManager.default.fileExists(atPath: dir.path)
     }
 
+    /// Bytes `model` takes on disk under `base`: its weights and download
+    /// metadata. Nil if it isn't downloaded.
+    package static func diskBytes(_ model: TranscriptionModel, base: URL = Paths.appSupport) -> Int64? {
+        guard let variant = model.whisperKitID else { return nil }
+        let folders = folders(for: variant).prefix(2).map { base.appendingPathComponent($0) }
+        guard FileManager.default.fileExists(atPath: folders[0].path) else { return nil }
+        return folders.reduce(0) { $0 + allocatedBytes(under: $1) }
+    }
+
+    /// Deletes `model`'s weights and download metadata under `base`, so it
+    /// downloads again when chosen. The tokenizer stays: it is small and
+    /// the large-v3 builds share one.
+    package static func deleteDownload(_ model: TranscriptionModel, base: URL = Paths.appSupport) throws {
+        guard let variant = model.whisperKitID else { return }
+        for folder in folders(for: variant).prefix(2) {
+            let url = base.appendingPathComponent(folder)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            try FileManager.default.removeItem(at: url)
+        }
+        Log.info("deleted \(model.id)")
+    }
+
+    /// Space the files under `url` take, as Finder counts it.
+    private static func allocatedBytes(under url: URL) -> Int64 {
+        let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .isRegularFileKey]
+        guard let walker = FileManager.default.enumerator(at: url, includingPropertiesForKeys: keys) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in walker {
+            guard let values = try? file.resourceValues(forKeys: Set(keys)), values.isRegularFile == true else { continue }
+            total += Int64(values.totalFileAllocatedSize ?? 0)
+        }
+        return total
+    }
+
     /// Hub-relative folders WhisperKit writes for `variant`: the weights, their
     /// download metadata, and the tokenizer. The weights folder comes first.
     private static func folders(for variant: String) -> [String] {
