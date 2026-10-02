@@ -161,6 +161,11 @@ extension MenuBarController: DictationObserver {
         setStatus("● recording")
     }
 
+    func dictationLocked() {
+        isIdle = false
+        setStatus("● recording (locked) · tap \(hotkey.shortName) to stop")
+    }
+
     func dictationTranscribing() {
         isIdle = false
         setStatus("transcribing…")

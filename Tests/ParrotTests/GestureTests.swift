@@ -68,6 +68,104 @@ final class GestureTests: XCTestCase {
     }
 }
 
+final class GestureLockTests: XCTestCase {
+    private let down = Gesture.Input.hotkeyDown(othersHeld: false)
+
+    /// Tap at 0…0.1, second press at 0.3, released at 0.4: locked.
+    private func locked() -> Gesture {
+        var g = Gesture()
+        XCTAssertEqual(g.handle(down, at: 0), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 0.1), .cancel)
+        XCTAssertEqual(g.handle(down, at: 0.3), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 0.4), .lock)
+        XCTAssertTrue(g.isLocked)
+        XCTAssertFalse(g.isHeld)
+        return g
+    }
+
+    func testDoubleTapLocksAndTheNextTapTranscribes() {
+        var g = locked()
+        XCTAssertEqual(g.handle(down, at: 60), .transcribe)
+        XCTAssertFalse(g.isLocked)
+        // The stopping press records nothing; its release is ignored.
+        XCTAssertNil(g.handle(.hotkeyUp, at: 60.1))
+        XCTAssertFalse(g.isHeld)
+        XCTAssertEqual(g.handle(down, at: 70), .start)
+    }
+
+    func testAPressWithAnotherModifierDiscardsALock() {
+        var g = locked()
+        XCTAssertEqual(g.handle(.hotkeyDown(othersHeld: true), at: 60), .cancel)
+        XCTAssertNil(g.handle(.hotkeyUp, at: 60.1))
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testOtherModifiersWhileLockedDoNothing() {
+        // The key is up while locked, so typing ⌘C mid-dictation is not a chord.
+        var g = locked()
+        XCTAssertNil(g.handle(.otherModifier, at: 10))
+        XCTAssertTrue(g.isLocked)
+    }
+
+    func testTapThenHoldIsPushToTalk() {
+        var g = Gesture()
+        _ = g.handle(down, at: 0)
+        _ = g.handle(.hotkeyUp, at: 0.1)
+        XCTAssertEqual(g.handle(down, at: 0.3), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 2), .transcribe)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testSlowSecondTapIsAnotherDiscardedTap() {
+        var g = Gesture()
+        _ = g.handle(down, at: 0)
+        _ = g.handle(.hotkeyUp, at: 0.1)
+        XCTAssertEqual(g.handle(down, at: 0.1 + Gesture.doubleTapWindow + 0.01), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 0.6), .cancel)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testAHoldThenATapDoesNotLock() {
+        // Only a discarded tap arms the lock, not the end of a dictation.
+        var g = Gesture()
+        _ = g.handle(down, at: 0)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 2), .transcribe)
+        _ = g.handle(down, at: 2.1)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 2.2), .cancel)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testAChordOnTheSecondPressCancels() {
+        var g = Gesture()
+        _ = g.handle(down, at: 0)
+        _ = g.handle(.hotkeyUp, at: 0.1)
+        _ = g.handle(down, at: 0.3)
+        XCTAssertEqual(g.handle(.otherModifier, at: 0.35), .cancel)
+        XCTAssertNil(g.handle(.hotkeyUp, at: 0.4))
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testLockDisabledIsPushToTalkOnly() {
+        var g = Gesture(lockEnabled: false)
+        _ = g.handle(down, at: 0)
+        _ = g.handle(.hotkeyUp, at: 0.1)
+        _ = g.handle(down, at: 0.3)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 0.4), .cancel)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testExpireAndResetEndALock() {
+        var g = locked()
+        XCTAssertEqual(g.expireLock(), .transcribe)
+        XCTAssertNil(g.expireLock())
+        XCTAssertFalse(g.isLocked)
+
+        g = locked()
+        XCTAssertEqual(g.reset(), .cancel)
+        XCTAssertFalse(g.isLocked)
+    }
+}
+
 final class HotkeyMatchTests: XCTestCase {
     private func input(_ keycode: Int64, _ flags: CGEventFlags, _ key: HotkeyKey, held: Bool) -> Gesture.Input? {
         HotkeyMonitor.input(keycode: keycode, flags: flags, key: key, held: held)

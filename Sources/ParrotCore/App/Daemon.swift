@@ -90,7 +90,11 @@ public enum Daemon {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
-        let monitor = HotkeyMonitor(key: options.hotkey ?? settings.current.hotkey.key, debug: options.debugHotkey)
+        let monitor = HotkeyMonitor(
+            key: options.hotkey ?? settings.current.hotkey.key,
+            lockEnabled: settings.current.hotkey.doubleTapLock,
+            debug: options.debugHotkey
+        )
         let capture = AudioCapture(mode: options.captureMode)
         let overlay: RecordingOverlay? = options.noOverlay ? nil : RecordingOverlay()
         if let overlay {
@@ -159,7 +163,11 @@ public enum Daemon {
         // or a hand edit of settings.json (#41). CLI flags only set the
         // starting values of a foreground run.
         settings.observe { old, new in
-            if old.hotkey != new.hotkey {
+            if old.hotkey.doubleTapLock != new.hotkey.doubleTapLock {
+                monitor.setLockEnabled(new.hotkey.doubleTapLock)
+                Log.info("double-tap lock: \(new.hotkey.doubleTapLock ? "on" : "off")")
+            }
+            if old.hotkey.key != new.hotkey.key {
                 if options.hotkey != nil {
                     Log.info("hotkey: \(new.hotkey.key.rawValue) saved; --hotkey \(monitor.key.rawValue) stays in effect for this run")
                 } else {

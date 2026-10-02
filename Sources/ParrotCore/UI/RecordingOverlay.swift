@@ -12,6 +12,8 @@ final class RecordingOverlay {
     enum State: Equatable {
         case hidden
         case recording
+        /// Recording, locked on by a double tap (fork addition).
+        case locked
         case transcribing
         /// One line of text, for example why a recording failed.
         case message(String)
@@ -149,6 +151,10 @@ extension RecordingOverlay: DictationObserver {
         show(.recording)
     }
 
+    func dictationLocked() {
+        show(.locked)
+    }
+
     func dictationTranscribing() {
         show(.transcribing)
     }
@@ -261,12 +267,16 @@ private struct OverlayPill: View {
         case .hidden, .recording, .transcribing:
             // The same bars in both states, so transcribing is the recording
             // bars taking up the loop rather than a swap to a spinner.
-            Waveform(
-                levels: model.levels,
-                transcribing: model.state == .transcribing,
-                heardVoice: model.heardVoice
-            )
-                .frame(width: 51, height: 20)
+            waveform
+        case .locked:
+            // The same bars with a lock beside them, so the user knows the
+            // key is free and the next tap stops.
+            HStack(spacing: 7) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(red: 181/255, green: 209/255, blue: 255/255))
+                waveform
+            }
         case .message(let text):
             Text(text)
                 .font(.system(size: 12, weight: .medium))
@@ -275,6 +285,15 @@ private struct OverlayPill: View {
                 .fixedSize()
                 .frame(height: 20)
         }
+    }
+
+    private var waveform: some View {
+        Waveform(
+            levels: model.levels,
+            transcribing: model.state == .transcribing,
+            heardVoice: model.heardVoice
+        )
+            .frame(width: 51, height: 20)
     }
 }
 

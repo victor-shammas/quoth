@@ -33,6 +33,11 @@ final class SettingsFieldTests: XCTestCase {
         XCTAssertEqual(try decode(#"{"hotkey": {"key": "right-option"}}"#).hotkey.key, .rightOption)
     }
 
+    func testDoubleTapLockDefaultsOnAndDecodes() throws {
+        XCTAssertTrue(try decode("{}").hotkey.doubleTapLock)
+        XCTAssertFalse(try decode(#"{"hotkey": {"doubleTapLock": false}}"#).hotkey.doubleTapLock)
+    }
+
     func testUnknownHotkeyFallsBackToFn() throws {
         XCTAssertEqual(try decode(#"{"hotkey": {"key": "caps-lock"}}"#).hotkey.key, .fn)
     }

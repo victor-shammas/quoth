@@ -72,7 +72,15 @@ final class DictationController {
         case .pressed: press()
         case .released: release()
         case .cancelled: cancel()
+        case .locked: lock()
         }
+    }
+
+    /// A double tap locked the recording on; capture carries on unchanged.
+    func lock() {
+        guard state == .recording else { return }
+        Log.info("● locked")
+        observers.forEach { $0.dictationLocked() }
     }
 
     func press() {

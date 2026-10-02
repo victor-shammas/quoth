@@ -40,6 +40,8 @@ enum DictationError: Error {
 protocol DictationObserver: AnyObject {
     /// Recording started.
     func dictationStarted()
+    /// The recording was locked on with a double tap and continues hands-free.
+    func dictationLocked()
     /// The hotkey was released; the capture is being transcribed.
     func dictationTranscribing()
     /// The transcript was delivered.
@@ -52,6 +54,7 @@ protocol DictationObserver: AnyObject {
 
 extension DictationObserver {
     func dictationStarted() {}
+    func dictationLocked() {}
     func dictationTranscribing() {}
     func dictationFinished(_ result: DictationResult) {}
     func dictationFailed(_ error: Error) {}

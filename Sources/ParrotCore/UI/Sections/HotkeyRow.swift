@@ -15,5 +15,15 @@ struct HotkeyRow: View {
                 }
             }
         }
+        // Outside a Form a toggle is a checkbox; this keeps the switch on
+        // the right, like Launch at login.
+        PillRow("Double-tap to lock") {
+            Toggle("Double-tap to lock", isOn: Binding(
+                get: { store.current.hotkey.doubleTapLock },
+                set: { on in store.update { $0.hotkey.doubleTapLock = on } }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+        }
     }
 }

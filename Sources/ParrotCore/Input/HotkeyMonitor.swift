@@ -29,11 +29,16 @@ final class HotkeyMonitor {
         case released
         /// Stop recording and discard it: a short tap, a chord, or a key switch.
         case cancelled
+        /// A double tap locked the recording on; it continues with the key up.
+        case locked
     }
     enum HotkeyError: Error { case tapCreateFailed }
 
     /// How often the watchdog checks that the tap is still enabled.
     static let watchdogInterval: TimeInterval = 5
+    /// The longest a locked recording runs before it is transcribed on its
+    /// own, so a forgotten lock does not record indefinitely.
+    static let lockLimit: TimeInterval = 10 * 60
 
     /// The modifier held to dictate. Change it with `setKey(_:)`.
     private(set) var key: HotkeyKey
@@ -41,7 +46,8 @@ final class HotkeyMonitor {
     private var onEvent: ((Event) -> Void)?
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var gesture = Gesture()
+    private var gesture: Gesture
+    private var lockTimer: Timer?
 
     private var recovery = TapRecovery()
     private var pendingRetry: DispatchWorkItem?
@@ -55,9 +61,16 @@ final class HotkeyMonitor {
         }
     }
 
-    init(key: HotkeyKey = .fn, debug: Bool = false) {
+    init(key: HotkeyKey = .fn, lockEnabled: Bool = true, debug: Bool = false) {
         self.key = key
         self.debug = debug
+        self.gesture = Gesture(lockEnabled: lockEnabled)
+    }
+
+    /// Turn the double-tap lock on or off. A recording already locked keeps
+    /// running until the next press.
+    func setLockEnabled(_ enabled: Bool) {
+        gesture.lockEnabled = enabled
     }
 
     /// Switch to another key without recreating the tap; the next press of
@@ -119,6 +132,8 @@ final class HotkeyMonitor {
     func stop() {
         watchdog?.invalidate()
         watchdog = nil
+        lockTimer?.invalidate()
+        lockTimer = nil
         pendingRetry?.cancel()
         pendingRetry = nil
         if let tap {
@@ -150,11 +165,29 @@ final class HotkeyMonitor {
     }
 
     private func emit(_ action: Gesture.Action) {
+        if action == .lock {
+            startLockTimer()
+        } else {
+            lockTimer?.invalidate()
+            lockTimer = nil
+        }
         switch action {
         case .start: onEvent?(.pressed)
         case .transcribe: onEvent?(.released)
         case .cancel: onEvent?(.cancelled)
+        case .lock: onEvent?(.locked)
         }
+    }
+
+    private func startLockTimer() {
+        lockTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.lockLimit, repeats: false) { [weak self] _ in
+            guard let self, let action = self.gesture.expireLock() else { return }
+            Log.info("lock reached \(Int(Self.lockLimit / 60)) min; transcribing")
+            self.emit(action)
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        lockTimer = timer
     }
 
     // MARK: - Matching

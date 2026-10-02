@@ -8,6 +8,9 @@ import CoreGraphics
 struct HotkeySettings: Codable, Equatable {
     /// The modifier held to dictate. An unknown name decodes to the default.
     var key: HotkeyKey = .fn
+    /// Whether a double tap of the key locks recording on, for hands-free
+    /// dictation (fork addition). The next tap stops it.
+    var doubleTapLock = true
 
     init() {}
 
@@ -15,6 +18,7 @@ struct HotkeySettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let name = try c.decodeIfPresent(String.self, forKey: .key)
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
+        doubleTapLock = try c.decodeIfPresent(Bool.self, forKey: .doubleTapLock) ?? true
     }
 }
 
