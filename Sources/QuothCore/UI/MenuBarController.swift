@@ -30,6 +30,8 @@ final class MenuBarController {
     let checkForUpdatesItem: NSMenuItem
     /// Slot: quits quoth.
     let quitItem: NSMenuItem
+    /// Opens the licence texts (`AcknowledgementsWindow`).
+    let acknowledgementsItem: NSMenuItem
 
     /// A degraded hotkey tap replaces the idle line, so the menu bar does not
     /// claim fn works when it does not (#37).
@@ -66,6 +68,9 @@ final class MenuBarController {
         settingsItem = NSMenuItem(title: "Settings…", action: #selector(settingsClicked), keyEquivalent: ",")
         menu.addItem(settingsItem)
 
+        acknowledgementsItem = NSMenuItem(title: "Acknowledgements…", action: #selector(acknowledgementsClicked), keyEquivalent: "")
+        menu.addItem(acknowledgementsItem)
+
         checkForUpdatesItem = NSMenuItem(
             title: "Check for Updates…",
             action: #selector(checkForUpdatesClicked),
@@ -86,6 +91,7 @@ final class MenuBarController {
         statusItem.menu = menu
         quitItem.target = self
         settingsItem.target = self
+        acknowledgementsItem.target = self
         checkForUpdatesItem.target = self
         grantPermissionsItem.target = self
         configureButton()
@@ -115,6 +121,10 @@ final class MenuBarController {
 
     private func setGlyph(_ style: QuoteGlyph.Style) {
         statusItem.button?.image = QuoteGlyph.image(style)
+    }
+
+    @objc private func acknowledgementsClicked() {
+        AcknowledgementsWindow.show()
     }
 
     @objc private func settingsClicked() {
