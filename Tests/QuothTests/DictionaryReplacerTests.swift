@@ -38,11 +38,23 @@ final class DictionaryReplacerTests: XCTestCase {
         XCTAssertEqual(apply("k8s", [(["k8's"], "Kubernetes")]), "Kubernetes")
     }
 
+    func testApostrophesDontTurnWordsIntoContractions() {
+        let rules: [(from: [String], to: String)] = [(["ID"], "ID"), (["Shell"], "Shell"), (["Well"], "Well")]
+        XCTAssertEqual(apply("I'd like she'll we'll", rules), "I'd like she'll we'll")
+        XCTAssertEqual(apply("my id", rules), "my ID")
+        // Written with an apostrophe, it matches with or without one.
+        XCTAssertEqual(apply("oclock and o'clock", [(["o'clock"], "o’clock")]), "o’clock and o’clock")
+    }
+
+    func testAFromOfOnlyPunctuationIsIgnored() {
+        XCTAssertEqual(apply("Hello, world.", [(["-"], "—"), (["'"], "x")]), "Hello, world.")
+    }
+
     func testLooseMatchingKeepsWholeWords() {
         let rules: [(from: [String], to: String)] = [(["api"], "API"), (["post hog"], "PostHog")]
         // A possessive keeps its 's; a longer word is left alone.
         XCTAssertEqual(apply("rapid a-pi's posthogs", rules), "rapid API's posthogs")
-        XCTAssertEqual(apply("a'p-i", rules), "API")
+        XCTAssertEqual(apply("a-p-i", rules), "API")
     }
 
     func testAccentedLettersAreWordCharacters() {

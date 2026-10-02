@@ -100,14 +100,31 @@ package final class DictionaryStore: @unchecked Sendable {
 
     // MARK: - Saving
 
+    /// Posted after the file is saved, so an open editor can reload.
+    static let didSave = Notification.Name("QuothDictionaryDidSave")
+
     /// Saves `dictionary` as the file, for the Settings editor and Fix Last
     /// Dictation. Atomic and owner-only, written to the file a symlink points
     /// at so a dotfiles link survives. Comments other than the preamble are
-    /// not kept. Returns false, and logs, if it couldn't.
+    /// not kept.
+    ///
+    /// Never over a file that has a mistake in it, so a hand edit in progress
+    /// is never lost; and, with `basedOn`, never over a file that changed
+    /// since the caller read it (another window, a text editor). Returns
+    /// false, and logs, when it didn't save.
     @discardableResult
-    func save(_ dictionary: UserDictionary) -> Bool {
+    func save(_ dictionary: UserDictionary, basedOn base: UserDictionary? = nil) -> Bool {
         lock.lock()
         defer { lock.unlock() }
+        refresh()
+        if let problem {
+            log("not saving the dictionary: the file has a mistake (\(problem))")
+            return false
+        }
+        if let base, base.rows().rows != loaded.dictionary.rows().rows {
+            log("not saving the dictionary: it changed since it was read")
+            return false
+        }
         let target = file.resolvingSymlinksInPath()
         do {
             try FileManager.default.createDirectory(
@@ -123,6 +140,7 @@ package final class DictionaryStore: @unchecked Sendable {
         loaded = Loaded(dictionary)
         seen = nil
         problem = nil
+        DispatchQueue.main.async { NotificationCenter.default.post(name: Self.didSave, object: self) }
         return true
     }
 
@@ -134,7 +152,8 @@ package final class DictionaryStore: @unchecked Sendable {
         let word = word.trimmingCharacters(in: .whitespacesAndNewlines)
         let heard = heardAs.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !word.isEmpty else { return false }
-        var rows = current().dictionary.rows().rows
+        let base = current().dictionary
+        var rows = base.rows().rows
         if let i = rows.firstIndex(where: { $0.word.caseInsensitiveCompare(word) == .orderedSame }) {
             rows[i].word = word
             if !heard.isEmpty, !rows[i].heardAs.contains(where: { $0.caseInsensitiveCompare(heard) == .orderedSame }) {
@@ -143,7 +162,7 @@ package final class DictionaryStore: @unchecked Sendable {
         } else {
             rows.append(UserDictionary.Row(word: word, heardAs: heard.isEmpty ? [] : [heard]))
         }
-        return save(UserDictionary(rows: rows, examples: current().dictionary.examples))
+        return save(UserDictionary(rows: rows, examples: base.examples), basedOn: base)
     }
 
     // MARK: - Reloading

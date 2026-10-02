@@ -18,8 +18,9 @@ struct DictionaryProcessor: TranscriptProcessor {
 ///   letter, digit or underscore in any script (`\p{L}\p{N}_`, plus combining
 ///   marks), so `api` leaves `rapid` alone and `café` is one word.
 /// - Whitespace inside a `from` matches any run of whitespace, a hyphen, or
-///   nothing; apostrophes and hyphens inside a word are optional
-///   (`pattern(for:)`), so "k8s" also matches "K8's" and "k-8-s".
+///   nothing; hyphens inside a word are optional, and apostrophes where
+///   that is safe (`pattern(for:)`), so "k8s" also matches "K8's" and
+///   "k-8-s", but "ID" never matches "I'd".
 /// - Where several rules match at the same place, the longest wins.
 /// - One pass over the input: text a rule inserts is never matched again, so
 ///   rules cannot chain.
@@ -52,7 +53,8 @@ struct DictionaryReplacer {
         var kept: [Rule] = []
         for rule in candidates {
             let from = rule.from.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-            guard !from.isEmpty, !rule.to.isEmpty else { continue }
+            // A `from` of only apostrophes or hyphens would match everywhere.
+            guard !from.isEmpty, !rule.to.isEmpty, !Self.pattern(for: from).isEmpty else { continue }
             if kept.contains(where: { $0.from.compare(from, options: .caseInsensitive) == .orderedSame }) { continue }
             kept.append(Rule(from: from, to: rule.to))
         }
@@ -84,17 +86,40 @@ struct DictionaryReplacer {
     static let joiners: Set<Character> = ["'", "’", "-", "‐", "‑"]
 
     /// The pattern for one `from`: its letters in order, with an optional
-    /// apostrophe or hyphen between any two of them, and its words joined by
-    /// spaces, hyphens or nothing, so "post hog" also matches "posthog" and
-    /// "post-hog". Joiners written in `from` itself are optional too.
+    /// hyphen between any two, and its words joined by spaces, hyphens or
+    /// nothing, so "post hog" also matches "posthog" and "post-hog".
+    ///
+    /// Apostrophes are optional only where they can't turn a word into
+    /// another: where `from` has one ("o'clock" matches "oclock"), and before
+    /// a final "s" ("k8s" matches "K8's"). Anywhere else they'd make "ID"
+    /// match "I'd" and "Well" match "we'll". Empty for a `from` with no
+    /// letters, which `init` drops.
     static func pattern(for from: String) -> String {
-        let joiner = #"['’\-‐‑]?"#
-        let between = #"[\s'’\-‐‑]*"#
+        let hyphen = #"[\-‐‑]?"#
+        let either = #"['’\-‐‑]?"#
+        let between = #"[\s\-‐‑]*"#
         return from.split(separator: " ")
-            .map { word in
-                word.filter { !joiners.contains($0) }
-                    .map { NSRegularExpression.escapedPattern(for: String($0)) }
-                    .joined(separator: joiner)
+            .map { word -> String in
+                // Letters, each remembering whether an apostrophe preceded it.
+                var letters: [(Character, apostropheBefore: Bool)] = []
+                var apostrophe = false
+                for c in word {
+                    if c == "'" || c == "’" {
+                        apostrophe = true
+                    } else if !joiners.contains(c) {
+                        letters.append((c, apostrophe))
+                        apostrophe = false
+                    }
+                }
+                var pattern = ""
+                for (i, letter) in letters.enumerated() {
+                    if i > 0 {
+                        let finalS = i == letters.count - 1 && letter.0.lowercased() == "s"
+                        pattern += letter.apostropheBefore || finalS ? either : hyphen
+                    }
+                    pattern += NSRegularExpression.escapedPattern(for: String(letter.0))
+                }
+                return pattern
             }
             .filter { !$0.isEmpty }
             .joined(separator: between)

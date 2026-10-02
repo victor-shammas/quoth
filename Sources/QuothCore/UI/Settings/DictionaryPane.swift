@@ -2,8 +2,10 @@ import AppKit
 import SwiftUI
 
 /// The dictionary as rows the Settings table edits. Saves the file a moment
-/// after the last change (`DictionaryStore.save`), and never over a file
-/// that has a mistake in it, so a hand edit is never lost.
+/// after the last change (`DictionaryStore.save`), never over a file that
+/// has a mistake in it and never over one that changed since it was read,
+/// so neither a hand edit nor Fix Last Dictation is lost; it reloads
+/// instead. Reloads, too, whenever the dictionary is saved elsewhere.
 @MainActor
 final class DictionaryEditor: ObservableObject {
     struct Row: Identifiable, Equatable {
@@ -22,25 +24,46 @@ final class DictionaryEditor: ObservableObject {
     /// Why the file can't be edited here: it has a mistake, which only an
     /// edit of the file can fix.
     @Published private(set) var problem: String?
+    /// The last save failed, or found the file changed and reloaded.
+    @Published private(set) var saveNote: String?
 
     private let store: DictionaryStore
     private var pending: Task<Void, Never>?
     private var reloading = false
+    /// What the rows were loaded from, so a save never overwrites a change
+    /// made elsewhere in the meantime.
+    private var base = UserDictionary.empty
+    private var observer: NSObjectProtocol?
 
     init(store: DictionaryStore) {
         self.store = store
         reload()
+        observer = NotificationCenter.default.addObserver(
+            forName: DictionaryStore.didSave, object: store, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reloadIfIdle() }
+        }
     }
 
-    /// Reads the file again, for a hand edit made while Settings was closed.
+    /// Reads the file again, for a change made outside this editor.
     func reload() {
         flush()
         reloading = true
         defer { reloading = false }
         problem = store.loadProblem()
-        rows = store.current().dictionary.rows().rows.map {
+        base = store.current().dictionary
+        rows = base.rows().rows.map {
             Row(word: $0.word, heardAs: $0.heardAs.joined(separator: ", "))
         }
+    }
+
+    /// Reloads unless an edit is waiting to be saved: for a save made
+    /// elsewhere, and when the window comes forward.
+    func reloadIfIdle() {
+        guard pending == nil else { return }
+        let current = store.current().dictionary
+        guard current.rows().rows != base.rows().rows || store.loadProblem() != problem else { return }
+        reload()
     }
 
     /// Appends an empty row and returns it, for the table to select.
@@ -94,7 +117,19 @@ final class DictionaryEditor: ObservableObject {
                 heardAs: row.heardAs.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             )
         }
-        store.save(UserDictionary(rows: table))
+        let next = UserDictionary(rows: table)
+        if store.save(next, basedOn: base) {
+            base = next
+            saveNote = nil
+        } else if let problem = store.loadProblem() {
+            self.problem = problem
+            saveNote = "Not saved: the dictionary file has a mistake."
+        } else if store.current().dictionary.rows().rows != base.rows().rows {
+            reload()
+            saveNote = "The dictionary changed elsewhere, so it was reloaded. Your last edit wasn't saved."
+        } else {
+            saveNote = "Couldn't save the dictionary. Check that its file can be written."
+        }
     }
 }
 
@@ -130,6 +165,11 @@ struct DictionaryPane: View {
             }
 
             ForEach(editor.issues, id: \.self) { Caption($0) }
+            if let note = editor.saveNote {
+                Label(note, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Divider()
 
@@ -137,6 +177,11 @@ struct DictionaryPane: View {
         }
         .onAppear { editor.reload() }
         .onDisappear { editor.flush() }
+        // The window is kept between openings, so onAppear alone would miss
+        // a change made while it was closed.
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            editor.reloadIfIdle()
+        }
     }
 
     private var table: some View {
@@ -261,9 +306,9 @@ private struct ExampleSentence: View {
             if !languages.contains(language) { language = languages.first ?? "en" }
             text = settings.current.dictionary.examples[language] ?? ""
         }
-        .onChange(of: language) { _, code in
-            flush()
-            text = settings.current.dictionary.examples[code] ?? ""
+        .onChange(of: language) { old, new in
+            flush(for: old)
+            text = settings.current.dictionary.examples[new] ?? ""
         }
         .onChange(of: text) { _, _ in
             pending?.cancel()
@@ -273,20 +318,23 @@ private struct ExampleSentence: View {
                 save()
             }
         }
-        .onDisappear { flush() }
+        .onDisappear { flush(for: language) }
     }
 
-    private func flush() {
+    /// Saves what was typed now, under `code`: the language it was typed
+    /// for, even when the menu has just changed to another.
+    private func flush(for code: String) {
         guard pending != nil else { return }
         pending?.cancel()
-        save()
+        save(for: code)
     }
 
-    private func save() {
+    private func save(for code: String? = nil) {
         pending = nil
+        let code = code ?? language
         let sentence = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard settings.current.dictionary.examples[language] ?? "" != sentence else { return }
-        settings.update { $0.dictionary.examples[language] = sentence.isEmpty ? nil : sentence }
+        guard settings.current.dictionary.examples[code] ?? "" != sentence else { return }
+        settings.update { $0.dictionary.examples[code] = sentence.isEmpty ? nil : sentence }
     }
 }
 

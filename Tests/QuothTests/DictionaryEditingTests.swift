@@ -64,4 +64,24 @@ final class DictionaryEditingTests: XCTestCase {
         ])
         XCTAssertFalse(store.add(word: " ", heardAs: "x"))
     }
+
+    func testSaveRefusesAFileWithAMistake() throws {
+        let store = DictionaryStore(file: file, log: { _ in })
+        store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: [])]))
+        // A hand edit in progress: a comma in the word column.
+        try "Word  Replaces\nPost, Hog  post hog\n".write(to: file, atomically: true, encoding: .utf8)
+        XCTAssertFalse(store.save(UserDictionary(rows: [.init(word: "Other", heardAs: [])])))
+        XCTAssertFalse(store.add(word: "Gaugeline", heardAs: "gauge line"))
+        XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("Post, Hog"))
+    }
+
+    func testSaveRefusesAFileThatChangedSinceItWasRead() throws {
+        let store = DictionaryStore(file: file, log: { _ in })
+        store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: [])]))
+        let base = store.current().dictionary
+        // Fix Last Dictation adds a word while the editor holds `base`.
+        XCTAssertTrue(store.add(word: "PostHog", heardAs: "post hog"))
+        XCTAssertFalse(store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: ["quote"])]), basedOn: base))
+        XCTAssertEqual(store.current().dictionary.rows().rows.map(\.word), ["Quoth", "PostHog"])
+    }
 }
