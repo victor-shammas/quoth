@@ -17,7 +17,9 @@ struct DictionaryProcessor: TranscriptProcessor {
 /// - Matching ignores case and takes whole words only: a match may not touch a
 ///   letter, digit or underscore in any script (`\p{L}\p{N}_`, plus combining
 ///   marks), so `api` leaves `rapid` alone and `café` is one word.
-/// - Whitespace inside a `from` matches any run of whitespace.
+/// - Whitespace inside a `from` matches any run of whitespace, a hyphen, or
+///   nothing; apostrophes and hyphens inside a word are optional
+///   (`pattern(for:)`), so "k8s" also matches "K8's" and "k-8-s".
 /// - Where several rules match at the same place, the longest wins.
 /// - One pass over the input: text a rule inserts is never matched again, so
 ///   rules cannot chain.
@@ -69,16 +71,33 @@ struct DictionaryReplacer {
         }
         // One capture group per rule, so the group that matched names the rule
         // without comparing strings outside the regex engine.
-        let alternatives = ordered.map { rule in
-            "(" + rule.from.split(separator: " ")
-                .map { NSRegularExpression.escapedPattern(for: String($0)) }
-                .joined(separator: #"\s+"#) + ")"
-        }
+        let alternatives = ordered.map { "(" + Self.pattern(for: $0.from) + ")" }
         // Combining marks count as part of a word, so a decomposed "é" is not
         // a boundary.
         let word = #"[\p{L}\p{M}\p{N}_]"#
         let pattern = "(?<!\(word))(?:" + alternatives.joined(separator: "|") + ")(?!\(word))"
         self.regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+    }
+
+    /// Apostrophes and hyphens, which Whisper puts in or leaves out of the
+    /// same word from one dictation to the next ("K8's", "k8s", "k-8-s").
+    static let joiners: Set<Character> = ["'", "’", "-", "‐", "‑"]
+
+    /// The pattern for one `from`: its letters in order, with an optional
+    /// apostrophe or hyphen between any two of them, and its words joined by
+    /// spaces, hyphens or nothing, so "post hog" also matches "posthog" and
+    /// "post-hog". Joiners written in `from` itself are optional too.
+    static func pattern(for from: String) -> String {
+        let joiner = #"['’\-‐‑]?"#
+        let between = #"[\s'’\-‐‑]*"#
+        return from.split(separator: " ")
+            .map { word in
+                word.filter { !joiners.contains($0) }
+                    .map { NSRegularExpression.escapedPattern(for: String($0)) }
+                    .joined(separator: joiner)
+            }
+            .filter { !$0.isEmpty }
+            .joined(separator: between)
     }
 
     func apply(to text: String) -> String {

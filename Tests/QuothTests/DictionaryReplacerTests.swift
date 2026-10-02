@@ -26,7 +26,23 @@ final class DictionaryReplacerTests: XCTestCase {
     func testPunctuationIsABoundary() {
         let rules: [(from: [String], to: String)] = [(["post hog"], "PostHog")]
         XCTAssertEqual(apply("Open post hog. Then (post hog), \"post hog\"!", rules), "Open PostHog. Then (PostHog), \"PostHog\"!")
-        XCTAssertEqual(apply("post-hog", rules), "post-hog")
+        // Hyphens and missing spaces are the same word to Whisper's output.
+        XCTAssertEqual(apply("post-hog and posthog", rules), "PostHog and PostHog")
+    }
+
+    func testApostrophesAndHyphensInsideAWordAreOptional() {
+        let rules: [(from: [String], to: String)] = [(["k8s"], "Kubernetes")]
+        XCTAssertEqual(apply("the K8's cluster, k8s, k-8-s and K8S", rules),
+                       "the Kubernetes cluster, Kubernetes, Kubernetes and Kubernetes")
+        // Written with the apostrophe, it still matches without.
+        XCTAssertEqual(apply("k8s", [(["k8's"], "Kubernetes")]), "Kubernetes")
+    }
+
+    func testLooseMatchingKeepsWholeWords() {
+        let rules: [(from: [String], to: String)] = [(["api"], "API"), (["post hog"], "PostHog")]
+        // A possessive keeps its 's; a longer word is left alone.
+        XCTAssertEqual(apply("rapid a-pi's posthogs", rules), "rapid API's posthogs")
+        XCTAssertEqual(apply("a'p-i", rules), "API")
     }
 
     func testAccentedLettersAreWordCharacters() {
