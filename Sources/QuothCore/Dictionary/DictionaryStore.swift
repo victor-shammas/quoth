@@ -87,6 +87,53 @@ package final class DictionaryStore: @unchecked Sendable {
         return true
     }
 
+    // MARK: - Saving
+
+    /// Saves `dictionary` as the file, for the Settings editor and Fix Last
+    /// Dictation. Atomic and owner-only, written to the file a symlink points
+    /// at so a dotfiles link survives. Comments other than the preamble are
+    /// not kept. Returns false, and logs, if it couldn't.
+    @discardableResult
+    func save(_ dictionary: UserDictionary) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        let target = file.resolvingSymlinksInPath()
+        do {
+            try FileManager.default.createDirectory(
+                at: target.deletingLastPathComponent(), withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700])
+            try Data(dictionary.text().text.utf8).write(to: target, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+        } catch {
+            log("couldn't save \(target.path): \(error.localizedDescription)")
+            return false
+        }
+        // Use it at once, without waiting for the next stat to notice.
+        loaded = Loaded(dictionary)
+        seen = nil
+        return true
+    }
+
+    /// Adds `heardAs` as what the model writes instead of `word`: to that
+    /// word's row if it has one (in any casing), or as a new row. Every other
+    /// row is kept.
+    @discardableResult
+    func add(word: String, heardAs: String) -> Bool {
+        let word = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        let heard = heardAs.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !word.isEmpty else { return false }
+        var rows = current().dictionary.rows().rows
+        if let i = rows.firstIndex(where: { $0.word.caseInsensitiveCompare(word) == .orderedSame }) {
+            rows[i].word = word
+            if !heard.isEmpty, !rows[i].heardAs.contains(where: { $0.caseInsensitiveCompare(heard) == .orderedSame }) {
+                rows[i].heardAs.append(heard)
+            }
+        } else {
+            rows.append(UserDictionary.Row(word: word, heardAs: heard.isEmpty ? [] : [heard]))
+        }
+        return save(UserDictionary(rows: rows, examples: current().dictionary.examples))
+    }
+
     // MARK: - Reloading
 
     /// Identity and version of the file last looked at.

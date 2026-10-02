@@ -152,16 +152,20 @@ extension UserDictionary {
 
         """
 
-    /// This dictionary as the text file: the preamble, the header and one
-    /// aligned row per word. Every term is a row; a replacement's target that
-    /// is not a term becomes one too, and several replacements to the same
-    /// word share its row. `examples` are not part of the file.
-    ///
-    /// What the table cannot hold is left out and counted in `skipped`: a word
-    /// with a comma or starting with `#`, and a Replaces item with a comma.
-    /// Runs of whitespace inside a word or an item become one space, which the
+    /// One row of the table: a word and what the model writes instead of
+    /// it. The Settings editor and the text file both show these.
+    struct Row: Equatable, Sendable {
+        var word: String
+        var heardAs: [String]
+    }
+
+    /// The table's rows: every term is a row; a replacement's target that is
+    /// not a term becomes one too, and several replacements to the same word
+    /// share its row. What the table cannot hold is left out and counted in
+    /// `skipped`: a word with a comma or starting with `#`, and a Replaces
+    /// item with a comma. Runs of whitespace become one space, which the
     /// replacement pass treats the same.
-    func text() -> (text: String, rows: Int, skipped: Int) {
+    func rows() -> (rows: [Row], skipped: Int) {
         func clean(_ s: String) -> String { s.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
 
         var order: [String] = []
@@ -187,7 +191,28 @@ extension UserDictionary {
         }
         for term in terms { add(term, []) }
         for replacement in replacements { add(replacement.to, replacement.from) }
+        return (order.map { Row(word: $0, heardAs: from[$0] ?? []) }, skipped)
+    }
 
+    /// The dictionary a table of rows describes: each word a term, and its
+    /// Heard as list a replacement to it. Blank words are dropped.
+    init(rows: [Row], examples: [String: String] = [:]) {
+        self.init(examples: examples)
+        for row in rows {
+            let word = row.word.trimmingCharacters(in: .whitespaces)
+            guard !word.isEmpty else { continue }
+            terms.append(word)
+            let from = row.heardAs.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            if !from.isEmpty { replacements.append(Replacement(from: from, to: word)) }
+        }
+    }
+
+    /// This dictionary as the text file: the preamble, the header and one
+    /// aligned row per word (`rows()`). `examples` are not part of the file.
+    func text() -> (text: String, rows: Int, skipped: Int) {
+        let (table, skipped) = rows()
+        let order = table.map(\.word)
+        let from = Dictionary(uniqueKeysWithValues: table.map { ($0.word, $0.heardAs) })
         let width = max(order.map(\.count).max() ?? 0, "Word".count) + 4
         func row(_ word: String, _ replaces: String) -> String {
             replaces.isEmpty ? word : word.padding(toLength: width, withPad: " ", startingAt: 0) + replaces
