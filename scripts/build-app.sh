@@ -58,17 +58,9 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 # the bare binary: their accessors look beside the .app, where a signed
 # bundle can't hold anything.
 
-# docs/assets/app-icon.png is the bird on a white rounded square, drawn by
-# scripts/make-app-icon.swift from docs/assets/icon.png.
-ICONSET="$OUT/AppIcon.iconset"
-rm -rf "$ICONSET" && mkdir -p "$ICONSET"
-for size in 16 32 128 256 512; do
-    sips -z "$size" "$size" docs/assets/app-icon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
-    double=$((size * 2))
-    sips -z "$double" "$double" docs/assets/app-icon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
-done
-iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
-rm -rf "$ICONSET"
+# packaging/AppIcon.icns is Quoth's quote on an espresso squircle, drawn
+# at every size by scripts/make-quoth-icon.swift.
+cp packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 TIMESTAMP="--timestamp"
 [ "${PARROT_TIMESTAMP:-}" = "none" ] && TIMESTAMP="--timestamp=none"

@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png">
-    <img src="docs/assets/icon.png" width="96" alt="Quoth">
-  </picture>
+  <img src="docs/assets/quoth-icon.png" width="128" alt="Quoth">
 </p>
 
 # Quoth
