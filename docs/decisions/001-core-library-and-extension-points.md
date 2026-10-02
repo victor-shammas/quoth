@@ -6,7 +6,7 @@ Last updated: `2026.09.27`
 
 ## 1. Decision
 
-- **Three targets.** `QuothCore` (library) holds every behaviour. `quoth` (executable) parses ArgumentParser commands and calls into it. `QuothTests` tests `QuothCore`.
+- **One core, thin entry points.** `QuothCore` (library) holds every behaviour. `quoth` (executable) parses ArgumentParser commands and calls into it; the App Store edition's `AppStore/main.swift` starts the menu-bar app directly (ADR-006). `quoth-bench` holds developer benchmarks. `QuothTests` tests `QuothCore`.
 - **The core does not depend on ArgumentParser.** Command bodies signal "message printed, exit with this code" by throwing `SilentExit`; `main.swift` maps it to an exit code.
 - **`DictationController` owns only the loop.** It holds the `idle`, `recording`, `transcribing` state machine, runs the transcriber off the main actor, and calls the extension points in order.
 - **Features plug in at extension points.** Input to the model goes through `TranscriptionContext`. Changes to the text go through a `TranscriptProcessor`. Reactions to a dictation (overlay, menu bar, stats, latency) are a `DictationObserver`. User-visible failures are a `UserFacingError`. Preferences are a per-feature struct inside `Settings`.

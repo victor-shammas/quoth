@@ -53,10 +53,9 @@ plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Inf
 plutil -replace CFBundleVersion -string "$VERSION" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-# SwiftPM's resource bundles (swift-transformers' fallback tokenizer
-# configs, swift-crypto's privacy manifest) are left out, as they were from
-# the bare binary: their accessors look beside the .app, where a signed
-# bundle can't hold anything.
+# SwiftPM resource bundles, should a dependency ever add one, are left
+# out: their accessors look beside the .app, where a signed bundle can't
+# hold anything. Argmax 1.1.0 ships none.
 
 # packaging/AppIcon.icns is Quoth's quote on an espresso squircle, drawn
 # at every size by scripts/make-quoth-icon.swift.

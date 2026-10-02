@@ -1,0 +1,20 @@
+# Builds and tests both editions on every push and pull request.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: xcodebuild -version && swift --version
+      - name: Direct edition — build and test
+        run: swift test
+      - name: App Store edition — build
+        run: |
+          brew install xcodegen
+          scripts/appstore.sh build

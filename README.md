@@ -10,11 +10,16 @@ Hold `fn`, speak, release, and your words appear at the cursor. For longer dicta
 
 Quoth is based on [Parrot](https://github.com/humanitas-labs/parrot) by Humanitas Labs (MIT), with a hands-free lock added.
 
+Website: [victorshammas.com/quoth](https://victorshammas.com/quoth/).
+
 ## 1. Install
 
-Build it from source (see section 6). Requires macOS 14+ on Apple Silicon. Open Quoth.app and allow it when macOS asks for Accessibility and the microphone. The first start downloads the speech model (about 150 MB).
+Quoth comes in two editions from this one codebase ([ADR-006](docs/decisions/006-two-editions.md)):
 
-Quoth does not update itself.
+- **Mac App Store**, $1.99, sandboxed. Pastes at the cursor once you allow it; otherwise each dictation is copied for ⌘V.
+- **Free and open source**, this repository. It also reads the text field it types into, for exact spacing and to keep out of password fields, and has the `quoth` command. Build it from source (section 6) until there is a release.
+
+Requires macOS 14+ on Apple silicon. Open Quoth and allow it when macOS asks for the microphone and Accessibility (Input Monitoring in the App Store edition). The first start downloads the speech model (about 150 MB).
 
 ## 2. Usage
 
@@ -26,7 +31,9 @@ Quoth does not update itself.
 
 If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shortcut** to Off, since macOS also uses a double press of `fn` to start its own dictation.
 
-Choose **Launch at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `quoth doctor` shows how to fix it.
+Say **"new paragraph"** or **"new line"** to break the text (English). If Quoth misspells a word, **Fix Last Dictation…** in the menu teaches it; **Settings › Dictionary** lists your words.
+
+Choose **Open at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `quoth doctor` shows how to fix it.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.
 
@@ -44,7 +51,9 @@ Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text
 | `quoth install --launch-at-login` | Start Quoth at login |
 | `quoth install --cli` | Link `/usr/local/bin/quoth` to Quoth.app |
 | `quoth install --uninstall` | Stop launching at login and remove logs |
-| `quoth models list` | List available models |
+| `quoth models list` | List available models, and which are on this Mac |
+| `quoth models download <id>` | Download a model |
+| `quoth models remove <id>` | Delete a downloaded model |
 | `quoth --model whisper-large-v3-turbo` | Larger, multilingual model |
 | `quoth --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
 | `quoth --no-overlay` | Hide the recording pill |
@@ -52,7 +61,7 @@ Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text
 
 ## 5. How it works
 
-WhisperKit runs Whisper on the Apple Neural Engine via CoreML, AVAudioEngine captures the mic, a CGEventTap watches the hotkey, and a synthesized ⌘V pastes the result. Nothing leaves your Mac, and logs never contain what you said. See [docs/architecture.md](docs/architecture.md).
+WhisperKit runs Whisper on the Apple Neural Engine via CoreML, a Core Audio input unit captures the mic, a CGEventTap watches the hotkey, and a synthesized ⌘V pastes the result. Nothing leaves your Mac, and logs never contain what you said. See [docs/architecture.md](docs/architecture.md).
 
 ## 6. Build from source
 

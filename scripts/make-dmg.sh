@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Builds Quoth.app, notarizes and staples it, and packages it into a
 # signed, notarized, stapled DMG with an Applications shortcut, plus the
-# zipped app that Sparkle downloads as the in-app update (#50).
+# zipped app that Sparkle downloads as the in-app update.
 #   scripts/make-dmg.sh <version>   → dist/Quoth-<version>.dmg and .dmg.sha256,
 #                                     dist/Quoth-<version>.zip
 #
-# The update archive is signed, and the appcast written, by the release
-# workflow, which holds the EdDSA key.
+# Signing the update archive and writing the appcast (Sparkle's
+# sign_update and generate_appcast, with Quoth's EdDSA key) are separate
+# steps; Quoth has no release workflow or update feed yet (ADR-005).
 #
 # Notary credentials, first match wins:
 #

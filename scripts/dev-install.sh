@@ -79,8 +79,4 @@ if [ "$WAS_RUNNING" = 1 ]; then
     open "$DEST"
 fi
 
-if [ -f "$HOME/Library/LaunchAgents/com.digimata.quoth.plist" ]; then
-    echo "note: the old LaunchAgent is still installed. Open $DEST once; it removes the agent."
-fi
-
 echo "✓ installed Quoth $("$EXE" --version 2>/dev/null || echo "$VERSION") at $DEST"
