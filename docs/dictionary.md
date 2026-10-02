@@ -44,7 +44,3 @@ Write it the way you dictate: "I need to review the pull requests before the mer
 Edits apply on the next dictation, with no restart. If the file has a mistake, Quoth keeps using the last version that loaded and logs the line number to `~/Library/Logs/quoth/`, without quoting the line. The usual mistake is a single space between the word and its Replaces list, as in `Vercel Versailles, Vercell`: a comma in the word column means the separator is missing, so Quoth refuses the file rather than guess where the word ends.
 
 The file can live in a dotfiles repository: `~/.config/quoth`, or `dictionary` itself, may be a symlink, as long as the file it points to is yours.
-
-## From dictionary.json
-
-Earlier versions kept the dictionary in `dictionary.json`. On the first launch after the update, if `dictionary` does not exist and `dictionary.json` does, Quoth converts it once: each term and each replacement target becomes a row with its replacements, the example sentences move into `settings.json` under `dictionary.examples` (unless it already has some), and `dictionary.json` is renamed to `dictionary.json.bak`. If `dictionary.json` was a symlink into a dotfiles repository, the new file is written in `~/.config/quoth` and the link itself is renamed; the file in the repository is left untouched, so move `dictionary` there and link it back if you want it tracked. If `dictionary.json` has a mistake, it is left as it was, the problem is logged, and the conversion runs again on the next launch.
