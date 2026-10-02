@@ -32,6 +32,12 @@ final class MenuBarController {
     let quitItem: NSMenuItem
     /// Opens the licence texts (`AcknowledgementsWindow`).
     let acknowledgementsItem: NSMenuItem
+    /// Copies the last dictation (`LastDictation`); disabled without one.
+    let copyLastItem: NSMenuItem
+    /// Opens Fix Last Dictation.
+    let fixLastItem: NSMenuItem
+    var onCopyLast: (() -> Void)?
+    var onFixLast: (() -> Void)?
 
     /// A degraded hotkey tap replaces the idle line, so the menu bar does not
     /// claim fn works when it does not (#37).
@@ -65,6 +71,14 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
+        copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastClicked), keyEquivalent: "")
+        copyLastItem.isEnabled = false
+        menu.addItem(copyLastItem)
+        fixLastItem = NSMenuItem(title: "Fix Last Dictation…", action: #selector(fixLastClicked), keyEquivalent: "")
+        menu.addItem(fixLastItem)
+
+        menu.addItem(.separator())
+
         settingsItem = NSMenuItem(title: "Settings…", action: #selector(settingsClicked), keyEquivalent: ",")
         menu.addItem(settingsItem)
 
@@ -92,6 +106,8 @@ final class MenuBarController {
         quitItem.target = self
         settingsItem.target = self
         acknowledgementsItem.target = self
+        copyLastItem.target = self
+        fixLastItem.target = self
         checkForUpdatesItem.target = self
         grantPermissionsItem.target = self
         configureButton()
@@ -121,6 +137,19 @@ final class MenuBarController {
 
     private func setGlyph(_ style: QuoteGlyph.Style) {
         statusItem.button?.image = QuoteGlyph.image(style)
+    }
+
+    /// Whether there is a last dictation to copy.
+    func setLastDictationAvailable(_ available: Bool) {
+        copyLastItem.isEnabled = available
+    }
+
+    @objc private func copyLastClicked() {
+        onCopyLast?()
+    }
+
+    @objc private func fixLastClicked() {
+        onFixLast?()
     }
 
     @objc private func acknowledgementsClicked() {

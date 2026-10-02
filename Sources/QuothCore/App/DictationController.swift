@@ -48,6 +48,10 @@ final class DictationController {
     private var live: LiveTranscription?
     /// Whether the current recording is locked on.
     private(set) var isLocked = false
+    /// Each finished transcript, for Copy and Fix Last Dictation
+    /// (`LastDictation`, memory only). Not called for a password field.
+    /// Observers never see text; this is the one place it leaves.
+    var onTranscript: ((String) -> Void)?
 
     init(
         capture: AudioCapture,
@@ -184,6 +188,9 @@ final class DictationController {
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
                 let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
+                if case .failure(DeliveryError.secureField) = delivered {} else {
+                    onTranscript?(transcript.text)
+                }
                 let done = CFAbsoluteTimeGetCurrent()
                 inFlight -= 1
                 settle()
@@ -239,6 +246,9 @@ final class DictationController {
         inFlight += 1
         Task {
             let outcome = await live.finish(capture: samples)
+            if (outcome.deliveryError as? DeliveryError) != .secureField {
+                onTranscript?(outcome.text)
+            }
             inFlight -= 1
             settle()
             Log.info(String(format: "→ live: %d segments · %.1fs audio · %.2fs transcribing · %d chars", outcome.segments, outcome.audio, outcome.transcribing, outcome.chars))

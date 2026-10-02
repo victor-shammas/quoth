@@ -135,6 +135,7 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertEqual(typed.first, "10s")
         XCTAssertEqual(outcome.segments, 3)
         XCTAssertNil(outcome.deliveryError)
+        XCTAssertEqual(outcome.text, typed.joined(separator: " "))
         XCTAssertTrue(copied.isEmpty)
     }
 

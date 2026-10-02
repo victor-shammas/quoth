@@ -143,6 +143,14 @@ public enum Daemon {
             context: dictionaryContext
         )
         controller.liveText = settings.current.hotkey.liveText
+
+        // Copy and Fix Last Dictation: the last transcript, in memory only.
+        let lastDictation = LastDictation()
+        let fixWindow = FixDictationWindow(dictionary: dictionary)
+        controller.onTranscript = { lastDictation.remember($0) }
+        lastDictation.onChange = { menuBar.setLastDictationAvailable($0) }
+        menuBar.onCopyLast = { lastDictation.copy() }
+        menuBar.onFixLast = { fixWindow.show(text: lastDictation.text) }
         // A headset connecting mid-lock ends the lock and keeps what was
         // said before it; push-to-talk still discards a changed route.
         capture.onRouteChange = {

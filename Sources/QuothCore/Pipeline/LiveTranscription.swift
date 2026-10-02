@@ -23,6 +23,8 @@ final class LiveTranscription {
     static let pollInterval: TimeInterval = 0.25
 
     struct Outcome {
+        /// Everything transcribed, typed or held, for Copy Last Dictation.
+        var text = ""
         var chars = 0
         var segments = 0
         /// Seconds of audio transcribed.
@@ -164,6 +166,7 @@ final class LiveTranscription {
         Log.info(String(format: "→ live segment %.1fs · %.2fs · %d chars", seconds, elapsed, text.count))
         guard !cancelled, !text.isEmpty else { return }
         outcome.chars += text.count
+        outcome.text = Self.join([outcome.text, text].filter { !$0.isEmpty })
 
         if let failure = outcome.deliveryError {
             if (failure as? DeliveryError) == .focusChanged { held.append(text) }
