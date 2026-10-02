@@ -25,6 +25,17 @@ package enum ModelRegistry {
             languages: ["multi"],
             recommended: false
         ),
+        // The same model as above, compressed: about 40% of the size for
+        // very little accuracy (fork addition).
+        TranscriptionModel(
+            id: "whisper-large-v3-turbo-compressed",
+            displayName: "Whisper Large v3 Turbo (compressed)",
+            engine: .whisperKit,
+            whisperKitID: "openai_whisper-large-v3-v20240930_turbo_632MB",
+            sizeMB: 646,
+            languages: ["multi"],
+            recommended: false
+        ),
         TranscriptionModel(
             id: "whisper-small.en",
             displayName: "Whisper Small (English)",

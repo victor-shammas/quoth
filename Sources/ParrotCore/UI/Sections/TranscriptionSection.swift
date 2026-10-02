@@ -101,6 +101,9 @@ struct TranscriptionSection: View {
         "whisper-small.en": "More accurate, slower",
         "whisper-small": "Fast",
         "whisper-large-v3-turbo": "Most accurate, slowest",
+        // Not benchmarked on the M4 Pro; compressed weights load and run
+        // like the full model.
+        "whisper-large-v3-turbo-compressed": "Nearly as accurate, smaller",
     ]
 
     /// "Fastest · English only · 145 MB". Not shown while the model loads:
