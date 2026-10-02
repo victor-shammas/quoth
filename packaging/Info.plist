@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Parrot</string>
+	<string>Parrot Lock</string>
 	<key>CFBundleExecutable</key>
 	<string>parrot</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.humanitas.parrot</string>
+	<string>local.parrot-lock</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Parrot</string>
+	<string>Parrot Lock</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,17 +29,13 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © Humanitas Labs. MIT License.</string>
+	<string>Copyright © Humanitas Labs. MIT License. Local fork with a double-tap lock.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Parrot records while you hold the dictation key and turns your speech into text on this Mac. Audio never leaves it.</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
-	<key>SUFeedURL</key>
-	<string>https://github.com/humanitas-labs/parrot/releases/latest/download/appcast.xml</string>
-	<!-- Public half of the Parrot update key (generate_keys --account parrot). The private
-	     half is the SPARKLE_PRIVATE_KEY repository secret; release.yml checks they match. -->
-	<key>SUPublicEDKey</key>
-	<string>sBKarVRumHAb75Avth4zTROhclldBN+nUC3ffkhcoTw=</string>
+	<false/>
+	<!-- Local fork: no SUFeedURL or SUPublicEDKey, so Updater.start() turns
+	     updates off and this app never replaces itself with an official release. -->
 	<key>SURequireSignedFeed</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

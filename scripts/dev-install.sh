@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build, sign, and install a local Parrot.app for testing.
+# Build, sign, and install the local fork, ParrotLock.app.
 #   scripts/dev-install.sh
 #
 # macOS keys the Accessibility and Microphone grants to the app's code
 # identity. An ad-hoc signature changes on every build, so each rebuild
 # silently loses the grants. Signing with the Developer ID certificate and
-# the fixed bundle ID com.humanitas.parrot (packaging/Info.plist) keeps one
+# the fixed bundle ID local.parrot-lock (packaging/Info.plist) keeps one
 # identity across rebuilds and releases.
 #
 # Installs to /Applications, or ~/Applications when /Applications is not
@@ -14,7 +14,7 @@
 # say yes. A running copy is quit and reopened.
 #
 #   PARROT_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
-#   PARROT_INSTALL_DIR    where Parrot.app goes
+#   PARROT_INSTALL_DIR    where ParrotLock.app goes
 #   PARROT_LINK_DIR       where the parrot link goes (default /usr/local/bin;
 #                         set it empty to skip the link)
 #   PARROT_NO_RESTART=1   don't quit and reopen a running copy
@@ -31,7 +31,7 @@ if [ -z "${PARROT_INSTALL_DIR:-}" ]; then
 fi
 LINK_DIR="${PARROT_LINK_DIR-/usr/local/bin}"
 BUILD="${PARROT_BUILD_DIR:-build}"
-DEST="$PARROT_INSTALL_DIR/Parrot.app"
+DEST="$PARROT_INSTALL_DIR/ParrotLock.app"
 EXE="$DEST/Contents/MacOS/parrot"
 
 VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0)"
@@ -51,7 +51,7 @@ fi
 echo "→ installing to $DEST"
 mkdir -p "$PARROT_INSTALL_DIR"
 rm -rf "$DEST"
-ditto "$BUILD/Parrot.app" "$DEST"
+ditto "$BUILD/ParrotLock.app" "$DEST"
 
 if [ -n "$LINK_DIR" ]; then
     LINK="$LINK_DIR/parrot"

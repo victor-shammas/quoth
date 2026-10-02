@@ -35,16 +35,17 @@ final class UpdaterTests: XCTestCase {
         XCTAssertNotNil(Updater.configurationProblem(info: info(version: "0.1.0", feed: "not a url")))
     }
 
-    func testThePackagedInfoPlistPointsAtTheReleaseFeed() throws {
+    func testThePackagedInfoPlistNeverUpdatesTheFork() throws {
         // packaging/Info.plist, found from this file: Tests/ParrotTests/ → repo root.
+        // The local fork has no feed, so it can't replace itself with an
+        // official release and lose the double-tap lock.
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let data = try Data(contentsOf: root.appendingPathComponent("packaging/Info.plist"))
         let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
-        XCTAssertEqual(plist["SUFeedURL"] as? String, feed)
-        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, true)
-        XCTAssertEqual(plist["SUScheduledCheckInterval"] as? Int, 86400)
-        XCTAssertEqual(plist["SURequireSignedFeed"] as? Bool, true)
-        XCTAssertEqual(plist["SUVerifyUpdateBeforeExtraction"] as? Bool, true)
-        XCTAssertNotNil(plist["SUPublicEDKey"] as? String)
+        XCTAssertNil(plist["SUFeedURL"])
+        XCTAssertNil(plist["SUPublicEDKey"])
+        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, false)
+        XCTAssertNotNil(Updater.configurationProblem(info: plist.merging(["CFBundleVersion": "0.2.3"]) { $1 }))
+        XCTAssertEqual(plist["CFBundleIdentifier"] as? String, AppBundle.identifier)
     }
 }
