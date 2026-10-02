@@ -42,8 +42,8 @@ final class ModelStorage: ObservableObject {
     }
 }
 
-/// Rows in the Transcription section: the total, then each downloaded
-/// model. The model in use, or one loading, can't be deleted.
+/// The "On this Mac" section: each downloaded model with its size, and the
+/// total in the heading. The model in use, or one loading, can't be deleted.
 struct DownloadedModels: View {
     /// The model chosen in Settings.
     let selected: TranscriptionModel?
@@ -52,33 +52,27 @@ struct DownloadedModels: View {
     @State private var confirming: ModelStorage.Entry?
 
     var body: some View {
-        if !storage.entries.isEmpty {
-            HStack {
-                Text("On this Mac").font(.headline)
-                Spacer()
-                Text("\(ModelStorage.format(storage.totalBytes)) in all")
-                    .foregroundStyle(.secondary)
+        SettingsSection(storage.entries.isEmpty ? "On this Mac" : "On this Mac · \(ModelStorage.format(storage.totalBytes))") {
+            if storage.entries.isEmpty {
+                SettingRow("No models downloaded yet") { EmptyView() }
             }
-        }
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(storage.entries) { entry in
-                HStack {
-                    Text(entry.model.displayName.replacingOccurrences(of: "Whisper ", with: ""))
-                    Spacer()
-                    Text(ModelStorage.format(entry.bytes))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                    if isInUse(entry.model) {
-                        Text("In use")
-                            .foregroundStyle(.tertiary)
-                            .frame(minWidth: 64, alignment: .trailing)
-                    } else {
-                        Button("Delete…") { confirming = entry }
-                            .buttonStyle(.pill)
-                            .frame(minWidth: 64, alignment: .trailing)
+            ForEach(Array(storage.entries.enumerated()), id: \.element.id) { index, entry in
+                if index > 0 { RowDivider() }
+                SettingRow(entry.model.displayName.replacingOccurrences(of: "Whisper ", with: "")) {
+                    HStack(spacing: 12) {
+                        Text(ModelStorage.format(entry.bytes))
+                            .foregroundStyle(Latte.secondary)
+                            .monospacedDigit()
+                        if isInUse(entry.model) {
+                            Text("In use")
+                                .foregroundStyle(Latte.secondary)
+                                .frame(minWidth: 70, alignment: .trailing)
+                        } else {
+                            Button("Delete…") { confirming = entry }
+                                .frame(minWidth: 70, alignment: .trailing)
+                        }
                     }
                 }
-                .font(.callout)
             }
         }
         .onAppear { storage.refresh() }

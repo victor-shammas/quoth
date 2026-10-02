@@ -148,7 +148,7 @@ struct DictionaryPane: View {
     var body: some View {
         Pane {
             Text("Words Quoth should spell your way. Heard as lists what it writes instead, separated by commas.")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Latte.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let problem = editor.problem {
@@ -158,20 +158,22 @@ struct DictionaryPane: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(alignment: .leading, spacing: 0) {
+            SettingsSection("Words") {
                 table
                     .disabled(editor.problem != nil)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10, style: .continuous))
+                RowDivider().padding(.leading, -14)
                 tableBar
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
             }
 
             ForEach(editor.issues, id: \.self) { Caption($0) }
             if let note = editor.saveNote {
                 Label(note, systemImage: "exclamationmark.triangle")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Latte.secondary)
             }
-
-            Divider()
 
             ExampleSentence(settings: settings)
         }
@@ -198,7 +200,8 @@ struct DictionaryPane: View {
                     .accessibilityLabel("Heard as")
             }
         }
-        .tableStyle(.bordered(alternatesRowBackgrounds: true))
+        .tableStyle(.inset(alternatesRowBackgrounds: true))
+        .scrollContentBackground(.hidden)
         .frame(height: 230)
         .onDeleteCommand { removeSelected() }
         .overlay {
@@ -207,7 +210,7 @@ struct DictionaryPane: View {
                     Text("No words yet").font(.headline)
                     Text("Add names and terms Quoth gets wrong, or use Fix Last Dictation in the menu bar right after dictating.")
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Latte.secondary)
                 }
                 .font(.callout)
                 .padding(.horizontal, 40)
@@ -238,7 +241,7 @@ struct DictionaryPane: View {
             let count = editor.rows.filter { !$0.word.trimmingCharacters(in: .whitespaces).isEmpty }.count
             Text(count == 1 ? "1 word" : "\(count) words")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Latte.secondary)
             if Edition.opensConfigFiles {
                 Button("Edit as Text…") { ConfigFiles.open(Paths.dictionaryFile) }
                     .buttonStyle(.link)
@@ -284,22 +287,22 @@ private struct ExampleSentence: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            PillRow("Example sentence", caption: "Optional. One sentence using your words, the way you'd say it. It helps Whisper spell them, and adds a little time to each dictation.") {
-                if languages.count > 1 {
-                    PillMenu(title: SpokenLanguage.displayName(language)) {
-                        ForEach(languages, id: \.self) { code in
-                            Toggle(SpokenLanguage.displayName(code), isOn: Binding(
-                                get: { language == code },
-                                set: { if $0 { language = code } }
-                            ))
-                        }
+        SettingsSection("Example sentence", footer: "Optional. One sentence using your words, the way you'd say it. It helps Whisper spell them, and adds a little time to each dictation.") {
+            if languages.count > 1 {
+                SettingRow("Language") {
+                    Picker("Language", selection: $language) {
+                        ForEach(languages, id: \.self) { Text(SpokenLanguage.displayName($0)).tag($0) }
                     }
+                    .labelsHidden()
+                    .fixedSize()
                 }
+                RowDivider()
             }
             TextField("I pushed the WhisperKit fix and checked the PostHog dashboard.", text: $text, axis: .vertical)
                 .lineLimit(2...3)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .accessibilityLabel("Example sentence")
         }
         .onAppear {

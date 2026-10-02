@@ -19,30 +19,31 @@ struct ModelPane: View {
 
     var body: some View {
         Pane {
-            PillRow("Model", caption: loading.current == nil ? selectedModel.map(summary) : nil) {
-                PillMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
-                    modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
-                    modelGroup("Multilingual, including English", ModelRegistry.shared.filter(\.isMultilingual))
-                }
-            }
-
-            if let state = loading.current {
-                HStack(spacing: 6) {
-                    switch state.phase {
-                    case .downloading(let fraction?):
-                        ProgressView(value: fraction).frame(width: 80)
-                    case .downloading(nil), .loading:
-                        ProgressView().controlSize(.small)
-                    case .failed:
-                        EmptyView()
+            SettingsSection("Transcription") {
+                SettingRow("Model", caption: loading.current == nil ? selectedModel.map(summary) : nil) {
+                    SettingMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
+                        modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
+                        modelGroup("Multilingual, including English", ModelRegistry.shared.filter(\.isMultilingual))
                     }
-                    caption(Self.capitalized(state.text))
                 }
+                if let state = loading.current {
+                    HStack(spacing: 8) {
+                        switch state.phase {
+                        case .downloading(let fraction?):
+                            ProgressView(value: fraction).frame(width: 90)
+                        case .downloading(nil), .loading:
+                            ProgressView().controlSize(.small)
+                        case .failed:
+                            EmptyView()
+                        }
+                        caption(Self.capitalized(state.text))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
+                }
+                RowDivider()
+                languagePicker
             }
-
-            languagePicker
-
-            Divider()
 
             DownloadedModels(selected: selectedModel)
         }
@@ -94,11 +95,10 @@ struct ModelPane: View {
         "whisper-large-v3-turbo-compressed": "Nearly as accurate, smaller",
     ]
 
-    /// "Fastest · English only · 145 MB", or "Fast · Multilingual, including
-    /// English · 490 MB". Not shown while the model loads:
+    /// "Fastest · English only · 145 MB", or "Fast · Multilingual · 490 MB". Not shown while the model loads:
     /// the progress line under the menu says that instead.
     private func summary(_ model: TranscriptionModel) -> String {
-        let languages = model.isMultilingual ? "Multilingual, including English" : "English only"
+        let languages = model.isMultilingual ? "Multilingual" : "English only"
         let size = model.sizeMB >= 1000
             ? String(format: "%.1f GB", Double(model.sizeMB) / 1000)
             : "\(model.sizeMB) MB"
@@ -117,8 +117,8 @@ struct ModelPane: View {
         let multilingual = selectedModel?.isMultilingual ?? false
         let code = store.current.language.code?.lowercased()
         let selected = code.flatMap { SpokenLanguage.whisperLanguages.contains($0) ? $0 : nil }
-        PillRow("Language") {
-            PillMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatic") {
+        SettingRow("Language", caption: multilingual ? nil : "This model hears \(SpokenLanguage.displayName(selectedModel?.languages.first ?? "en")) only. For other languages, choose a multilingual model.") {
+            SettingMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatic") {
                 languageToggle("Automatic", nil, selected: selected)
                 Divider()
                 ForEach(Self.languages, id: \.code) { language in
@@ -128,11 +128,9 @@ struct ModelPane: View {
             .disabled(!multilingual)
         }
 
-        if !multilingual, let model = selectedModel {
-            let only = SpokenLanguage.displayName(model.languages.first ?? "en")
-            caption("This model hears \(only) only. For other languages, choose a multilingual model.")
-        } else if store.current.language.code == nil {
-            PillRow("Languages you speak", caption: "Automatic picks among these.") {
+        if multilingual, store.current.language.code == nil {
+            RowDivider()
+            SettingRow("Languages you speak", caption: "Automatic picks among these.") {
                 SpokenLanguagesButton(store: store)
             }
         }
@@ -162,10 +160,7 @@ private struct SpokenLanguagesButton: View {
     }
 
     var body: some View {
-        Button { isOpen.toggle() } label: {
-            PillLabel(title: Onboarding.summary(spoken.map { SpokenLanguage.displayName($0) }), chevron: true)
-        }
-        .buttonStyle(.plain)
+        Button(Onboarding.summary(spoken.map { SpokenLanguage.displayName($0) })) { isOpen.toggle() }
         .popover(isPresented: $isOpen, arrowEdge: .bottom) {
             SpokenLanguagesList(store: store)
         }

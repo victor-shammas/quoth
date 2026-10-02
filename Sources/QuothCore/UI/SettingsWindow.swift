@@ -77,6 +77,9 @@ final class SettingsWindow {
         let window = EditingWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.toolbarStyle = .preference
+        // The latte background runs up under the title and the tabs.
+        window.backgroundColor = Latte.windowBackground
+        window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         window.center()
         return window
@@ -127,13 +130,16 @@ struct Pane<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             content()
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 24)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
         .frame(width: 520, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
+        .foregroundStyle(Latte.text)
+        .tint(Latte.tint)
+        .background(Latte.background)
     }
 }
 
@@ -148,7 +154,7 @@ struct Caption: View {
     var body: some View {
         Text(text)
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Latte.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 }

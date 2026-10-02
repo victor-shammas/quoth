@@ -14,7 +14,8 @@ protocol DictationTarget: AnyObject {
     func scratchLast() -> Bool
 }
 
-/// The Quote Card: a floating espresso card that a dictation streams into,
+/// The Quote Card: a floating card, in the latte look of Quoth's windows,
+/// that a dictation streams into,
 /// where the text can be fixed with the keyboard before it goes anywhere.
 /// ⌘↩ inserts it where the user was; Copy All copies it; Escape closes it,
 /// keeping the text for Copy Last Dictation.
@@ -248,14 +249,14 @@ struct QuoteCardView: View {
                 QuotePair(opening: true).frame(width: 18, height: 15)
                 Text(statusText)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Brand.cream.opacity(0.7))
+                    .foregroundStyle(Latte.secondary)
                 Spacer()
                 Button {
                     model.onClose?()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Brand.cream.opacity(0.6))
+                        .foregroundStyle(Latte.secondary)
                         .frame(width: 20, height: 20)
                         .contentShape(Rectangle())
                 }
@@ -272,14 +273,13 @@ struct QuoteCardView: View {
             HStack(spacing: 10) {
                 Text("Edit freely. Dictation adds to the end.")
                     .font(.system(size: 11))
-                    .foregroundStyle(Brand.cream.opacity(0.45))
+                    .foregroundStyle(Latte.secondary)
                 Spacer()
                 Button("Copy All") { model.onCopy?() }
-                    .buttonStyle(CardButtonStyle())
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                     .disabled(model.isEmpty)
-                Button("Insert ⌘↩") { model.onInsert?() }
-                    .buttonStyle(CardButtonStyle(primary: true))
+                Button("Insert") { model.onInsert?() }
+                    .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.return, modifiers: .command)
                     .disabled(model.isEmpty)
                 QuotePair().frame(width: 18, height: 15)
@@ -287,13 +287,14 @@ struct QuoteCardView: View {
             .padding(.horizontal, 18)
             .padding(.bottom, 14)
         }
+        .tint(Latte.tint)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Brand.espresso)
+            RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Latte.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Brand.cream.opacity(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Latte.stroke, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var statusText: String {
@@ -307,25 +308,7 @@ struct QuoteCardView: View {
     }
 }
 
-/// The card's buttons: cream on espresso, or amber for Insert.
-private struct CardButtonStyle: ButtonStyle {
-    var primary = false
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(primary ? Brand.espressoBottom : Brand.cream)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule().fill(primary ? AnyShapeStyle(Brand.amber) : AnyShapeStyle(Brand.cream.opacity(configuration.isPressed ? 0.22 : 0.12)))
-            )
-            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.35)
-    }
-}
-
-/// An editable, cream-on-espresso text view the model can append to.
+/// An editable text view, in the latte colors, the model can append to.
 private struct CardTextView: NSViewRepresentable {
     @ObservedObject var model: QuoteCardModel
 
@@ -338,10 +321,10 @@ private struct CardTextView: NSViewRepresentable {
         view.allowsUndo = true
         view.drawsBackground = false
         view.font = .systemFont(ofSize: 15)
-        view.textColor = NSColor(Brand.cream)
-        view.insertionPointColor = NSColor(Brand.amberTop)
+        view.textColor = NSColor(light: 0x24180F, dark: 0xF6EBDD)
+        view.insertionPointColor = NSColor(light: 0xB8610F, dark: 0xFFB457)
         view.textContainerInset = NSSize(width: 6, height: 6)
-        view.typingAttributes = [.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor(Brand.cream)]
+        view.typingAttributes = [.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor(light: 0x24180F, dark: 0xF6EBDD)]
         view.delegate = context.coordinator
         model.textView = view
         return scroll

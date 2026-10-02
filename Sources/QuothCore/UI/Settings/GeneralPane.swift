@@ -10,72 +10,74 @@ struct GeneralPane: View {
 
     var body: some View {
         Pane {
-            PillRow("Hotkey", caption: "Hold it to dictate.") {
-                PillMenu(title: hotkey.key.displayName) {
-                    ForEach(HotkeyKey.allCases, id: \.self) { key in
-                        Toggle(key.displayName, isOn: Binding(
-                            get: { hotkey.key == key },
-                            set: { on in if on { store.update { $0.hotkey.key = key } } }
-                        ))
+            SettingsSection("Dictation", footer: hotkey.key == .fn && hotkey.doubleTapLock
+                ? "If a double tap of fn starts Apple's Dictation instead, turn off its shortcut in Keyboard settings."
+                : nil) {
+                SettingRow("Hotkey", caption: "Hold it to dictate.") {
+                    Picker("Hotkey", selection: Binding(
+                        get: { hotkey.key },
+                        set: { key in store.update { $0.hotkey.key = key } }
+                    )) {
+                        ForEach(HotkeyKey.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
+                    .labelsHidden()
+                    .fixedSize()
                 }
-            }
-
-            PillRow("Double-tap to lock", caption: "Double-tap the hotkey to keep recording hands-free; tap once to stop.") {
-                switchToggle("Double-tap to lock", isOn: Binding(
-                    get: { hotkey.doubleTapLock },
-                    set: { on in store.update { $0.hotkey.doubleTapLock = on } }
-                ))
-            }
-
-            PillRow("Hands-free goes to", caption: hotkey.lockTarget == .card || !PasteAccess.isGranted
-                ? "A Quote Card, to edit before you insert it with ⌘↩."
-                : "Straight to the cursor in the app you're in.") {
-                PillMenu(title: PasteAccess.isGranted ? hotkey.lockTarget.displayName : LockTarget.card.displayName) {
-                    ForEach(LockTarget.allCases, id: \.self) { target in
-                        Toggle(target.displayName, isOn: Binding(
-                            get: { hotkey.lockTarget == target },
-                            set: { on in if on { store.update { $0.hotkey.lockTarget = target } } }
-                        ))
+                RowDivider()
+                SettingRow("Double-tap to lock", caption: "Hands-free dictation; tap once to stop.") {
+                    switchToggle("Double-tap to lock", isOn: Binding(
+                        get: { hotkey.doubleTapLock },
+                        set: { on in store.update { $0.hotkey.doubleTapLock = on } }
+                    ))
+                }
+                RowDivider()
+                SettingRow("Hands-free goes to", caption: hotkey.lockTarget == .card || !PasteAccess.isGranted
+                    ? "A Quote Card, to edit before ⌘↩ inserts it."
+                    : "Straight to the cursor in the app you're in.") {
+                    Picker("Hands-free goes to", selection: Binding(
+                        get: { PasteAccess.isGranted ? hotkey.lockTarget : .card },
+                        set: { target in store.update { $0.hotkey.lockTarget = target } }
+                    )) {
+                        ForEach(LockTarget.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
+                    .labelsHidden()
+                    .fixedSize()
+                    // Without the paste grant, the card is the only way.
+                    .disabled(!PasteAccess.isGranted)
                 }
-                // Without the paste grant, the card is the only way.
-                .disabled(!PasteAccess.isGranted)
-            }
-            .disabled(!hotkey.doubleTapLock)
-
-            PillRow("Live text while locked", caption: "Text appears each time you pause.") {
-                switchToggle("Live text while locked", isOn: Binding(
-                    get: { hotkey.liveText },
-                    set: { on in store.update { $0.hotkey.liveText = on } }
-                ))
-            }
-            .disabled(!hotkey.doubleTapLock)
-
-            PillRow("Voice commands", caption: "Punctuation and editing by voice, in English for now.") {
-                VoiceCommandsButton()
+                .disabled(!hotkey.doubleTapLock)
+                RowDivider()
+                SettingRow("Live text while locked", caption: "Text appears each time you pause.") {
+                    switchToggle("Live text while locked", isOn: Binding(
+                        get: { hotkey.liveText },
+                        set: { on in store.update { $0.hotkey.liveText = on } }
+                    ))
+                }
+                .disabled(!hotkey.doubleTapLock)
+                RowDivider()
+                SettingRow("Voice commands", caption: "Punctuation and editing by voice; see Help.") {
+                    VoiceCommandsButton()
+                }
             }
 
             if hotkey.key == .fn && hotkey.doubleTapLock {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Caption("If a double tap of fn starts Apple's Dictation instead, turn off its shortcut in Keyboard settings.")
-                    Spacer(minLength: 0)
-                    Button("Open Keyboard Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
-                            NSWorkspace.shared.open(url)
-                        }
+                Button("Open Keyboard Settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
+                        NSWorkspace.shared.open(url)
                     }
-                    .buttonStyle(.pill)
-                    .fixedSize()
                 }
+                .buttonStyle(.link)
+                .font(.caption)
+                .padding(.top, -14)
+                .padding(.leading, 4)
             }
 
-            Divider()
-
-            LaunchAtLoginRow()
-
-            if Edition.pasteNeedsOwnGrant {
-                PasteRow()
+            SettingsSection("Startup") {
+                LaunchAtLoginRow()
+                if Edition.pasteNeedsOwnGrant {
+                    RowDivider()
+                    PasteRow()
+                }
             }
         }
     }
@@ -97,7 +99,7 @@ private struct LaunchAtLoginRow: View {
 
     var body: some View {
         if LoginItem.isAvailable {
-            PillRow("Open at login") {
+            SettingRow("Open at login") {
                 switchToggle("Open at login", isOn: Binding(
                     get: { isOn },
                     set: { on in
@@ -114,7 +116,7 @@ private struct LaunchAtLoginRow: View {
                 isOn = LoginItem.isEnabled
             }
         } else {
-            PillRow("Open at login", caption: "Available when Quoth runs as Quoth.app.") {
+            SettingRow("Open at login", caption: "Available when Quoth runs as Quoth.app.") {
                 EmptyView()
             }
         }
@@ -127,16 +129,15 @@ private struct PasteRow: View {
     @State private var granted = PasteAccess.isGranted
 
     var body: some View {
-        PillRow("Paste at cursor", caption: "Allow Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
+        SettingRow("Paste at cursor", caption: "Allow Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
             if granted {
                 Label("Allowed", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Latte.secondary)
             } else {
                 Button("Allow…") {
                     Permissions.perform(.promptPaste)
                     Permissions.perform(.openPasteSettings)
                 }
-                .buttonStyle(.pill)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
@@ -151,7 +152,6 @@ private struct VoiceCommandsButton: View {
 
     var body: some View {
         Button("Show…") { isOpen.toggle() }
-            .buttonStyle(.pill)
             .popover(isPresented: $isOpen, arrowEdge: .bottom) {
                 // A fixed width and the list's own height: without them the
                 // popover has no size to take and opens tall and empty.
@@ -182,17 +182,17 @@ struct VoiceCommandList: View {
                 Text("To")
             }
             .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Latte.secondary)
             ForEach(Self.commands, id: \.say) { command in
                 HStack(alignment: .firstTextBaseline, spacing: 14) {
                     Text(command.say).frame(width: 210, alignment: .leading)
-                    Text(command.does).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(command.does).foregroundStyle(Latte.secondary).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .fixedSize(horizontal: false, vertical: true)
             }
             Text("In English, for now.")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Latte.secondary)
         }
         .font(.callout)
     }
