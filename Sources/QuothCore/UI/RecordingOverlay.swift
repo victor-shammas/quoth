@@ -249,23 +249,27 @@ final class OverlayModel: ObservableObject {
     }
 }
 
-private struct OverlayPill: View {
+/// The pill: your words in quotes. Amber quotation marks, as in the app
+/// icon, around a cream waveform on espresso; a lock when the recording is
+/// locked, and the bars settling into dots while transcribing. The marks
+/// lean in with your voice, unless Reduce Motion is on.
+struct OverlayPill: View {
     @ObservedObject var model: OverlayModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         content
-            .padding(.horizontal, 13)
+            .padding(.horizontal, 14)
             .padding(.vertical, 9)
             .background(
                 Capsule()
-                    .fill(Color(red: 16/255, green: 18/255, blue: 18/255))
-                    .shadow(color: .black.opacity(0.28), radius: 6, y: 2)
+                    .fill(Brand.espresso)
+                    .shadow(color: .black.opacity(0.32), radius: 7, y: 2)
             )
-            // A faint light rim, like the edge of a macOS window, so the pill
-            // holds its shape on a dark background.
+            // A faint cream rim, so the pill holds its shape on a dark background.
             .overlay(
                 Capsule()
-                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    .strokeBorder(Brand.cream.opacity(0.16), lineWidth: 1)
             )
             .scaleEffect(model.state == .hidden ? 0 : 1)
             .animation(
@@ -277,36 +281,50 @@ private struct OverlayPill: View {
     @ViewBuilder
     private var content: some View {
         switch model.state {
-        case .hidden, .recording, .transcribing:
-            // The same bars in both states, so transcribing is the recording
-            // bars taking up the loop rather than a swap to a spinner.
-            waveform
-        case .locked:
-            // The same bars with a lock beside them, so the user knows the
-            // key is free and the next tap stops.
-            HStack(spacing: 7) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color(red: 181/255, green: 209/255, blue: 255/255))
-                waveform
+        case .hidden, .recording, .locked, .transcribing:
+            HStack(spacing: 8) {
+                quotes(opening: true, level: model.levels.first ?? 0)
+                if model.state == .locked {
+                    // The key is free; the next tap stops.
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Brand.amber)
+                        .transition(.scale.combined(with: .opacity))
+                }
+                // The same bars throughout, so transcribing is the recording
+                // bars settling rather than a swap to a spinner.
+                Waveform(
+                    levels: model.levels,
+                    transcribing: model.state == .transcribing,
+                    heardVoice: model.heardVoice
+                )
+                .frame(width: 51, height: 20)
+                quotes(opening: false, level: model.levels.last ?? 0)
             }
+            .animation(.easeOut(duration: 0.2), value: model.state)
         case .message(let text):
-            Text(text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color(red: 235/255, green: 238/255, blue: 242/255))
-                .lineLimit(1)
-                .fixedSize()
-                .frame(height: 20)
+            HStack(spacing: 8) {
+                QuotePair(opening: true).frame(width: 15, height: 12)
+                Text(text)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Brand.cream)
+                    .lineLimit(1)
+                    .fixedSize()
+                QuotePair().frame(width: 15, height: 12)
+            }
+            .frame(height: 20)
         }
     }
 
-    private var waveform: some View {
-        Waveform(
-            levels: model.levels,
-            transcribing: model.state == .transcribing,
-            heardVoice: model.heardVoice
-        )
-            .frame(width: 51, height: 20)
+    /// A pair of marks that leans toward the waveform as you speak: the
+    /// opening pair rises, the closing one dips.
+    private func quotes(opening: Bool, level: Float) -> some View {
+        let lift = reduceMotion || model.state == .transcribing ? 0 : CGFloat(min(1, level)) * 2.5
+        return QuotePair(opening: opening)
+            .frame(width: 17, height: 14)
+            .offset(y: opening ? 2 - lift : -2 + lift)
+            .scaleEffect(1 + lift * 0.05)
+            .animation(.easeOut(duration: 0.12), value: lift)
     }
 }
 
@@ -314,7 +332,7 @@ private struct Waveform: View {
     let levels: [Float]
     var transcribing = false
     var heardVoice = false
-    private let color = Color(red: 181/255.0, green: 209/255.0, blue: 255/255.0)
+    private let color = Brand.cream
 
     /// Height of an idle bar after a silent recording, as a fraction of the
     /// full height.
