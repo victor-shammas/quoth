@@ -79,4 +79,11 @@ final class SpokenLanguageTests: XCTestCase {
         XCTAssertEqual(SpokenLanguage.displayName("pt", locale: Locale(identifier: "en_US")), "Portuguese")
         XCTAssertEqual(SpokenLanguage.displayName("pt", locale: Locale(identifier: "pt_BR")), "Português")
     }
+
+    func testAppleCodesMapToWhispers() {
+        XCTAssertEqual(SpokenLanguage.preferredCodes(["en-US", "nb-NO", "fil-PH", "jv"]), ["en", "no", "tl", "jw"])
+        XCTAssertEqual(SpokenLanguage.plan(setting: nil, spoken: SpokenLanguage.preferredCodes(["en-US", "nb-NO"]), model: turbo),
+                       .detect(among: ["en", "no"]))
+        XCTAssertEqual(SpokenLanguage.plan(setting: "nb", spoken: ["en"], model: turbo), .fixed("no"))
+    }
 }

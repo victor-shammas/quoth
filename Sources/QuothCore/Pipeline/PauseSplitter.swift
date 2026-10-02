@@ -15,8 +15,10 @@ enum PauseSplitter {
     static let frameLength = 480
     /// Segments shorter than this give Whisper too little context.
     static let minSegment: TimeInterval = 4
-    /// A gap this long between words is a pause, not a breath inside a word.
-    static let minPause: TimeInterval = 0.6
+    /// A gap this long is a pause between sentences. Shorter ones happen
+    /// mid-sentence, and a cut there makes Whisper end the segment with a
+    /// period that can't be taken back once typed.
+    static let minPause: TimeInterval = 1.0
     /// Cut even without a pause by now.
     static let maxSegment: TimeInterval = 25
     /// Frames quieter than this are silence on a quiet microphone. Silent
@@ -74,11 +76,16 @@ enum PauseSplitter {
         return makeCut(atFrame: best, levels: levels, threshold: threshold)
     }
 
-    /// Whether `samples` hold speech, for the tail left when a lock ends.
-    static func hasSpeech(_ samples: [Float]) -> Bool {
+    /// Whether `samples` hold speech: for the tail left when a lock ends,
+    /// and for a push-to-talk dictation, which takes a shorter `minRun`
+    /// (150 ms) so a short "Yes." still counts.
+    static func hasSpeech(_ samples: [Float], minRun: Int = minSpeechRun) -> Bool {
         let levels = frameLevels(samples)
-        return speech(in: levels[...], threshold: threshold(levels))
+        return speech(in: levels[...], threshold: threshold(levels), minRun: minRun)
     }
+
+    /// Consecutive loud frames for push-to-talk: 150 ms.
+    static let minPushToTalkRun = 5
 
     // MARK: - Helpers
 
@@ -86,11 +93,11 @@ enum PauseSplitter {
         Cut(end: frame * frameLength, hasSpeech: speech(in: levels[..<frame], threshold: threshold))
     }
 
-    private static func speech(in levels: ArraySlice<Float>, threshold: Float) -> Bool {
+    private static func speech(in levels: ArraySlice<Float>, threshold: Float, minRun: Int = minSpeechRun) -> Bool {
         var run = 0
         for level in levels {
             run = level >= threshold ? run + 1 : 0
-            if run >= minSpeechRun { return true }
+            if run >= minRun { return true }
         }
         return false
     }

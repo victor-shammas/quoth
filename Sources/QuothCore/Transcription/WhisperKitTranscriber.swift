@@ -30,14 +30,46 @@ package actor WhisperKitTranscriber: Transcriber {
         // which the launchd daemon can't read and iCloud may evict. The
         // tokenizer folder follows downloadBase.
         let base = try Paths.prepareDirectory(Paths.appSupport)
-        // The same download WhisperKit's init would run, called here to see
-        // its progress. Files already on disk are not fetched again.
-        let folder = try await WhisperKit.download(variant: whisperKitID, downloadBase: base) { p in
+        let loaded: WhisperKit
+        // A model already on disk loads from there, with no network: the
+        // download step lists the repository's files on Hugging Face even
+        // when nothing needs fetching, so offline it would fail. If the local
+        // copy doesn't load (an interrupted download), download and retry.
+        if Self.isOnDisk(whisperKitID, base: base) {
+            do {
+                loaded = try await Self.load(whisperKitID, from: base.appendingPathComponent(Self.folders(for: whisperKitID)[0]), base: base, tuning: tuning)
+            } catch {
+                try Task.checkCancellation()
+                Log.warning("\(model.id) on disk didn't load (\(error)); downloading it again")
+                loaded = try await Self.downloadAndLoad(whisperKitID, base: base, tuning: tuning, progress: progress)
+            }
+        } else {
+            loaded = try await Self.downloadAndLoad(whisperKitID, base: base, tuning: tuning, progress: progress)
+        }
+        // Replaced while loading (a model change during startup): drop it.
+        if retired {
+            await loaded.unloadModels()
+            return
+        }
+        pipeline = loaded
+        Log.info("✓ \(model.id) ready")
+    }
+
+    /// The same download WhisperKit's init would run, called here to see its
+    /// progress, then the load. Files already on disk are not fetched again.
+    private static func downloadAndLoad(
+        _ variant: String, base: URL, tuning: WhisperTuning, progress: (@Sendable (Double) -> Void)?
+    ) async throws -> WhisperKit {
+        let folder = try await WhisperKit.download(variant: variant, downloadBase: base) { p in
             progress?(p.fractionCompleted)
         }
         try Task.checkCancellation()
+        return try await load(variant, from: folder, base: base, tuning: tuning)
+    }
+
+    private static func load(_ variant: String, from folder: URL, base: URL, tuning: WhisperTuning) async throws -> WhisperKit {
         let config = WhisperKitConfig(
-            model: whisperKitID,
+            model: variant,
             downloadBase: base,
             modelFolder: folder.path,
             computeOptions: ModelComputeOptions(
@@ -50,14 +82,7 @@ package actor WhisperKitTranscriber: Transcriber {
             load: true,
             download: false
         )
-        let loaded = try await WhisperKit(config)
-        // Replaced while loading (a model change during startup): drop it.
-        if retired {
-            await loaded.unloadModels()
-            return
-        }
-        pipeline = loaded
-        Log.info("✓ \(model.id) ready")
+        return try await WhisperKit(config)
     }
 
     /// Frees the model after a swap to another one. A load still running
@@ -265,6 +290,19 @@ extension WhisperKitTranscriber {
             total += Int64(values.totalFileAllocatedSize ?? 0)
         }
         return total
+    }
+
+    /// Whether `variant`'s weights and tokenizer are both on disk under
+    /// `base`, so it can load with no network.
+    static func isOnDisk(_ variant: String, base: URL) -> Bool {
+        let fm = FileManager.default
+        let paths = folders(for: variant)
+        let weights = base.appendingPathComponent(paths[0])
+        let tokenizer = base.appendingPathComponent(paths[2])
+        guard let contents = try? fm.contentsOfDirectory(atPath: weights.path) else { return false }
+        let hasModels = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc"].allSatisfy(contents.contains)
+        let hasTokenizer = fm.fileExists(atPath: tokenizer.appendingPathComponent("tokenizer.json").path)
+        return hasModels && hasTokenizer
     }
 
     /// Hub-relative folders WhisperKit writes for `variant`: the weights, their

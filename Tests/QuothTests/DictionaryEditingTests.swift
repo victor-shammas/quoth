@@ -84,4 +84,13 @@ final class DictionaryEditingTests: XCTestCase {
         XCTAssertFalse(store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: ["quote"])]), basedOn: base))
         XCTAssertEqual(store.current().dictionary.rows().rows.map(\.word), ["Quoth", "PostHog"])
     }
+
+    func testAddSplitsVariantsAndRefusesWordsTheFileCantHold() throws {
+        let store = DictionaryStore(file: file, log: { _ in })
+        XCTAssertFalse(store.add(word: "Smith, John", heardAs: "smith john"))
+        XCTAssertFalse(store.add(word: "#tag", heardAs: "tag"))
+        XCTAssertTrue(store.add(word: "Acme", heardAs: "ack me, akme"))
+        XCTAssertEqual(store.current().dictionary.rows().rows, [.init(word: "Acme", heardAs: ["ack me", "akme"])])
+    }
 }
+

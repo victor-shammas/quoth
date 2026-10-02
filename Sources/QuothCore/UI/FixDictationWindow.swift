@@ -118,7 +118,9 @@ struct FixDictationView: View {
             heardAs = ""
             self.word = ""
         } else {
-            added = "Couldn't save the dictionary."
+            added = word.contains(",") || word.hasPrefix("#")
+                ? "A word can't contain a comma or start with #."
+                : "Couldn't save: the dictionary file may have a mistake; see Settings › Dictionary."
         }
     }
 }

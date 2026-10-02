@@ -183,3 +183,18 @@ final class SettingsResetTests: XCTestCase {
         XCTAssertTrue(reset.onboarding.completed)
     }
 }
+
+@MainActor
+final class SettingsStoreSafetyTests: XCTestCase {
+    func testAChangeNeverOverwritesAFileWithAMistake() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        try Data(#"{"hotkey": {"key": "right-option"}}"#.utf8).write(to: file)
+        let store = SettingsStore(file: file, log: { _ in })
+        // A hand edit in progress.
+        try Data(#"{"hotkey": {"key": "right-option",}"#.utf8).write(to: file)
+        store.update { $0.hotkey.liveText = false }
+        XCTAssertFalse(store.current.hotkey.liveText)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), #"{"hotkey": {"key": "right-option",}"#)
+    }
+}
+

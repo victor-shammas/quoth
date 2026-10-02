@@ -150,17 +150,18 @@ package final class DictionaryStore: @unchecked Sendable {
     @discardableResult
     func add(word: String, heardAs: String) -> Bool {
         let word = word.trimmingCharacters(in: .whitespacesAndNewlines)
-        let heard = heardAs.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !word.isEmpty else { return false }
+        // The file can't hold a word with a comma or starting with #.
+        guard !word.isEmpty, !word.contains(","), !word.hasPrefix("#") else { return false }
+        let variants = heardAs.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let base = current().dictionary
         var rows = base.rows().rows
         if let i = rows.firstIndex(where: { $0.word.caseInsensitiveCompare(word) == .orderedSame }) {
             rows[i].word = word
-            if !heard.isEmpty, !rows[i].heardAs.contains(where: { $0.caseInsensitiveCompare(heard) == .orderedSame }) {
+            for heard in variants where !rows[i].heardAs.contains(where: { $0.caseInsensitiveCompare(heard) == .orderedSame }) {
                 rows[i].heardAs.append(heard)
             }
         } else {
-            rows.append(UserDictionary.Row(word: word, heardAs: heard.isEmpty ? [] : [heard]))
+            rows.append(UserDictionary.Row(word: word, heardAs: variants))
         }
         return save(UserDictionary(rows: rows, examples: base.examples), basedOn: base)
     }

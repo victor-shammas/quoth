@@ -32,11 +32,11 @@ package enum SpokenLanguage {
     package static func plan(setting: String?, spoken: [String], model: TranscriptionModel) -> Plan {
         guard model.isMultilingual else { return .none }
         let supported = model.supportedLanguages
-        if let code = setting?.lowercased(), supported.contains(code) {
+        if let code = setting.map(whisperCode), supported.contains(code) {
             return .fixed(code)
         }
         var seen = Set<String>()
-        let candidates = spoken.map { $0.lowercased() }.filter { supported.contains($0) && seen.insert($0).inserted }
+        let candidates = spoken.map(whisperCode).filter { supported.contains($0) && seen.insert($0).inserted }
         if candidates.count == 1 { return .fixed(candidates[0]) }
         return .detect(among: candidates)
     }
@@ -59,9 +59,22 @@ package enum SpokenLanguage {
         return identifiers.compactMap { id -> String? in
             let language = Locale.Language(identifier: id)
             let code = language.languageCode?.identifier(.alpha2) ?? language.languageCode?.identifier
-            return code?.lowercased()
+            return code.map(whisperCode)
         }
         .filter { seen.insert($0).inserted }
+    }
+
+    /// Where Apple's language codes and Whisper's differ for the same
+    /// language: Norwegian Bokmål is `nb` to macOS and `no` to Whisper,
+    /// Filipino `fil` and `tl`, Javanese `jv` and `jw`, and the old Hebrew
+    /// and Indonesian codes. Without this, a Mac's language would be
+    /// silently dropped from the ones Automatic chooses among.
+    static let appleToWhisper = ["nb": "no", "fil": "tl", "jv": "jw", "iw": "he", "in": "id"]
+
+    /// `code` as Whisper knows it, lowercased.
+    static func whisperCode(_ code: String) -> String {
+        let code = code.lowercased()
+        return appleToWhisper[code] ?? code
     }
 
     /// Every language Whisper's multilingual models know, as codes. From

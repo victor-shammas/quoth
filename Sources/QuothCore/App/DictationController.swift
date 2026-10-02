@@ -175,7 +175,10 @@ final class DictationController {
             return
         }
 
-        guard !samples.isEmpty else {
+        // Whisper invents words ("you", "Thank you.") for silence, so a
+        // press with nothing said transcribes nothing.
+        guard !samples.isEmpty, PauseSplitter.hasSpeech(samples, minRun: PauseSplitter.minPushToTalkRun) else {
+            if !samples.isEmpty { Log.info("  no speech; nothing transcribed") }
             settle()
             observers.forEach { $0.dictationFailed(DictationError.noAudio) }
             return

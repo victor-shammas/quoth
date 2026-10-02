@@ -40,8 +40,15 @@ final class SettingsStore: ObservableObject {
     }
 
     /// Saves `settings` and applies it. Creates the config directory owner-only
-    /// if it is missing.
+    /// if it is missing. If the file on disk has a mistake in it, a hand edit
+    /// in progress, the change applies for this session but isn't saved over
+    /// the edit.
     func write(_ settings: Settings) {
+        if Paths.fileType(file.path) != nil, read() == nil {
+            log("not saving \(file.lastPathComponent): it has a mistake; the change applies until Quoth quits")
+            apply(settings)
+            return
+        }
         do {
             try save(settings)
         } catch {

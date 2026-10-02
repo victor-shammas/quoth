@@ -14,21 +14,22 @@ private enum Audio {
 
 final class PauseSplitterTests: XCTestCase {
     func testWaitsWhileSpeechIsShort() {
-        XCTAssertNil(PauseSplitter.cut(Audio.speech(2) + Audio.pause(1)))
+        XCTAssertNil(PauseSplitter.cut(Audio.speech(2) + Audio.pause(1.5)))
     }
 
     func testCutsInTheFirstPauseAfterTheMinimum() throws {
-        let audio = Audio.speech(2) + Audio.pause(1) + Audio.speech(3) + Audio.pause(1) + Audio.speech(2)
+        let audio = Audio.speech(2) + Audio.pause(1.5) + Audio.speech(3) + Audio.pause(1.5) + Audio.speech(2)
         let cut = try XCTUnwrap(PauseSplitter.cut(audio))
         XCTAssertTrue(cut.hasSpeech)
-        // Inside the second pause, which starts at 6 s.
-        XCTAssertGreaterThan(cut.end, 6 * 16_000)
-        XCTAssertLessThan(cut.end, 7 * 16_000)
+        // Inside the second pause, which starts at 6.5 s.
+        XCTAssertGreaterThan(cut.end, Int(6.5 * 16_000))
+        XCTAssertLessThan(cut.end, Int(7.5 * 16_000))
     }
 
     func testWaitsUntilThePauseIsLongEnough() {
-        XCTAssertNil(PauseSplitter.cut(Audio.speech(5) + Audio.pause(0.3)))
-        XCTAssertNotNil(PauseSplitter.cut(Audio.speech(5) + Audio.pause(0.7)))
+        // A mid-sentence gap is not a pause; a second between sentences is.
+        XCTAssertNil(PauseSplitter.cut(Audio.speech(5) + Audio.pause(0.8)))
+        XCTAssertNotNil(PauseSplitter.cut(Audio.speech(5) + Audio.pause(1.2)))
     }
 
     func testCutsWithoutAPauseAtTheLimit() throws {
@@ -56,13 +57,21 @@ final class PauseSplitterTests: XCTestCase {
             let start = Int(at * 16_000)
             for i in start..<(start + 640) { audio[i] = Float(sin(Double(i) * 0.1)) * 0.1 }
         }
-        let cut = PauseSplitter.cut(audio)
-        XCTAssertEqual(cut?.hasSpeech, false)
+        // Whether or not the gaps are long enough to cut, clicks are never speech.
+        XCTAssertNotEqual(PauseSplitter.cut(audio)?.hasSpeech, true)
+        XCTAssertFalse(PauseSplitter.hasSpeech(audio))
         XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(0.3) + Audio.speech(0.16) + Audio.pause(0.3)))
     }
 
+    func testPushToTalkTakesShortWordsButNotSilence() {
+        // A short "Yes." of about 200 ms between silences.
+        XCTAssertTrue(PauseSplitter.hasSpeech(Audio.pause(0.5) + Audio.speech(0.2) + Audio.pause(0.5), minRun: PauseSplitter.minPushToTalkRun))
+        XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(2), minRun: PauseSplitter.minPushToTalkRun))
+        XCTAssertFalse(PauseSplitter.hasSpeech([Float](repeating: 0, count: 32_000), minRun: PauseSplitter.minPushToTalkRun))
+    }
+
     func testHasSpeech() {
-        XCTAssertTrue(PauseSplitter.hasSpeech(Audio.pause(1) + Audio.speech(0.5)))
+        XCTAssertTrue(PauseSplitter.hasSpeech(Audio.pause(1.5) + Audio.speech(0.5)))
         XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(2)))
         XCTAssertFalse(PauseSplitter.hasSpeech([]))
     }
@@ -125,9 +134,9 @@ final class LiveTranscriptionTests: XCTestCase {
 
     func testSegmentsAreTypedInOrderAndTheTailAtTheEnd() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         live.poll()
-        recording += Audio.speech(5) + Audio.pause(1)
+        recording += Audio.speech(5) + Audio.pause(1.5)
         live.poll()
         recording += Audio.speech(2)
         let outcome = await live.finish(capture: recording)
@@ -141,7 +150,7 @@ final class LiveTranscriptionTests: XCTestCase {
 
     func testSegmentsContinueThePreviousOneInItsLanguage() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         live.poll()
         recording += Audio.speech(5)
         _ = await live.finish(capture: recording)
@@ -155,7 +164,7 @@ final class LiveTranscriptionTests: XCTestCase {
     func testAFailedSegmentIsReportedAtOnce() async {
         let live = makeLive()
         transcriber.failing = 10
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         live.poll()
         await live.waitForSegments()
         XCTAssertEqual(notices, [LiveTextNotice.segmentFailed.userMessage])
@@ -167,7 +176,7 @@ final class LiveTranscriptionTests: XCTestCase {
 
     func testAFocusChangeIsReportedAtOnce() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         failNext = .focusChanged
         live.poll()
         await live.waitForSegments()
@@ -191,10 +200,10 @@ final class LiveTranscriptionTests: XCTestCase {
 
     func testAfterAFocusChangeTheRestGoesToTheClipboard() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         live.poll()
         await live.waitForSegments()
-        recording += Audio.speech(5) + Audio.pause(1)
+        recording += Audio.speech(5) + Audio.pause(1.5)
         failNext = .focusChanged
         live.poll()
         recording += Audio.speech(6)
@@ -203,12 +212,12 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertEqual(outcome.deliveryError as? DeliveryError, .focusChanged)
         // The failed segment and everything after it, once, at the end.
         // Segments start inside the previous pause, so they run long.
-        XCTAssertEqual(copied.last, "6s 6s")
+        XCTAssertEqual(copied.last, "6s 7s")
     }
 
     func testAPasswordFieldStopsDelivery() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         failNext = .secureField
         live.poll()
         recording += Audio.speech(5)
@@ -220,7 +229,7 @@ final class LiveTranscriptionTests: XCTestCase {
 
     func testCancelDeliversNothingMore() async {
         let live = makeLive()
-        recording = Audio.speech(10) + Audio.pause(1)
+        recording = Audio.speech(10) + Audio.pause(1.5)
         live.cancel()
         live.poll()
         let outcome = await live.finish(capture: recording + Audio.speech(3))
