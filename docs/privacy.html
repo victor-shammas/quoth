@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · Quoth</title>
+<meta name="description" content="Quoth privacy policy: speech is transcribed on your Mac. No accounts, no servers, no analytics; audio and transcripts are never saved or sent.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="30" height="30">Quoth</a>
+    <nav class="nav" aria-label="Main">
+      <a href="./" class="hide-sm">Home</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc">
+  <div class="wrap narrow">
+    <h1>Privacy Policy</h1>
+    <p class="meta-line">Effective date: October 2, 2026</p>
+
+    <div class="tldr">
+      <strong>The short version</strong>
+      <ul>
+        <li>Quoth turns your speech into text on your Mac. Your audio and your transcripts never leave it.</li>
+        <li>Quoth saves no recordings and no transcripts.</li>
+        <li>It has no accounts, no servers, no analytics and no ads.</li>
+        <li>Its only network use is downloading the speech model you choose.</li>
+        <li>I (the developer) never receive any of your data.</li>
+      </ul>
+    </div>
+
+    <p>This policy explains what the Quoth app for macOS ("Quoth", "the app") records, what it keeps, and what it never does. It covers both the Mac App Store edition and the free, open-source edition. Quoth is made by Victor Shammas, an independent developer ("I", "me").</p>
+
+    <h2>1. Your voice</h2>
+    <p>Quoth turns on the microphone only while you hold your dictation key, or while a recording is locked on with a double tap; the microphone is off at all other times. The audio is held in memory, turned into text on your Mac by a Whisper speech model, and then discarded. It is never written to disk and never sent anywhere.</p>
+
+    <h2>2. Your text</h2>
+    <ul>
+      <li><strong>The transcript is inserted where you are typing</strong>, by pasting it. When pasting borrows the clipboard, Quoth puts back what was there. If Quoth can't paste (for example, when you haven't allowed it to), it leaves the transcript on the clipboard for you.</li>
+      <li><strong>The last transcript is kept in memory</strong> for <em>Copy Last Dictation</em> and <em>Fix Last Dictation</em>, for at most 10 minutes. It is forgotten sooner if you lock your screen or quit Quoth. It is never written to disk, and a dictation into a password field is never kept.</li>
+      <li><strong>Logs contain no text.</strong> Quoth keeps a small diagnostic log on your Mac with timings and counts (for example, "3.2 s of audio · 41 characters"), never what you said.</li>
+    </ul>
+
+    <h2>3. What Quoth stores on your Mac</h2>
+    <table class="stack">
+      <thead><tr><th>What</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Your settings</td><td data-label="Why">Your hotkey, model, languages and other choices.</td></tr>
+        <tr><td>Your dictionary and example sentences</td><td data-label="Why">The words you asked Quoth to spell your way. Only what you type into it.</td></tr>
+        <tr><td>Speech models</td><td data-label="Why">The Whisper models you chose, downloaded once. Delete them any time in Settings › Model.</td></tr>
+        <tr><td>A diagnostic log</td><td data-label="Why">Timings and counts, without any text, to help me fix problems if you send it to me.</td></tr>
+      </tbody>
+    </table>
+    <p>All of it stays on your Mac. In the App Store edition it lives in the app's own sandboxed container; in the open-source edition, in <code>~/.config/quoth</code> and <code>~/Library</code>. <a href="support.html#remove">Removing Quoth</a> explains how to delete it.</p>
+
+    <h2>4. Network</h2>
+    <p>Quoth connects to the internet only to download a speech model, from Hugging Face (<code>huggingface.co</code>), the first time you use that model. Like any website, Hugging Face receives your IP address and standard request information when the download happens; their privacy policy applies to it. Quoth sends no audio, no text and nothing about you.</p>
+    <p>If the open-source edition checks for updates, it asks GitHub whether a newer version exists. That check sends only the standard request information any download does.</p>
+
+    <h2>5. Permissions</h2>
+    <table class="stack">
+      <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Microphone</td><td data-label="Why">To hear you while you dictate.</td></tr>
+        <tr><td>Input Monitoring (App Store edition) or Accessibility (open-source edition)</td><td data-label="Why">To notice when you press your dictation key. Quoth only listens to modifier keys such as fn, Option and Command, so it never sees the keys you type.</td></tr>
+        <tr><td>Paste at cursor (optional in the App Store edition)</td><td data-label="Why">To insert the transcript where you are typing. Without it, transcripts are copied for you to paste.</td></tr>
+      </tbody>
+    </table>
+    <p>The open-source edition also uses Accessibility to look at the text field it types into: whether it's a password field, whether you moved to another field mid-dictation, and the character before the cursor, so spacing comes out right. It reads nothing else, and keeps nothing.</p>
+
+    <h2>6. Children</h2>
+    <p>Quoth collects no personal information from anyone, including children.</p>
+
+    <h2>7. Changes</h2>
+    <p>If this policy changes, I'll update it here and change the effective date above.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions about privacy: <a href="mailto:contact@victorshammas.com?subject=Quoth%20privacy">contact@victorshammas.com</a>.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <nav aria-label="Footer"><a href="./">Home</a><a href="support.html">Support</a><a href="privacy.html">Privacy Policy</a><a href="https://github.com/victor-shammas/quoth">Source code</a><a href="mailto:contact@victorshammas.com">Contact</a></nav>
+    <p>© 2026 Victor Shammas</p>
+  </div>
+</footer>
+</body>
+</html>

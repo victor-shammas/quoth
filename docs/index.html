@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quoth: local voice transcription on your Mac</title>
+<meta name="description" content="Quoth turns your voice into text in any app on your Mac. Hold a key, speak, let go. Transcribed on your Mac with Whisper: nothing saved, nothing sent.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Quoth">
+<meta property="og:description" content="Local voice transcription on your Mac. Hold a key, speak, and your words appear wherever you type.">
+<meta property="og:image" content="https://victorshammas.com/quoth/icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="30" height="30">Quoth</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#features" class="hide-sm">Features</a>
+      <a href="#privacy" class="hide-sm">Privacy</a>
+      <a href="support.html">Support</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <img class="hero-icon" src="icon.png" alt="Quoth app icon" width="96" height="96">
+        <h1>Speak, and your words appear where you type.</h1>
+        <p class="lede">Quoth is dictation for your Mac that runs entirely on your Mac. Hold a key, speak, let go, and the text lands at your cursor, in any app. Nothing is saved, and nothing is sent.</p>
+        <div class="cta-row">
+          <!-- At launch, replace with: <a class="btn" href="https://apps.apple.com/app/idAPP_ID">Download on the Mac App Store <small>$1.99</small></a> -->
+          <span class="btn" aria-disabled="true">Coming soon to the Mac App Store <small>$1.99</small></span>
+          <span class="fineprint">macOS 14 or later · Apple silicon · <a href="#editions">Also free and open source</a></span>
+        </div>
+      </div>
+
+      <figure class="mock" role="img" aria-label="Illustration: a note being dictated into, with Quoth's recording pill at the bottom">
+        <div class="mock-titlebar"><i></i><i></i><i></i><span>Notes</span></div>
+        <div class="mock-page">
+          <h4>Thursday</h4>
+          <p>Send the draft to Maria before Friday, and ask her about the reading list.</p>
+          <p class="typed">Book the train for the conference, and check whether the hotel is near the station<span class="caret"></span></p>
+        </div>
+        <div class="mock-foot">
+          <span class="pill" aria-hidden="true">
+            <svg viewBox="0 0 12 12"><path d="M3 5V3.5a3 3 0 0 1 6 0V5h.5A1.5 1.5 0 0 1 11 6.5v4A1.5 1.5 0 0 1 9.5 12h-7A1.5 1.5 0 0 1 1 10.5v-4A1.5 1.5 0 0 1 2.5 5H3Zm1.5 0h3V3.5a1.5 1.5 0 0 0-3 0V5Z"/></svg>
+            <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </span>
+        </div>
+        <p class="demo">Locked hands-free: text appears at each pause.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Dictation that stays out of your way.</h2>
+      <p class="section-lede">One key, no windows to manage, and the text goes where you were already typing.</p>
+      <div class="grid">
+        <div class="card"><h3>Hold to talk</h3><p>Hold fn, or another modifier key of your choice, speak, and let go. Your words appear at the cursor in any app, usually in well under a second.</p></div>
+        <div class="card"><h3>Hands-free for long thoughts</h3><p>Double-tap the key to keep recording without holding it. Text appears each time you pause, and one tap stops.</p></div>
+        <div class="card"><h3>On your Mac, only</h3><p>Whisper runs on your Mac's Neural Engine. Your audio never leaves the Mac, and Quoth keeps no recordings and no transcripts.</p></div>
+        <div class="card"><h3>English, and 98 more</h3><p>English-only models for speed, or multilingual ones for 99 languages, detected automatically among the languages you speak.</p></div>
+        <div class="card"><h3>Your words, spelled your way</h3><p>A dictionary for names and jargon. When Quoth gets a word wrong, Fix Last Dictation teaches it in a few seconds.</p></div>
+        <div class="card"><h3>Small and quiet</h3><p>A few megabytes in the menu bar, with the microphone off between dictations. Choose speech models in Settings, and delete the ones you don't use.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="section-lede">Set up once, then forget it's there.</p>
+      <div class="steps">
+        <div class="card"><h3>Allow the microphone and the key</h3><p>Quoth asks for the microphone, and for permission to notice your dictation key. It only watches modifier keys like fn; it never sees what you type.</p></div>
+        <div class="card"><h3>Let the model download</h3><p>The first start downloads a speech model, about 150 MB, once. Larger, more accurate models are a choice away in Settings.</p></div>
+        <div class="card"><h3>Hold the key and speak</h3><p>Let go, and the text is at your cursor. For anything longer, double-tap and talk.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <h2>Private by design</h2>
+      <p class="section-lede">There is no Quoth account and no Quoth server. Speech is turned into text on your Mac, and the only thing Quoth ever downloads is the speech model you choose.</p>
+      <ul class="checks">
+        <li>No accounts, no sign-in</li>
+        <li>No analytics, tracking or ads</li>
+        <li>Audio is never saved or sent</li>
+        <li>Transcripts are never saved or sent</li>
+        <li>Microphone off between dictations</li>
+        <li>Sees modifier keys only, never your typing</li>
+      </ul>
+      <p style="margin-top:22px"><a href="privacy.html">Read the full privacy policy</a></p>
+    </div>
+  </section>
+
+  <section class="band" id="editions">
+    <div class="wrap">
+      <h2>Two ways to get Quoth</h2>
+      <p class="section-lede">The same app and the same speech models, from the store or from the source.</p>
+      <div class="editions">
+        <div class="card">
+          <h3>Mac App Store <small>$1.99</small></h3>
+          <p>Sandboxed by Apple and updated through the App Store. The simplest way to install, and a way to support the work.</p>
+          <ul>
+            <li>Pastes at your cursor once you allow it; otherwise each dictation is copied, ready for ⌘V</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Free and open source <small>MIT</small></h3>
+          <p>Download from GitHub, or build it yourself. It can read the text field it types into, which adds a few things:</p>
+          <ul>
+            <li>Spacing that fits the text already there</li>
+            <li>Never types into a password field, and notices when you switch fields mid-dictation</li>
+            <li>A <code>quoth</code> command for the terminal</li>
+          </ul>
+        </div>
+      </div>
+      <!-- When the repository is public and has a release, link it here: https://github.com/victor-shammas/quoth/releases/latest -->
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap narrow">
+      <h2>Requirements</h2>
+      <ul>
+        <li>macOS 14 Sonoma or later, on a Mac with Apple silicon</li>
+        <li>150 MB to 1.6 GB of disk space for each speech model you keep</li>
+        <li>A microphone: the Mac's own, a headset, or AirPods</li>
+      </ul>
+      <p>Questions? See <a href="support.html">Support &amp; FAQ</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <nav aria-label="Footer"><a href="./">Home</a><a href="support.html">Support</a><a href="privacy.html">Privacy Policy</a><a href="https://github.com/victor-shammas/quoth">Source code</a><a href="mailto:contact@victorshammas.com">Contact</a></nav>
+    <p>Quoth is an independent app, based on Parrot by Humanitas Labs (MIT license). Whisper is a speech recognition model by OpenAI, released under the MIT license. Mac, Mac App Store and Apple silicon are trademarks of Apple Inc.</p>
+    <p>© 2026 Victor Shammas</p>
+  </div>
+</footer>
+</body>
+</html>

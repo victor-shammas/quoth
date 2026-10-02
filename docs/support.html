@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support · Quoth</title>
+<meta name="description" content="Help with Quoth, local voice transcription for the Mac: setup, the hotkey, hands-free dictation, accuracy, models and removing the app.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="30" height="30">Quoth</a>
+    <nav class="nav" aria-label="Main">
+      <a href="./" class="hide-sm">Home</a>
+      <a href="support.html" aria-current="page">Support</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc">
+  <div class="wrap narrow">
+    <h1>Support</h1>
+    <p>Something not working? The answers below cover almost everything. If not, email <a href="mailto:contact@victorshammas.com?subject=Quoth%20support">contact@victorshammas.com</a>. I read every message.</p>
+    <ul class="toc">
+      <li><a href="#start">Getting started</a></li>
+      <li><a href="#dictating">Dictating</a></li>
+      <li><a href="#handsfree">Hands-free</a></li>
+      <li><a href="#accuracy">Accuracy &amp; languages</a></li>
+      <li><a href="#models">Models &amp; disk space</a></li>
+      <li><a href="#remove">Removing Quoth</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+
+    <h2 id="start">Getting started</h2>
+    <details open>
+      <summary>Where is the app? I don't see a window.</summary>
+      <p>Quoth lives in the menu bar, at the top-right of your screen, as a small closing quote mark (”), and has no Dock icon. Click it for the menu: <em>Settings…</em>, <em>Copy Last Dictation</em>, <em>Fix Last Dictation…</em> and <em>Quit</em>. If you have many menu bar items, it may be hidden behind the notch; quit a few other menu bar apps or use a menu bar manager.</p>
+    </details>
+    <details>
+      <summary>Which permissions does Quoth need, and why?</summary>
+      <p><strong>Microphone</strong>, to hear you, and permission to notice your dictation key: <strong>Input Monitoring</strong> in the App Store edition, <strong>Accessibility</strong> in the open-source edition. Quoth only listens to modifier keys like fn, so it never sees what you type. The App Store edition also offers <strong>Paste at cursor</strong>, which is optional: without it, each dictation is copied for you to paste with <kbd>⌘V</kbd>. If you skipped a permission, choose <em>Finish Setup…</em> in the menu.</p>
+    </details>
+    <details>
+      <summary>Nothing happens the first time I hold the key.</summary>
+      <p>The first start downloads a speech model, about 150 MB, once. The menu says <em>Loading model…</em> until it's ready, then <em>Ready — hold fn to dictate</em>.</p>
+    </details>
+
+    <h2 id="dictating">Dictating</h2>
+    <details>
+      <summary>Holding fn does nothing.</summary>
+      <p>Many third-party keyboards, including most Logitech ones, handle fn inside the keyboard and never tell the Mac about it. Choose another key in Settings › General › Hotkey: left or right Option, Command, Control or Shift. Also check System Settings › Keyboard › "Press 🌐 key to": it should be <em>Do Nothing</em>, or the Mac acts on fn itself.</p>
+    </details>
+    <details>
+      <summary>Do shortcuts that use my hotkey still work?</summary>
+      <p>Yes. A quick tap of the key, or holding it together with another key, is ignored, so a shortcut like <kbd>⌥←</kbd> on Option still works.</p>
+    </details>
+    <details>
+      <summary>The text didn't appear, or it says "Copied — press ⌘V to paste".</summary>
+      <p>In the App Store edition, Quoth pastes only after you allow <em>Paste at cursor</em> (Settings › General). Until then, each dictation is on the clipboard: press <kbd>⌘V</kbd>. If you clicked into another window mid-dictation, Quoth copies the text instead of typing it somewhere you didn't mean. Either way, <em>Copy Last Dictation</em> in the menu brings back your last dictation for 10 minutes.</p>
+    </details>
+    <details>
+      <summary>Will it type into a password field?</summary>
+      <p>No. When a password field is active, Quoth doesn't type or copy the transcript, and doesn't keep it.</p>
+    </details>
+
+    <h2 id="handsfree">Hands-free</h2>
+    <details>
+      <summary>How do I dictate without holding the key?</summary>
+      <p>Double-tap the key quickly. The pill at the bottom of the screen shows a lock, and you can talk for as long as you like. Text appears each time you pause, and one tap of the key stops. A locked recording stops by itself after 10 minutes.</p>
+    </details>
+    <details>
+      <summary>Double-tapping fn opens Apple's Dictation instead.</summary>
+      <p>macOS uses a double press of fn for its own Dictation. Turn its shortcut off in System Settings › Keyboard › Dictation › Shortcut (Settings › General has a button that opens it), or choose another hotkey for Quoth.</p>
+    </details>
+    <details>
+      <summary>Can I use shortcuts or switch microphones while locked?</summary>
+      <p>Yes. A shortcut that uses your hotkey, or connecting a headset, ends the lock and keeps everything you've said so far. A lock never throws your words away.</p>
+    </details>
+
+    <h2 id="accuracy">Accuracy &amp; languages</h2>
+    <details>
+      <summary>Quoth keeps misspelling a name or a word.</summary>
+      <p>Right after it happens, choose <em>Fix Last Dictation…</em> in the menu, select the word Quoth got wrong, and type how it should be spelled. From then on it's spelled your way. You can also edit the list in Settings › Dictionary, and add an example sentence that uses your words, which helps the model recognize them in the first place.</p>
+    </details>
+    <details>
+      <summary>Which model should I use?</summary>
+      <p>Settings › Model. <strong>Base (English)</strong> is the fastest and fine for everyday English. <strong>Small (English)</strong> is more accurate. If you dictate in other languages, choose a model under <em>All languages, including English</em>: <strong>Large v3 Turbo (compressed)</strong> is the most accurate for its size. A new model downloads when you choose it.</p>
+    </details>
+    <details>
+      <summary>Can I dictate in more than one language?</summary>
+      <p>Yes, with a multilingual model. Leave Language on <em>Automatic</em> and tick the languages you speak under <em>Languages you speak</em>; Quoth picks among those for each dictation. In a hands-free dictation, it keeps the language it heard first.</p>
+    </details>
+
+    <h2 id="models">Models &amp; disk space</h2>
+    <details>
+      <summary>How much space do models take, and how do I free it?</summary>
+      <p>From about 150 MB (Base) to 1.6 GB (Large v3 Turbo). Settings › Model › <em>On this Mac</em> lists each downloaded model with its size; <em>Delete…</em> removes one. The model in use can't be deleted, and a deleted model downloads again if you choose it later.</p>
+    </details>
+    <details>
+      <summary>Does Quoth need the internet?</summary>
+      <p>Only to download a model, once. After that it works offline, and your speech never leaves your Mac.</p>
+    </details>
+
+    <h2 id="remove">Removing Quoth</h2>
+    <details>
+      <summary>How do I remove Quoth completely?</summary>
+      <p>Choose <em>Quit Quoth</em> in its menu, then drag Quoth from Applications to the Trash. If you turned on <em>Open at login</em>, turn it off first in Settings › General. To also delete your settings, dictionary and models:</p>
+      <ul>
+        <li><strong>App Store edition:</strong> delete <code>~/Library/Containers/com.victorshammas.quoth</code>.</li>
+        <li><strong>Open-source edition:</strong> delete <code>~/.config/quoth</code>, <code>~/Library/Application Support/quoth</code>, <code>~/Library/Logs/quoth</code> and <code>~/Library/Caches/quoth</code>.</li>
+      </ul>
+      <p>In Finder, choose Go › Go to Folder… (<kbd>⇧⌘G</kbd>) and paste the path. You can remove Quoth from System Settings › Privacy &amp; Security › Microphone, Input Monitoring and Accessibility too.</p>
+    </details>
+
+    <h2 id="contact">Contact</h2>
+    <p>Email <a href="mailto:contact@victorshammas.com?subject=Quoth%20support">contact@victorshammas.com</a>. It helps to mention your Mac, your macOS version, and the version in Settings › About.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <nav aria-label="Footer"><a href="./">Home</a><a href="support.html">Support</a><a href="privacy.html">Privacy Policy</a><a href="https://github.com/victor-shammas/quoth">Source code</a><a href="mailto:contact@victorshammas.com">Contact</a></nav>
+    <p>© 2026 Victor Shammas</p>
+  </div>
+</footer>
+</body>
+</html>
