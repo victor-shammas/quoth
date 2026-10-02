@@ -96,25 +96,16 @@ struct PillRow<Control: View>: View {
     }
 }
 
-/// The Quoth bird in the text color: white in dark mode, black in light.
-struct BirdBadge: View {
+/// The app icon, for the onboarding and Settings headers. Outside the app
+/// bundle (a foreground `swift run`) it falls back to the menu-bar glyph.
+struct AppBadge: View {
     var size: CGFloat = 64
 
-    private static let bird: NSImage? = {
-        guard let image = NSImage(data: Data(MenuBarController.birdSVG.utf8)) else { return nil }
-        image.isTemplate = true
-        return image
-    }()
-
     var body: some View {
-        if let bird = Self.bird {
-            Image(nsImage: bird)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-                .foregroundStyle(.primary)
-        }
+        Image(nsImage: AppBundle.current != nil ? NSApplication.shared.applicationIconImage : QuoteGlyph.image(.recording))
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
     }
 }
 

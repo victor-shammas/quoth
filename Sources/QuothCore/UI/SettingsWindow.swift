@@ -112,11 +112,11 @@ struct SettingsGroup<Content: View>: View {
     }
 }
 
-/// The Quoth bird, with the title and version centered under it.
+/// The app icon, with the title and version centered under it.
 private struct SettingsHeader: View {
     var body: some View {
         VStack(spacing: 4) {
-            BirdBadge()
+            AppBadge()
                 .padding(.bottom, 12)
             Text("Quoth · Settings")
                 .font(.title3.weight(.semibold))

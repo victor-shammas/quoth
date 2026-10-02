@@ -183,7 +183,7 @@ final class OnboardingModel: ObservableObject {
     func getStarted() { onGetStarted?() }
 }
 
-/// The page: the bird in a circle, the name, the hotkey and languages as
+/// The page: the app icon, the name, the hotkey and languages as
 /// pills (`Pill.swift`), the two permissions, and Get Started.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
@@ -191,7 +191,7 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            BirdBadge()
+            AppBadge()
             Text("Quoth")
                 .font(.system(size: 24, weight: .semibold))
                 .padding(.top, 16)
