@@ -3,13 +3,14 @@ import SwiftUI
 
 /// The panes of the Settings window, in toolbar order.
 enum SettingsPane: Int, CaseIterable {
-    case general, model, dictionary, about
+    case general, model, dictionary, help, about
 
     var title: String {
         switch self {
         case .general: return "General"
         case .model: return "Model"
         case .dictionary: return "Dictionary"
+        case .help: return "Help"
         case .about: return "About"
         }
     }
@@ -19,6 +20,7 @@ enum SettingsPane: Int, CaseIterable {
         case .general: return "gearshape"
         case .model: return "waveform"
         case .dictionary: return "character.book.closed"
+        case .help: return "questionmark.circle"
         case .about: return "info.circle"
         }
     }
@@ -85,6 +87,7 @@ final class SettingsWindow {
         case .general: return AnyView(GeneralPane(store: store))
         case .model: return AnyView(ModelPane(store: store))
         case .dictionary: return AnyView(DictionaryPane(settings: store, dictionary: dictionary))
+        case .help: return AnyView(HelpPane(store: store))
         case .about: return AnyView(AboutPane(store: store))
         }
     }

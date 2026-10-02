@@ -149,34 +149,51 @@ private struct PasteRow: View {
 private struct VoiceCommandsButton: View {
     @State private var isOpen = false
 
-    private static let commands: [(say: String, does: String)] = [
+    var body: some View {
+        Button("Show…") { isOpen.toggle() }
+            .buttonStyle(.pill)
+            .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+                // A fixed width and the list's own height: without them the
+                // popover has no size to take and opens tall and empty.
+                VoiceCommandList()
+                    .padding(16)
+                    .frame(width: 470)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+    }
+}
+
+/// Every voice command and what it does, for the popover and the cheat
+/// sheet in About.
+struct VoiceCommandList: View {
+    static let commands: [(say: String, does: String)] = [
         ("“new paragraph”, “new line”", "Break the text"),
         ("“bullet point”", "Start a bulleted line"),
         ("“comma”, “semicolon”, “question mark”, “exclamation point”, “full stop”", "Type the mark"),
         ("“period”, “colon”", "Type the mark, when you pause around the word"),
         ("“quote” … “unquote”", "Put the words between in “quotes”"),
-        ("“scratch that”", "Remove what was just typed, or what you said before it"),
+        ("“scratch that”", "Remove what you said just before it, or, on its own, what Quoth just typed"),
     ]
 
     var body: some View {
-        Button("Show…") { isOpen.toggle() }
-            .buttonStyle(.pill)
-            .popover(isPresented: $isOpen, arrowEdge: .bottom) {
-                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 10) {
-                    GridRow {
-                        Text("Say").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                        Text("To").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    }
-                    ForEach(Self.commands, id: \.say) { command in
-                        GridRow {
-                            Text(command.say).frame(maxWidth: 230, alignment: .leading)
-                            Text(command.does).foregroundStyle(.secondary).frame(maxWidth: 200, alignment: .leading)
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .font(.callout)
-                .padding(16)
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                Text("Say").frame(width: 210, alignment: .leading)
+                Text("To")
             }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(Self.commands, id: \.say) { command in
+                HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    Text(command.say).frame(width: 210, alignment: .leading)
+                    Text(command.does).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("In English, for now.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .font(.callout)
     }
 }
