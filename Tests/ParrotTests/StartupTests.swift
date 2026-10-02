@@ -23,7 +23,7 @@ final class StartupTests: XCTestCase {
         for failure in failures {
             XCTAssertTrue(failure.message.contains("\n  fix: "), failure.message)
             XCTAssertTrue(
-                failure.message.contains("`open -a Parrot`"),
+                failure.message.contains("`open -a Quoth`"),
                 failure.message
             )
         }

@@ -36,7 +36,7 @@ enum DictionaryMigration {
         guard Paths.fileType(file.path) == nil, Paths.fileType(legacy.path) != nil else { return .nothingToDo }
         let name = legacy.lastPathComponent
         func fail(_ problem: String) -> Outcome {
-            log("\(name) not converted, \(problem); fix it and relaunch Parrot")
+            log("\(name) not converted, \(problem); fix it and relaunch Quoth")
             return .failed
         }
 

@@ -9,13 +9,13 @@ public enum SetupFlow {
         print("parrot setup")
         print("============")
         print()
-        print("Parrot needs two permissions:")
+        print("Quoth needs two permissions:")
         print("  1. Accessibility — to detect the Fn key globally and inject text at the cursor.")
         print("  2. Microphone — to record audio while you hold Fn.")
         print()
         print("Granted here, they attach to your terminal app (Terminal/iTerm/Ghostty/etc.),")
         print("which covers running `parrot` from this terminal. The launch-at-login daemon")
-        print("asks for its own on first start: allow Parrot when macOS prompts.")
+        print("asks for its own on first start: allow Quoth when macOS prompts.")
         print()
 
         // Runs here, with the terminal's ~/Documents access; the daemon has none.

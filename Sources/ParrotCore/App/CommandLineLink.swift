@@ -9,7 +9,7 @@ public enum CommandLineLink {
     public static func installFromTerminal() throws {
         guard AppBundle.current != nil, let executable = Bundle.main.executableURL else {
             Log.error("the parrot command links into Parrot.app. Install the app from the DMG, then run "
-                + "/Applications/Parrot.app/Contents/MacOS/parrot install --cli")
+                + "/Applications/Quoth.app/Contents/MacOS/parrot install --cli")
             throw SilentExit(1)
         }
         let link = Paths.commandLineLink

@@ -1,39 +1,41 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png">
-    <img src="docs/assets/icon.png" width="96" alt="parrot">
+    <img src="docs/assets/icon.png" width="96" alt="Quoth">
   </picture>
 </p>
 
-# parrot
+# Quoth
 
-Hold `fn`, speak, release. Your words appear at the cursor. On-device dictation for macOS.
+**Local voice transcription on your Mac.**
+
+Hold `fn`, speak, release, and your words appear at the cursor. For longer dictation, double-tap `fn` to lock recording on, and tap again when you're done. Everything runs on-device.
+
+Quoth is based on [Parrot](https://github.com/humanitas-labs/parrot) by Humanitas Labs (MIT), with a hands-free lock added.
 
 ## 1. Install
 
-Download [Parrot.dmg](https://github.com/humanitas-labs/parrot/releases/latest/download/Parrot.dmg), drag Parrot to Applications, and open it. Turn on Parrot when macOS asks for Accessibility and the microphone. The first start downloads the speech model (about 150 MB).
+Build it from source (see section 6). Requires macOS 14+ on Apple Silicon. Open Quoth.app and allow it when macOS asks for Accessibility and the microphone. The first start downloads the speech model (about 150 MB).
 
-Or from a terminal, which also installs the `parrot` command:
-
-```sh
-curl -fsSL https://perroquet.xyz/install.sh | sh
-```
-
-Requires macOS 14+ on Apple Silicon. Parrot is signed and notarized, so permissions survive updates, and it updates itself: it checks once a day, and **Check for Updates…** in its menu checks now. Upgrading from the command-line version: open the new app once and it replaces the old install.
+Quoth does not update itself.
 
 ## 2. Usage
 
 1. Click into any text field.
-2. Hold `fn` and speak. A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift. The change applies from the next press.
-3. Release. The transcript is pasted at the cursor, usually within 200–300 ms, and your clipboard is restored.
+2. **Hold `fn` and speak.** A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift.
+3. Release. The transcript is pasted at the cursor and your clipboard is restored.
 
-Choose **Launch at login** in **Settings…** to start Parrot with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `parrot doctor` shows how to fix it.
+**Hands-free:** double-tap the hotkey to lock recording on. The pill shows a lock. Tap the hotkey again to stop and transcribe, or hold another modifier (such as Shift) while tapping to discard. A locked recording stops by itself after 10 minutes. Turn this off with **Double-tap to lock** in Settings.
+
+If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shortcut** to Off, since macOS also uses a double press of `fn` to start its own dictation.
+
+Choose **Launch at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `parrot doctor` shows how to fix it.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.
 
 ## 3. Dictionary
 
-Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-text table of each word and what the model writes instead, and Parrot spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
+Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-text table of each word and what the model writes instead, and Quoth spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
 
 ## 4. CLI
 
@@ -42,8 +44,8 @@ Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-tex
 | `parrot` | Run in the foreground (^C to quit) |
 | `parrot setup` | One-time setup: permissions and model download |
 | `parrot doctor` | Check permissions, and the `fn` key setting when the hotkey is `fn` |
-| `parrot install --launch-at-login` | Start Parrot at login |
-| `parrot install --cli` | Link `/usr/local/bin/parrot` to Parrot.app |
+| `parrot install --launch-at-login` | Start Quoth at login |
+| `parrot install --cli` | Link `/usr/local/bin/parrot` to Quoth.app |
 | `parrot install --uninstall` | Stop launching at login and remove logs |
 | `parrot models list` | List available models |
 | `parrot --model whisper-large-v3-turbo` | Larger, multilingual model |
@@ -59,9 +61,9 @@ WhisperKit runs Whisper on the Apple Neural Engine via CoreML, AVAudioEngine cap
 
 ```sh
 swift build -c release && swift test
-scripts/dev-install.sh      # build, sign, install Parrot.app, link the CLI
+scripts/dev-install.sh      # build, sign, install Quoth.app, link the CLI
 ```
 
 ## 7. License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Based on Parrot, copyright © 2026 Humanitas Labs.

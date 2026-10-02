@@ -35,7 +35,7 @@ public enum LoginItem {
         switch SMAppService.mainApp.status {
         case .requiresApproval:
             print("! launch at login needs your approval")
-            print("  System Settings → General → Login Items → allow Parrot")
+            print("  System Settings → General → Login Items → allow Quoth")
             SMAppService.openSystemSettingsLoginItems()
         default:
             print("✓ launch at login on")
@@ -74,7 +74,7 @@ public enum LoginItem {
         for running in NSRunningApplication.runningApplications(withBundleIdentifier: AppBundle.identifier)
         where running.processIdentifier != me {
             running.terminate()
-            print("  quit Parrot (pid \(running.processIdentifier))")
+            print("  quit Quoth (pid \(running.processIdentifier))")
         }
 
         for dir in [Paths.logs, Paths.caches] where Paths.fileType(dir.path) != nil {

@@ -72,7 +72,7 @@ enum OnboardingWindow {
             backing: .buffered, defer: false
         )
         window.contentView = hosting
-        window.title = "Welcome to Parrot"
+        window.title = "Welcome to Quoth"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
@@ -192,7 +192,7 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             BirdBadge()
-            Text("Parrot")
+            Text("Quoth")
                 .font(.system(size: 24, weight: .semibold))
                 .padding(.top, 16)
             Text("Hold a key, speak, and let go.")

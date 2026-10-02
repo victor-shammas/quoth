@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Parrot Lock</string>
+	<string>Quoth</string>
 	<key>CFBundleExecutable</key>
 	<string>parrot</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.parrot-lock</string>
+	<string>local.quoth</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Parrot Lock</string>
+	<string>Quoth</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,9 +29,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © Humanitas Labs. MIT License. Local fork with a double-tap lock.</string>
+	<string>Based on Parrot, copyright © Humanitas Labs. MIT License.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Parrot records while you hold the dictation key and turns your speech into text on this Mac. Audio never leaves it.</string>
+	<string>Quoth records while you hold the dictation key, or after a double tap locks it on, and turns your speech into text on this Mac. Audio never leaves it.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<false/>
 	<!-- Local fork: no SUFeedURL or SUPublicEDKey, so Updater.start() turns

@@ -9,9 +9,9 @@ import Foundation
 /// through the `/usr/local/bin/parrot` symlink, it is the CLI.
 public enum AppBundle {
     /// Parrot's bundle identifier. TCC grants and the login item key to it,
-    /// so it never changes (ADR-005). This fork has its own, so it installs
+    /// so it never changes (ADR-005). Quoth has its own, so it installs
     /// beside the official Parrot with separate grants and login item.
-    static let identifier = "local.parrot-lock"
+    static let identifier = "local.quoth"
 
     /// The bundle's URL when the main bundle is Parrot.app, else nil (a bare
     /// `swift build` binary).
@@ -83,7 +83,7 @@ public enum AppLaunch {
     public static func prepare() {
         isApp = true
         redirectOutput()
-        Log.info("Parrot \(AppBundle.version) starting")
+        Log.info("Quoth \(AppBundle.version) starting")
 
         guard claimSingleInstance() else {
             // LaunchServices normally activates the running copy instead; this
@@ -97,8 +97,8 @@ public enum AppLaunch {
 
         if isOnDiskImageOrTranslocated(bundle) {
             _ = alert(
-                "Move Parrot to Applications",
-                "Parrot is running from the disk image. Drag it to the Applications folder, then open it from there.",
+                "Move Quoth to Applications",
+                "Quoth is running from the disk image. Drag it to the Applications folder, then open it from there.",
                 buttons: ["Quit"]
             )
             exit(0)
@@ -229,12 +229,12 @@ public enum AppLaunch {
         switch failure {
         case .microphoneDenied:
             return (
-                "Parrot needs the microphone",
-                "Turn on Parrot in System Settings → Privacy & Security → Microphone, then open Parrot again.",
+                "Quoth needs the microphone",
+                "Turn on Quoth in System Settings → Privacy & Security → Microphone, then open Quoth again.",
                 "Privacy_Microphone"
             )
         default:
-            return ("Parrot couldn't start", failure.message, nil)
+            return ("Quoth couldn't start", failure.message, nil)
         }
     }
 

@@ -51,7 +51,7 @@ public enum StartupFailure: Error {
     private static func permanent(_ problem: String, fix: String) -> String {
         "\(problem)\n"
             + "  fix: \(fix), then restart parrot "
-            + "(`open -a Parrot`, or log in again)."
+            + "(`open -a Quoth`, or log in again)."
     }
 }
 

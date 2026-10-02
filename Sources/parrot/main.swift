@@ -141,13 +141,13 @@ struct Install: ParsableCommand {
         abstract: "Set up launch at login and the parrot command, or remove them."
     )
 
-    @Flag(name: .long, help: "Start Parrot.app at login, and start it now.")
+    @Flag(name: .long, help: "Start Quoth.app at login, and start it now.")
     var launchAtLogin: Bool = false
 
-    @Flag(name: .long, help: "Link /usr/local/bin/parrot to the executable in Parrot.app.")
+    @Flag(name: .long, help: "Link /usr/local/bin/parrot to the executable in Quoth.app.")
     var cli: Bool = false
 
-    @Flag(name: .long, help: "Stop starting at login, quit Parrot, and remove its logs.")
+    @Flag(name: .long, help: "Stop starting at login, quit Quoth, and remove its logs.")
     var uninstall: Bool = false
 
     func run() throws {

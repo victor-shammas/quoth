@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the release binary and wraps it in a signed ParrotLock.app.
-#   scripts/build-app.sh [version]        → build/ParrotLock.app
+# Builds the release binary and wraps it in a signed Quoth.app.
+#   scripts/build-app.sh [version]        → build/Quoth.app
 #
 # The version (a tag such as v0.1.0 or 0.1.0) goes into
 # CFBundleShortVersionString and CFBundleVersion. Without one it comes from
@@ -29,7 +29,7 @@ cd "$(dirname "$0")/.."
 VERSION="${1:-$(git describe --tags --abbrev=0 2>/dev/null || echo 0.0.0)}"
 VERSION="${VERSION#v}"
 OUT="${PARROT_BUILD_DIR:-build}"
-APP="$OUT/ParrotLock.app"
+APP="$OUT/Quoth.app"
 
 IDENTITY="${PARROT_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
     | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)}"
