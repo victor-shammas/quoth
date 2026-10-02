@@ -59,7 +59,7 @@ final class HotkeyRecoveryTests: XCTestCase {
         XCTAssertEqual(HotkeyHealth.degraded(secureInput: true), .secureInputActive)
         XCTAssertEqual(HotkeyHealth.degraded(secureInput: false), .tapDisabled)
         XCTAssertNil(HotkeyHealth.ok.statusText)
-        XCTAssertEqual(HotkeyHealth.secureInputActive.statusText, "hotkey unavailable, secure input active")
-        XCTAssertEqual(HotkeyHealth.tapDisabled.statusText, "hotkey tap disabled")
+        XCTAssertEqual(HotkeyHealth.secureInputActive.statusText, "Hotkey paused while a password field is active")
+        XCTAssertEqual(HotkeyHealth.tapDisabled.statusText, "Hotkey isn't responding. Retrying…")
     }
 }

@@ -20,11 +20,11 @@ enum HotkeyHealth: Equatable {
     var statusText: String? {
         switch self {
         case .ok: return nil
-        case .secureInputActive: return "hotkey unavailable, secure input active"
-        case .tapDisabled: return "hotkey tap disabled"
-        case .accessibilityMissing: return "grant \(HotkeyAccess.name) to start"
-        case .modelLoading: return "loading model…"
-        case .modelFailed: return "couldn't load the model, retrying"
+        case .secureInputActive: return "Hotkey paused while a password field is active"
+        case .tapDisabled: return "Hotkey isn't responding. Retrying…"
+        case .accessibilityMissing: return "Allow \(HotkeyAccess.name) to start"
+        case .modelLoading: return "Loading model…"
+        case .modelFailed: return "Couldn't load the model. Retrying…"
         }
     }
 

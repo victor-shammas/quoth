@@ -35,6 +35,17 @@ package final class DictionaryStore: @unchecked Sendable {
     /// What was last looked at, loaded or not, so an unchanged file is neither
     /// read nor logged again.
     private var seen: Stamp?
+    private var problem: String?
+
+    /// Why the file on disk isn't what `current()` uses, or nil when it is:
+    /// a syntax error or an unreadable file. The Settings editor won't save
+    /// over it, so a hand edit is never lost.
+    func loadProblem() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        refresh()
+        return problem
+    }
 
     package init(file: URL = Paths.dictionaryFile, log: @escaping (String) -> Void = { Log.warning($0) }) {
         self.file = file
@@ -111,6 +122,7 @@ package final class DictionaryStore: @unchecked Sendable {
         // Use it at once, without waiting for the next stat to notice.
         loaded = Loaded(dictionary)
         seen = nil
+        problem = nil
         return true
     }
 
@@ -150,6 +162,7 @@ package final class DictionaryStore: @unchecked Sendable {
                 if seen != nil { log("\(file.path) was removed; dictionary is empty") }
                 loaded = Loaded(.empty)
                 seen = .missing
+                problem = nil
             }
             return
         }
@@ -187,8 +200,10 @@ package final class DictionaryStore: @unchecked Sendable {
         do {
             let dictionary = try UserDictionary.parse(data)
             loaded = Loaded(dictionary)
+            problem = nil
             Log.info("dictionary: \(dictionary.terms.count) words · \(dictionary.replacements.count) with replacements")
         } catch {
+            problem = "\(error)"
             log("\(file.lastPathComponent) not loaded, \(error); keeping the last good version")
         }
     }
@@ -196,6 +211,7 @@ package final class DictionaryStore: @unchecked Sendable {
     /// Keeps the last good dictionary and logs `message` once.
     private func refuse(_ message: String) {
         let stamp = Stamp.refused(message)
+        problem = message
         guard seen != stamp else { return }
         seen = stamp
         log("\(message); keeping the last good dictionary")

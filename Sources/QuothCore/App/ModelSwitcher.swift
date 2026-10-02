@@ -40,7 +40,7 @@ final class ModelSwitcher {
         guard next.id != model.id else {
             // Back to the model already in use: nothing to load.
             status.show(nil)
-            menuBar.setModel(model.id)
+            menuBar.setModelStatus(nil)
             return
         }
 
@@ -86,7 +86,7 @@ final class ModelSwitcher {
         model = next
         load = nil
         status.show(nil)
-        menuBar.setModel(next.id)
+        menuBar.setModelStatus(nil)
         Log.info("model: \(next.id)")
         // Free the old model's memory. Nothing is transcribing with it: the
         // swap waited for the controller to go idle.
@@ -102,7 +102,7 @@ final class ModelSwitcher {
         let state = ModelLoadStatus.State(modelID: next.id, phase: phase)
         guard state != status.current else { return }
         status.show(state)
-        menuBar.setModel("\(model.id) · \(state.text)")
+        menuBar.setModelStatus(state.text)
     }
 }
 
@@ -123,17 +123,18 @@ final class ModelLoadStatus: ObservableObject {
         var modelID: String
         var phase: Phase
 
-        /// For example "downloading whisper-large-v3-turbo… 42%".
+        /// For example "Downloading Large v3 Turbo… 42%".
         var text: String {
+            let name = ModelRegistry.find(modelID)?.displayName.replacingOccurrences(of: "Whisper ", with: "") ?? modelID
             switch phase {
             case .downloading(let fraction?):
-                return "downloading \(modelID)… \(Int((fraction * 100).rounded(.down)))%"
+                return "Downloading \(name)… \(Int((fraction * 100).rounded(.down)))%"
             case .downloading(nil):
-                return "downloading \(modelID)…"
+                return "Downloading \(name)…"
             case .loading:
-                return "loading \(modelID)…"
+                return "Getting \(name) ready…"
             case .failed:
-                return "couldn't load \(modelID)"
+                return "Couldn't load \(name). Check your connection and choose it again."
             }
         }
     }

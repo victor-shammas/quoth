@@ -165,3 +165,21 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(Daemon.knownModel(nil))
     }
 }
+
+final class SettingsResetTests: XCTestCase {
+    func testResetKeepsWhatIsTheUsersOwn() {
+        var settings = Settings()
+        settings.hotkey.key = .rightOption
+        settings.hotkey.liveText = false
+        settings.model.id = "whisper-small"
+        settings.dictionary.examples = ["en": "I pushed the WhisperKit fix."]
+        settings.language.spoken = ["en", "de"]
+        settings.onboarding.completed = true
+        let reset = settings.reset()
+        XCTAssertEqual(reset.hotkey, HotkeySettings())
+        XCTAssertNil(reset.model.id)
+        XCTAssertEqual(reset.dictionary.examples, ["en": "I pushed the WhisperKit fix."])
+        XCTAssertEqual(reset.language.spoken, ["en", "de"])
+        XCTAssertTrue(reset.onboarding.completed)
+    }
+}

@@ -5,16 +5,17 @@ import AppKit
 /// (since we run as `.accessory` — no dock icon, no main window).
 ///
 /// The menu has named slots, top to bottom: `statusLine`, `modelLine`,
-/// `grantPermissionsItem`, `settingsItem`, `checkForUpdatesItem`, `quitItem`. Features update a slot
+/// `grantPermissionsItem`, `copyLastItem`, `fixLastItem`, `settingsItem`,
+/// `checkForUpdatesItem`, `quitItem`. Features update a slot
 /// rather than rebuilding the menu.
 @MainActor
 final class MenuBarController {
-    private static func readyStatus(_ key: HotkeyKey) -> String { "idle · hold \(key.shortName) to dictate" }
+    private static func readyStatus(_ key: HotkeyKey) -> String { "Ready — hold \(key.shortName) to dictate" }
 
     private let statusItem: NSStatusItem
     /// Slot: what the dictation loop is doing. Driven as a `DictationObserver`.
     let statusLine: NSMenuItem
-    /// Slot: the loaded model.
+    /// Slot: a model downloading or loading; hidden otherwise.
     let modelLine: NSMenuItem
     /// Slot: reopens the onboarding window (#51). Shown in Quoth.app while
     /// a permission is missing.
@@ -30,8 +31,6 @@ final class MenuBarController {
     let checkForUpdatesItem: NSMenuItem
     /// Slot: quits quoth.
     let quitItem: NSMenuItem
-    /// Opens the licence texts (`AcknowledgementsWindow`).
-    let acknowledgementsItem: NSMenuItem
     /// Copies the last dictation (`LastDictation`); disabled without one.
     let copyLastItem: NSMenuItem
     /// Opens Fix Last Dictation.
@@ -57,12 +56,13 @@ final class MenuBarController {
         statusLine.isEnabled = false
         menu.addItem(statusLine)
 
-        modelLine = NSMenuItem(title: "model: \(modelID)", action: nil, keyEquivalent: "")
+        modelLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         modelLine.isEnabled = false
+        modelLine.isHidden = true
         menu.addItem(modelLine)
 
         grantPermissionsItem = NSMenuItem(
-            title: "Grant Permissions…",
+            title: "Finish Setup…",
             action: #selector(grantPermissionsClicked),
             keyEquivalent: ""
         )
@@ -82,8 +82,6 @@ final class MenuBarController {
         settingsItem = NSMenuItem(title: "Settings…", action: #selector(settingsClicked), keyEquivalent: ",")
         menu.addItem(settingsItem)
 
-        acknowledgementsItem = NSMenuItem(title: "Acknowledgements…", action: #selector(acknowledgementsClicked), keyEquivalent: "")
-        menu.addItem(acknowledgementsItem)
 
         checkForUpdatesItem = NSMenuItem(
             title: "Check for Updates…",
@@ -95,6 +93,8 @@ final class MenuBarController {
         #endif
         menu.addItem(checkForUpdatesItem)
 
+        menu.addItem(.separator())
+
         quitItem = NSMenuItem(
             title: "Quit Quoth",
             action: #selector(quitClicked),
@@ -105,7 +105,6 @@ final class MenuBarController {
         statusItem.menu = menu
         quitItem.target = self
         settingsItem.target = self
-        acknowledgementsItem.target = self
         copyLastItem.target = self
         fixLastItem.target = self
         checkForUpdatesItem.target = self
@@ -127,8 +126,10 @@ final class MenuBarController {
         if isIdle { setStatus(idleStatus) }
     }
 
-    func setModel(_ modelID: String) {
-        modelLine.title = "model: \(modelID)"
+    /// A model downloading or loading, or nil to hide the line.
+    func setModelStatus(_ text: String?) {
+        modelLine.title = text ?? ""
+        modelLine.isHidden = text == nil
     }
 
     private func configureButton() {
@@ -150,10 +151,6 @@ final class MenuBarController {
 
     @objc private func fixLastClicked() {
         onFixLast?()
-    }
-
-    @objc private func acknowledgementsClicked() {
-        AcknowledgementsWindow.show()
     }
 
     @objc private func settingsClicked() {
@@ -179,19 +176,19 @@ extension MenuBarController: DictationObserver {
     func dictationStarted() {
         isIdle = false
         setGlyph(.recording)
-        setStatus("● recording")
+        setStatus("Recording…")
     }
 
     func dictationLocked() {
         isIdle = false
         setGlyph(.locked)
-        setStatus("● recording (locked) · tap \(hotkey.shortName) to stop")
+        setStatus("Locked — tap \(hotkey.shortName) to stop")
     }
 
     func dictationTranscribing() {
         isIdle = false
         setGlyph(.transcribing)
-        setStatus("transcribing…")
+        setStatus("Transcribing…")
     }
 
     func dictationFinished(_ result: DictationResult) {

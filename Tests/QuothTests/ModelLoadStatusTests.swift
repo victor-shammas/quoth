@@ -5,10 +5,10 @@ import XCTest
 final class ModelLoadStatusTests: XCTestCase {
     func testText() {
         typealias State = ModelLoadStatus.State
-        XCTAssertEqual(State(modelID: "whisper-small", phase: .downloading(nil)).text, "downloading whisper-small…")
-        XCTAssertEqual(State(modelID: "whisper-small", phase: .downloading(0.426)).text, "downloading whisper-small… 42%")
-        XCTAssertEqual(State(modelID: "whisper-small", phase: .loading).text, "loading whisper-small…")
-        XCTAssertEqual(State(modelID: "whisper-small", phase: .failed).text, "couldn't load whisper-small")
+        XCTAssertEqual(State(modelID: "whisper-small", phase: .downloading(nil)).text, "Downloading Small…")
+        XCTAssertEqual(State(modelID: "whisper-small", phase: .downloading(0.426)).text, "Downloading Small… 42%")
+        XCTAssertEqual(State(modelID: "whisper-small", phase: .loading).text, "Getting Small ready…")
+        XCTAssertEqual(State(modelID: "whisper-small", phase: .failed).text, "Couldn't load Small. Check your connection and choose it again.")
     }
 
     func testShowsWholePercentStepsOnly() {

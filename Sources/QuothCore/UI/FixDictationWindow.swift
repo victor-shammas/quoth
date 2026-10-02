@@ -27,7 +27,7 @@ final class FixDictationWindow {
     }
 
     private func make() -> NSWindow {
-        let window = NSWindow(
+        let window = EditingWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
             styleMask: [.titled, .closable],
             backing: .buffered,

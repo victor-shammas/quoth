@@ -33,8 +33,12 @@ final class ModelStorage: ObservableObject {
         refresh()
     }
 
+    /// Two significant figures are plenty for disk use: "650 MB", "1.6 GB".
     static func format(_ bytes: Int64) -> String {
-        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        let mb = Double(bytes) / 1_000_000
+        if mb >= 1000 { return String(format: "%.1f GB", mb / 1000) }
+        if mb >= 100 { return String(format: "%.0f MB", (mb / 10).rounded() * 10) }
+        return String(format: "%.0f MB", mb)
     }
 }
 
@@ -49,15 +53,17 @@ struct DownloadedModels: View {
 
     var body: some View {
         if !storage.entries.isEmpty {
-            PillRow("Downloaded") {
-                Text("\(ModelStorage.format(storage.totalBytes)) on this Mac")
+            HStack {
+                Text("On this Mac").font(.headline)
+                Spacer()
+                Text("\(ModelStorage.format(storage.totalBytes)) in all")
                     .foregroundStyle(.secondary)
             }
         }
         VStack(alignment: .leading, spacing: 6) {
             ForEach(storage.entries) { entry in
                 HStack {
-                    Text(entry.model.displayName)
+                    Text(entry.model.displayName.replacingOccurrences(of: "Whisper ", with: ""))
                     Spacer()
                     Text(ModelStorage.format(entry.bytes))
                         .foregroundStyle(.secondary)
@@ -67,7 +73,7 @@ struct DownloadedModels: View {
                             .foregroundStyle(.tertiary)
                             .frame(minWidth: 64, alignment: .trailing)
                     } else {
-                        Button("Delete") { confirming = entry }
+                        Button("Delete…") { confirming = entry }
                             .buttonStyle(.pill)
                             .frame(minWidth: 64, alignment: .trailing)
                     }
@@ -85,11 +91,11 @@ struct DownloadedModels: View {
             isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
             presenting: confirming
         ) { entry in
-            Button("Delete \(ModelStorage.format(entry.bytes))", role: .destructive) {
+            Button("Delete", role: .destructive) {
                 storage.delete(entry.model)
             }
-        } message: { _ in
-            Text("It downloads again if you choose it later.")
+        } message: { entry in
+            Text("Frees \(ModelStorage.format(entry.bytes)). It downloads again if you choose it later.")
         }
     }
 

@@ -105,8 +105,6 @@ public enum Daemon {
         if AppLaunch.isApp { Updater.start() }
         #endif
         let menuBar = MenuBarController(modelID: model.id)
-        let settingsWindow = SettingsWindow(store: settings)
-        menuBar.onOpenSettings = { settingsWindow.show() }
         menuBar.setHotkey(monitor.key)
         // Quoth.app sets up the hotkey, languages and permissions, and
         // explains each permission before macOS asks (#51).
@@ -117,6 +115,8 @@ public enum Daemon {
         // The dictionary (#33): created on first run, reloaded when it changes.
         let dictionary = DictionaryStore()
         dictionary.createIfMissing()
+        let settingsWindow = SettingsWindow(store: settings, dictionary: dictionary)
+        menuBar.onOpenSettings = { settingsWindow.show() }
         // Read at each release, so a Language change applies at the next press (#43).
         let dictionaryContext = {
             var context = DictionaryContext(

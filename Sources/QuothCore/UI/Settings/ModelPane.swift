@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// The model and the spoken language (#43).
-struct TranscriptionSection: View {
+/// Model: which Whisper model transcribes, in which language (#43), and
+/// the models downloaded to this Mac.
+struct ModelPane: View {
     @ObservedObject var store: SettingsStore
     /// A model loading behind the one in use, after a change here.
     @ObservedObject private var loading = ModelLoadStatus.shared
@@ -18,19 +18,8 @@ struct TranscriptionSection: View {
     }
 
     var body: some View {
-        SettingsGroup("Transcription") {
-            // Built by hand: LabeledContent aligns the menu with the first
-            // line, and it should sit centered beside both.
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Model")
-                    if let model = selectedModel, loading.current == nil {
-                        Text(summary(model))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
+        Pane {
+            PillRow("Model", caption: loading.current == nil ? selectedModel.map(summary) : nil) {
                 PillMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
                     modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
                     modelGroup("All languages, including English", ModelRegistry.shared.filter(\.isMultilingual))
@@ -53,12 +42,9 @@ struct TranscriptionSection: View {
 
             languagePicker
 
-            DownloadedModels(selected: selectedModel)
+            Divider()
 
-            PillRow("Dictionary") {
-                Button("Open Dictionary File") { Self.openDictionary() }
-                    .buttonStyle(.pill)
-            }
+            DownloadedModels(selected: selectedModel)
         }
     }
 
@@ -144,9 +130,9 @@ struct TranscriptionSection: View {
 
         if !multilingual, let model = selectedModel {
             let only = SpokenLanguage.displayName(model.languages.first ?? "en")
-            caption("\(model.displayName) hears \(only) only; choose a multilingual model to set a language.")
+            caption("This model hears \(only) only. For other languages, choose one under All languages.")
         } else if store.current.language.code == nil {
-            PillRow("Languages") {
+            PillRow("Languages you speak", caption: "Automatic picks among these.") {
                 SpokenLanguagesButton(store: store)
             }
         }
@@ -159,23 +145,8 @@ struct TranscriptionSection: View {
         ))
     }
 
-    /// Opens the dictionary in the default plain-text editor, creating it
-    /// from the template first if it is missing. The file has no extension,
-    /// so `open(_:)` alone would not know what to open it with.
-    private static func openDictionary() {
-        let file = Paths.dictionaryFile
-        DictionaryStore(file: file).createIfMissing()
-        let editor = NSWorkspace.shared.urlForApplication(toOpen: UTType.plainText)
-            ?? URL(fileURLWithPath: "/System/Applications/TextEdit.app")
-        NSWorkspace.shared.open([file], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-            if let error { Log.warning("couldn't open \(file.path): \(error.localizedDescription)") }
-        }
-    }
-
     private func caption(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        Caption(text)
     }
 }
 

@@ -1,165 +1,151 @@
 import AppKit
 import SwiftUI
 
-/// The Settings window (#41), opened from the menu bar's Settings… (⌘,).
-/// One instance: opening it again brings the same window to the front, and
-/// closing it leaves Quoth running.
+/// The panes of the Settings window, in toolbar order.
+enum SettingsPane: Int, CaseIterable {
+    case general, model, dictionary, about
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .model: return "Model"
+        case .dictionary: return "Dictionary"
+        case .about: return "About"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .general: return "gearshape"
+        case .model: return "waveform"
+        case .dictionary: return "character.book.closed"
+        case .about: return "info.circle"
+        }
+    }
+}
+
+/// The Settings window (#41), opened from the menu bar's Settings… (⌘,):
+/// toolbar tabs, as in Apple's own Settings windows, each sized to its pane
+/// so nothing scrolls but the dictionary's list. One instance: opening it
+/// again brings the same window to the front, on the pane it was left on,
+/// and closing it leaves Quoth running.
+///
+/// Controls write straight through to `settings.json` via `SettingsStore`
+/// and the dictionary file via `DictionaryStore`, so the window holds no
+/// state of its own (ADR-002).
 @MainActor
 final class SettingsWindow {
     private let store: SettingsStore
+    private let dictionary: DictionaryStore
     private var window: NSWindow?
+    private var tabs: SettingsTabs?
 
-    init(store: SettingsStore) {
+    init(store: SettingsStore, dictionary: DictionaryStore) {
         self.store = store
+        self.dictionary = dictionary
     }
 
-    func show() {
+    /// Brings the window forward, on `pane` if given.
+    func show(pane: SettingsPane? = nil) {
         let window = self.window ?? make()
         self.window = window
+        if let pane { tabs?.selectedTabViewItemIndex = pane.rawValue }
         // An accessory app is never active on its own; without this the
         // window opens behind the frontmost app.
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         window.makeKeyAndOrderFront(nil)
     }
 
     private func make() -> NSWindow {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 560),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Quoth Settings"
-        // The header inside says it; the title still names the window in
-        // Mission Control and the window switcher.
-        window.titleVisibility = .hidden
-        window.contentView = NSHostingView(rootView: SettingsView(store: store))
+        let tabs = SettingsTabs()
+        tabs.tabStyle = .toolbar
+        tabs.transitionOptions = [.crossfade, .allowUserInteraction]
+        for pane in SettingsPane.allCases {
+            let host = NSHostingController(rootView: view(for: pane))
+            // The pane reports its height, and the window follows it.
+            host.sizingOptions = [.preferredContentSize]
+            host.title = pane.title
+            let item = NSTabViewItem(viewController: host)
+            item.label = pane.title
+            item.image = NSImage(systemSymbolName: pane.symbol, accessibilityDescription: pane.title)
+            tabs.addTabViewItem(item)
+        }
+        self.tabs = tabs
+
+        let window = EditingWindow(contentViewController: tabs)
+        window.styleMask = [.titled, .closable]
+        window.toolbarStyle = .preference
         window.isReleasedWhenClosed = false
         window.center()
         return window
     }
-}
 
-
-/// Every setting on one scrolling page. Controls write straight through to
-/// `settings.json` via `SettingsStore`, and a hand edit of the file updates
-/// the controls, so the window and the file never disagree. The window holds
-/// no state of its own (ADR-002).
-///
-/// Laid out by hand rather than as a grouped `Form`, whose row boxes can't
-/// be removed on macOS: rows sit on the window background and the pills
-/// carry the style, as in the onboarding window.
-struct SettingsView: View {
-    @ObservedObject var store: SettingsStore
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                SettingsHeader()
-                    .padding(.bottom, 8)
-                Divider()
-                SettingsGroup("General") {
-                    PillRow("Config") {
-                        Button("Open Config File") {
-                            store.createIfMissing()
-                            NSWorkspace.shared.open(store.file)
-                        }
-                        .buttonStyle(.pill)
-                    }
-                    HotkeyRow(store: store)
-                    LaunchAtLoginRow()
-                    PillRow("Reset") {
-                        Button("Reset to Defaults") { store.write(Settings()) }
-                            .buttonStyle(.pill)
-                    }
-                }
-                Divider()
-                TranscriptionSection(store: store)
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 36)
-            .padding(.bottom, 32)
+    private func view(for pane: SettingsPane) -> AnyView {
+        switch pane {
+        case .general: return AnyView(GeneralPane(store: store))
+        case .model: return AnyView(ModelPane(store: store))
+        case .dictionary: return AnyView(DictionaryPane(settings: store, dictionary: dictionary))
+        case .about: return AnyView(AboutPane(store: store))
         }
-        // Escape and ⌘W close the window: an accessory app has no menu bar
-        // of its own to carry Close. Behind the page, so it takes no row.
-        .background {
-            Button("Close") { NSApp.keyWindow?.performClose(nil) }
-                .keyboardShortcut("w", modifiers: .command)
-                .opacity(0)
-                .accessibilityHidden(true)
-        }
-        .frame(width: 460)
-        .frame(minHeight: 420, idealHeight: 560)
-        .onExitCommand { NSApp.keyWindow?.performClose(nil) }
     }
 }
 
-/// A titled group of rows, such as General.
-struct SettingsGroup<Content: View>: View {
-    let title: String
+/// Resizes the window to the selected pane, keeping its top edge where it
+/// is, as Apple's Settings windows do; and again when a pane grows, such as
+/// when a download's progress line appears.
+final class SettingsTabs: NSTabViewController {
+    override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+        super.tabView(tabView, didSelect: tabViewItem)
+        fit()
+    }
+
+    override func preferredContentSizeDidChange(for viewController: NSViewController) {
+        super.preferredContentSizeDidChange(for: viewController)
+        fit()
+    }
+
+    private func fit() {
+        guard let window = view.window,
+              tabViewItems.indices.contains(selectedTabViewItemIndex),
+              let pane = tabViewItems[selectedTabViewItemIndex].viewController
+        else { return }
+        let size = pane.preferredContentSize
+        guard size.height > 0 else { return }
+        var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+        frame.origin = NSPoint(x: window.frame.minX, y: window.frame.maxY - frame.height)
+        let animate = window.isVisible && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        window.setFrame(frame, display: true, animate: animate)
+    }
+}
+
+/// The layout every pane shares: one width, the same margins, and a height
+/// that is exactly its content's, which the window then takes.
+struct Pane<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
-    init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
-        self.title = title
-        self.content = content
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(.title3.weight(.semibold))
+        VStack(alignment: .leading, spacing: 16) {
             content()
         }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
+        .frame(width: 520, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
-/// The app icon, with the title and version centered under it.
-private struct SettingsHeader: View {
-    var body: some View {
-        VStack(spacing: 4) {
-            AppBadge()
-                .padding(.bottom, 12)
-            Text("Quoth · Settings")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-            Text("Version \(AppBundle.version)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+/// A small secondary line under a row or a group.
+struct Caption: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
     }
-}
-
-/// Launch at login through `SMAppService`. Read live, since the user can
-/// change it in System Settings while Quoth runs; not stored in
-/// `settings.json`.
-private struct LaunchAtLoginRow: View {
-    @State private var isOn = LoginItem.isEnabled
 
     var body: some View {
-        if LoginItem.isAvailable {
-            // Outside a Form a toggle is a checkbox; this keeps the switch
-            // on the right, like the other controls.
-            PillRow("Launch at login") {
-                Toggle("Launch at login", isOn: Binding(
-                get: { isOn },
-                set: { on in
-                    do {
-                        try LoginItem.setEnabled(on)
-                    } catch {
-                        Log.warning("couldn't change launch at login: \(error)")
-                    }
-                    isOn = LoginItem.isEnabled
-                }
-                ))
-                .toggleStyle(.switch)
-                .labelsHidden()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-                isOn = LoginItem.isEnabled
-            }
-        } else {
-            Text("Launch at login is available when Quoth runs from Quoth.app.")
-                .foregroundStyle(.secondary)
-        }
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

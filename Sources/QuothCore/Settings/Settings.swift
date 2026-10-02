@@ -30,3 +30,16 @@ struct Settings: Codable, Equatable {
         onboarding = try c.decodeIfPresent(OnboardingSettings.self, forKey: .onboarding) ?? OnboardingSettings()
     }
 }
+
+extension Settings {
+    /// Defaults for every preference, keeping what is the user's own rather
+    /// than a preference: the dictionary's example sentences, the languages
+    /// they speak, and that onboarding is done (Reset to Defaults…).
+    func reset() -> Settings {
+        var fresh = Settings()
+        fresh.dictionary = dictionary
+        fresh.language.spoken = language.spoken
+        fresh.onboarding = onboarding
+        return fresh
+    }
+}

@@ -20,9 +20,12 @@ struct PillLabel: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        .background(Capsule().fill(Color.primary.opacity(0.08)))
+        .background(Capsule().fill(Color.primary.opacity(contrast == .increased ? 0.16 : 0.08)))
+        .overlay(Capsule().strokeBorder(Color.primary.opacity(contrast == .increased ? 0.5 : 0), lineWidth: 1))
         .contentShape(Capsule())
     }
+
+    @Environment(\.colorSchemeContrast) private var contrast
 }
 
 /// A button drawn as a pill: `.buttonStyle(.pill)` with the light fill of a
@@ -33,6 +36,7 @@ struct PillButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     /// `.large` for the window's main button, such as Get Started.
     @Environment(\.controlSize) private var controlSize
+    @Environment(\.colorSchemeContrast) private var contrast
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -41,6 +45,7 @@ struct PillButtonStyle: ButtonStyle {
             .padding(.horizontal, controlSize == .large ? 22 : 14)
             .padding(.vertical, controlSize == .large ? 9 : 6)
             .background(Capsule().fill(fill(pressed: configuration.isPressed)))
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(contrast == .increased && !primary ? 0.5 : 0), lineWidth: 1))
             .contentShape(Capsule())
             .opacity(isEnabled ? 1 : 0.35)
     }
@@ -48,7 +53,7 @@ struct PillButtonStyle: ButtonStyle {
     private func fill(pressed: Bool) -> Color {
         primary
             ? Color.primary.opacity(pressed ? 0.8 : 1)
-            : Color.primary.opacity(pressed ? 0.14 : 0.08)
+            : Color.primary.opacity(pressed ? 0.14 : (contrast == .increased ? 0.16 : 0.08))
     }
 }
 
@@ -75,23 +80,31 @@ struct PillMenu<Content: View>: View {
     }
 }
 
-/// A settings row with its control centered beside the label. Not
-/// `LabeledContent`, which lines the pill's text up with the label's
-/// baseline and so drops the pill below center.
+/// A settings row with its control centered beside the label, and an
+/// optional caption under the label. Not `LabeledContent`, which lines the
+/// pill's text up with the label's baseline and so drops the pill below
+/// center. VoiceOver reads the label with the control, so a menu says what
+/// it sets ("Hotkey, fn"), not only its value.
 struct PillRow<Control: View>: View {
     let label: String
+    var caption: String?
     @ViewBuilder let control: () -> Control
 
-    init(_ label: String, @ViewBuilder control: @escaping () -> Control) {
+    init(_ label: String, caption: String? = nil, @ViewBuilder control: @escaping () -> Control) {
         self.label = label
+        self.caption = caption
         self.control = control
     }
 
     var body: some View {
-        HStack(alignment: .center) {
-            Text(label)
-            Spacer()
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                if let caption { Caption(caption) }
+            }
+            Spacer(minLength: 8)
             control()
+                .accessibilityLabel(Text(label))
         }
     }
 }
