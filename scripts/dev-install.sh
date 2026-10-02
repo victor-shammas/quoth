@@ -40,7 +40,7 @@ PARROT_TIMESTAMP=none PARROT_BUILD_DIR="$BUILD" scripts/build-app.sh "${VERSION#
 WAS_RUNNING=0
 if [ -z "${PARROT_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
     WAS_RUNNING=1
-    echo "→ quitting the running Parrot"
+    echo "→ quitting the running Quoth"
     pkill -TERM -f "^$EXE" || true
     for _ in 1 2 3 4 5 6 7 8 9 10; do
         pgrep -f "^$EXE" >/dev/null 2>&1 || break
@@ -75,7 +75,7 @@ if [ -n "$LINK_DIR" ]; then
 fi
 
 if [ "$WAS_RUNNING" = 1 ]; then
-    echo "→ reopening Parrot"
+    echo "→ reopening Quoth"
     open "$DEST"
 fi
 
