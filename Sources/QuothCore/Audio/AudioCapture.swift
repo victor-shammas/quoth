@@ -23,6 +23,10 @@ package final class AudioCapture {
     /// Invoked on an arbitrary thread; hop to main if you touch UI.
     var onLevel: ((Float) -> Void)?
 
+    /// Called when the input route changes mid-recording (a headset
+    /// connects, the default input changes). Invoked on an arbitrary thread.
+    var onRouteChange: (() -> Void)?
+
     let mode: CaptureMode
 
     /// Counts and timings of the last finished capture, including press to
@@ -77,7 +81,10 @@ package final class AudioCapture {
         let buffer = self.buffer
         let sink = InputSink(
             deliver: Self.inputHandler(buffer: buffer, converters: converters, onLevel: onLevel),
-            routeChanged: { buffer.markRouteChanged() },
+            routeChanged: { [onRouteChange] in
+                buffer.markRouteChanged()
+                onRouteChange?()
+            },
             inputFailed: { buffer.recordInputFailure() }
         )
         do {
@@ -107,8 +114,9 @@ package final class AudioCapture {
 
     /// Stop recording, stop the input, and return the captured samples.
     /// Throws `CaptureError.routeChanged` instead of returning a partial
-    /// capture if the input route changed mid-recording.
-    package func finish() throws -> [Float] {
+    /// capture if the input route changed mid-recording, unless
+    /// `keepBeforeRouteChange` asks for what came before the change.
+    package func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
         guard recording else { return [] }
         recording = false
         input.stop()
@@ -118,7 +126,7 @@ package final class AudioCapture {
         let stats = buffer.currentStats
         lastStats = stats
         logStats(stats)
-        return try buffer.finish()
+        return try buffer.finish(keepBeforeRouteChange: keepBeforeRouteChange)
     }
 
     /// The body of an input callback: note when the buffer's first sample,

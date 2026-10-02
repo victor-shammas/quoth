@@ -93,11 +93,29 @@ final class GestureLockTests: XCTestCase {
         XCTAssertEqual(g.handle(down, at: 70), .start)
     }
 
-    func testAPressWithAnotherModifierDiscardsALock() {
+    func testAShortcutOnTheHotkeyEndsALockWithoutLosingIt() {
+        // Shift+fn+→ mid-dictation: transcribe, never discard minutes of audio.
         var g = locked()
-        XCTAssertEqual(g.handle(.hotkeyDown(othersHeld: true), at: 60), .cancel)
+        XCTAssertEqual(g.handle(.hotkeyDown(othersHeld: true), at: 60), .transcribe)
         XCTAssertNil(g.handle(.hotkeyUp, at: 60.1))
         XCTAssertFalse(g.isLocked)
+    }
+
+    func testATripleTapIsDiscarded() {
+        var g = locked()
+        XCTAssertEqual(g.handle(down, at: 0.3 + Gesture.minimumLock - 0.1), .cancel)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testAPressThatStartedNoRecordingCannotLock() {
+        var g = Gesture()
+        _ = g.handle(down, at: 0)
+        _ = g.handle(.hotkeyUp, at: 0.1)
+        XCTAssertEqual(g.handle(down, at: 0.3), .start)
+        g.abandonPress()
+        XCTAssertNil(g.handle(.hotkeyUp, at: 0.4))
+        XCTAssertFalse(g.isLocked)
+        XCTAssertFalse(g.isHeld)
     }
 
     func testOtherModifiersWhileLockedDoNothing() {
@@ -160,8 +178,9 @@ final class GestureLockTests: XCTestCase {
         XCTAssertNil(g.expireLock())
         XCTAssertFalse(g.isLocked)
 
+        // A key switch in Settings transcribes a lock rather than losing it.
         g = locked()
-        XCTAssertEqual(g.reset(), .cancel)
+        XCTAssertEqual(g.reset(), .transcribe)
         XCTAssertFalse(g.isLocked)
     }
 }

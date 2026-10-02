@@ -49,6 +49,18 @@ final class PauseSplitterTests: XCTestCase {
         XCTAssertFalse(cut.hasSpeech)
     }
 
+    func testKeyClicksAreNotSpeech() {
+        // Five 40 ms clicks in 6 s of quiet room: typing while locked.
+        var audio = Audio.pause(6)
+        for at in [1.0, 2.0, 3.0, 4.0, 5.0] {
+            let start = Int(at * 16_000)
+            for i in start..<(start + 640) { audio[i] = Float(sin(Double(i) * 0.1)) * 0.1 }
+        }
+        let cut = PauseSplitter.cut(audio)
+        XCTAssertEqual(cut?.hasSpeech, false)
+        XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(0.3) + Audio.speech(0.16) + Audio.pause(0.3)))
+    }
+
     func testHasSpeech() {
         XCTAssertTrue(PauseSplitter.hasSpeech(Audio.pause(1) + Audio.speech(0.5)))
         XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(2)))
@@ -64,13 +76,22 @@ final class PauseSplitterTests: XCTestCase {
 
 /// Answers each segment with its length in whole seconds, after a delay
 /// that makes later segments finish first unless they are run in order.
-private struct SecondsTranscriber: Transcriber {
-    var modelID = "fake"
+/// Records the context each segment got, and fails segments of `failing`
+/// seconds.
+private final class SecondsTranscriber: Transcriber, @unchecked Sendable {
+    let modelID = "fake"
+    var failing: Int?
+    private(set) var contexts: [TranscriptionContext] = []
+    private let lock = NSLock()
 
     func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
         let seconds = audio.count / 16_000
+        lock.withLock { contexts.append(context) }
         try await Task.sleep(nanoseconds: UInt64(max(0, 30 - seconds)) * 1_000_000)
-        return Transcript(text: "\(seconds)s")
+        if seconds == failing { throw CancellationError() }
+        var timings = TranscriberTimings()
+        timings.language = "de"
+        return Transcript(text: "\(seconds)s", timings: timings)
     }
 }
 
@@ -80,11 +101,13 @@ final class LiveTranscriptionTests: XCTestCase {
     private var typed: [String] = []
     private var copied: [String] = []
     private var failNext: DeliveryError?
+    private var notices: [String] = []
+    private let transcriber = SecondsTranscriber()
 
     private func makeLive() -> LiveTranscription {
         LiveTranscription(
             samples: { [unowned self] offset in offset < recording.count ? Array(recording[offset...]) : [] },
-            transcriber: SecondsTranscriber(),
+            transcriber: transcriber,
             context: TranscriptionContext(),
             processors: [],
             deliver: { [unowned self] text in
@@ -95,7 +118,8 @@ final class LiveTranscriptionTests: XCTestCase {
                 }
                 typed.append(text)
             },
-            copy: { [unowned self] in copied.append($0) }
+            copy: { [unowned self] in copied.append($0) },
+            notice: { [unowned self] in notices.append(($0 as? UserFacingError)?.userMessage ?? "\($0)") }
         )
     }
 
@@ -112,6 +136,47 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertEqual(outcome.segments, 3)
         XCTAssertNil(outcome.deliveryError)
         XCTAssertTrue(copied.isEmpty)
+    }
+
+    func testSegmentsContinueThePreviousOneInItsLanguage() async {
+        let live = makeLive()
+        recording = Audio.speech(10) + Audio.pause(1)
+        live.poll()
+        recording += Audio.speech(5)
+        _ = await live.finish(capture: recording)
+        XCTAssertEqual(transcriber.contexts.count, 2)
+        XCTAssertNil(transcriber.contexts[0].previousText)
+        XCTAssertNil(transcriber.contexts[0].language)
+        XCTAssertEqual(transcriber.contexts[1].previousText, "10s")
+        XCTAssertEqual(transcriber.contexts[1].language, "de")
+    }
+
+    func testAFailedSegmentIsReportedAtOnce() async {
+        let live = makeLive()
+        transcriber.failing = 10
+        recording = Audio.speech(10) + Audio.pause(1)
+        live.poll()
+        await live.waitForSegments()
+        XCTAssertEqual(notices, [LiveTextNotice.segmentFailed.userMessage])
+        recording += Audio.speech(5)
+        let outcome = await live.finish(capture: recording)
+        XCTAssertEqual(typed.count, 1)
+        XCTAssertNotNil(outcome.transcriptionError)
+    }
+
+    func testAFocusChangeIsReportedAtOnce() async {
+        let live = makeLive()
+        recording = Audio.speech(10) + Audio.pause(1)
+        failNext = .focusChanged
+        live.poll()
+        await live.waitForSegments()
+        XCTAssertEqual(notices, [DeliveryError.focusChanged.userMessage])
+    }
+
+    func testHeldTextJoinsLikeDictations() {
+        XCTAssertEqual(LiveTranscription.join(["One.", "Two."]), "One. Two.")
+        XCTAssertEqual(LiveTranscription.join(["今日は", "晴れです"]), "今日は晴れです")
+        XCTAssertEqual(LiveTranscription.join(["Hi", ", there"]), "Hi, there")
     }
 
     func testSilentSegmentsAreNotTranscribed() async {

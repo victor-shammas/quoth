@@ -33,6 +33,10 @@ package struct TranscriptionContext: Equatable, Sendable {
     /// The languages the user speaks, most used first, which Automatic
     /// trusts at any probability. Empty for the Mac's preferred languages.
     package var spokenLanguages: [String]
+    /// The text just before this audio in the same dictation (live text's
+    /// previous segment), so a segment cut mid-sentence continues it rather
+    /// than starting a new one. Nil for a dictation on its own.
+    package var previousText: String?
 
     init(
         language: String? = nil,

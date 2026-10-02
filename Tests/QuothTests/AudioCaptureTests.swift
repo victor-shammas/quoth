@@ -20,6 +20,21 @@ final class AudioCaptureTests: XCTestCase {
 
     // MARK: Route change
 
+    func testALockedRecordingKeepsWhatCameBeforeARouteChange() throws {
+        let buffer = CaptureBuffer()
+        buffer.reset(startedAt: 0)
+        append([0.1, 0.2, 0.3], to: buffer)
+        buffer.markRouteChanged()
+        append([0.4], to: buffer)
+        // Live text never reads past the change either.
+        XCTAssertEqual(buffer.samples(from: 1), [0.2, 0.3])
+        XCTAssertEqual(try buffer.finish(keepBeforeRouteChange: true), [0.1, 0.2, 0.3])
+        // The next recording starts clean.
+        buffer.reset(startedAt: 0)
+        append([0.5], to: buffer)
+        XCTAssertEqual(try buffer.finish(), [0.5])
+    }
+
     func testRouteChangeDiscardsThePartialCapture() {
         let buffer = CaptureBuffer()
         buffer.reset(startedAt: 0)

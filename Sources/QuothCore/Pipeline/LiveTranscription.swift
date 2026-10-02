@@ -8,10 +8,15 @@ import Foundation
 /// locks and hands it the whole capture when the lock ends; it then
 /// transcribes what is left and waits for every segment.
 ///
+/// Each segment is transcribed with the end of the previous one as context,
+/// so a sentence cut at a pause carries on, and in the language the first
+/// segment settled on, so Automatic doesn't flip between segments.
+///
 /// When a delivery fails, later segments are not typed: after a focus
 /// change everything from that segment on ends up on the clipboard, and
-/// after a password field nothing more is delivered. Text already typed
-/// stays, including when the recording is discarded.
+/// after a password field nothing more is delivered. Either is reported at
+/// once through `notice`, as is a segment that fails to transcribe. Text
+/// already typed stays, including when the recording is discarded.
 @MainActor
 final class LiveTranscription {
     /// How often the recording is checked for a pause.
@@ -35,12 +40,14 @@ final class LiveTranscription {
     /// The capture's samples from an offset on.
     private let samples: (Int) -> [Float]
     private let transcriber: Transcriber
-    private let context: TranscriptionContext
+    private var context: TranscriptionContext
     private let processors: [TranscriptProcessor]
     /// Delivers at the cursor; throws `DeliveryError`.
     private let deliver: (String) throws -> Void
     /// Leaves text on the clipboard.
     private let copy: (String) -> Void
+    /// Reports a problem while recording continues.
+    private let notice: (Error) -> Void
 
     /// Samples already cut into segments.
     private(set) var committed = 0
@@ -57,7 +64,8 @@ final class LiveTranscription {
         context: TranscriptionContext,
         processors: [TranscriptProcessor],
         deliver: @escaping (String) throws -> Void,
-        copy: @escaping (String) -> Void
+        copy: @escaping (String) -> Void,
+        notice: @escaping (Error) -> Void = { _ in }
     ) {
         self.samples = samples
         self.transcriber = transcriber
@@ -65,6 +73,7 @@ final class LiveTranscription {
         self.processors = processors
         self.deliver = deliver
         self.copy = copy
+        self.notice = notice
     }
 
     func start() {
@@ -97,7 +106,7 @@ final class LiveTranscription {
         }
         await chain?.value
         if !held.isEmpty {
-            copy(held.joined(separator: " "))
+            copy(Self.join(held))
         }
         return outcome
     }
@@ -137,6 +146,7 @@ final class LiveTranscription {
         } catch {
             Log.error("live segment failed: \(error)")
             outcome.transcriptionError = error
+            if !cancelled { notice(LiveTextNotice.segmentFailed) }
             return
         }
         let elapsed = CFAbsoluteTimeGetCurrent() - started
@@ -144,6 +154,11 @@ final class LiveTranscription {
         outcome.audio += seconds
         outcome.transcribing += elapsed
         outcome.timings = raw.timings
+        // Later segments continue this one, in its language.
+        if context.language == nil, let language = raw.timings?.language {
+            context.language = language
+        }
+        if !raw.text.isEmpty { context.previousText = raw.text }
         let text = processors.reduce(raw) { $1.process($0) }.text
         // Never log the text itself.
         Log.info(String(format: "→ live segment %.1fs · %.2fs · %d chars", seconds, elapsed, text.count))
@@ -161,6 +176,27 @@ final class LiveTranscription {
             // The delivery copied this segment; the end copies it again with
             // everything after it.
             if (error as? DeliveryError) == .focusChanged { held.append(text) }
+            notice(error)
+        }
+    }
+
+    /// Held segments as one text, spaced as consecutive dictations are:
+    /// no space between Chinese, Japanese or Thai segments.
+    static func join(_ segments: [String]) -> String {
+        segments.reduce("") { text, segment in
+            guard let last = text.last else { return segment }
+            return text + (Spacing.needsSpace(after: last, text: segment) ? " " : "") + segment
+        }
+    }
+}
+
+/// A live-text problem shown while the lock keeps recording.
+enum LiveTextNotice: UserFacingError, Equatable {
+    case segmentFailed
+
+    var userMessage: String {
+        switch self {
+        case .segmentFailed: return "Part of this dictation couldn't be transcribed"
         }
     }
 }

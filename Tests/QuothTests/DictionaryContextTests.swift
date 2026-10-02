@@ -2,6 +2,16 @@ import WhisperKit
 import XCTest
 @testable import QuothCore
 
+final class LivePromptTests: XCTestCase {
+    func testThePromptContinuesThePreviousSegment() {
+        XCTAssertEqual(WhisperKitTranscriber.prompt("Quoth and WhisperKit.", continuing: nil), "Quoth and WhisperKit.")
+        XCTAssertEqual(WhisperKitTranscriber.prompt(nil, continuing: "I went to the"), "I went to the")
+        XCTAssertEqual(WhisperKitTranscriber.prompt("Quoth.", continuing: "I went to the"), "Quoth. I went to the")
+        let long = String(repeating: "word ", count: 100)
+        XCTAssertEqual(WhisperKitTranscriber.prompt(nil, continuing: long)?.count, 200)
+    }
+}
+
 final class DictionaryContextTests: XCTestCase {
     // MARK: Context
 

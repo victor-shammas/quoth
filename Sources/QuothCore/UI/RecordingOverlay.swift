@@ -155,6 +155,19 @@ extension RecordingOverlay: DictationObserver {
         show(.locked)
     }
 
+    func dictationNotice(_ error: Error) {
+        guard let text = Self.message(for: error) else { return }
+        let resume = model.state
+        show(.message(text))
+        let shown = generation
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.messageDuration) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == shown else { return }
+                self.show(resume)
+            }
+        }
+    }
+
     func dictationTranscribing() {
         show(.transcribing)
     }

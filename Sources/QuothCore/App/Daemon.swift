@@ -141,6 +141,15 @@ public enum Daemon {
             context: dictionaryContext
         )
         controller.liveText = settings.current.hotkey.liveText
+        // A headset connecting mid-lock ends the lock and keeps what was
+        // said before it; push-to-talk still discards a changed route.
+        capture.onRouteChange = {
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    if controller.isLocked { monitor.endLock(reason: "the microphone changed") }
+                }
+            }
+        }
         switcher.controller = controller
 
         // Each setting applies itself here when it changes, from the window
@@ -202,6 +211,11 @@ public enum Daemon {
             do {
                 try startHotkey(monitor, menuBar: menuBar) { event in
                     controller.handle(event)
+                    // The microphone failed to start: this press must not
+                    // go on to lock or transcribe a recording that isn't there.
+                    if event == .pressed, controller.state != .recording {
+                        monitor.abandonPress()
+                    }
                 }
             } catch {
                 Log.error((error as? StartupFailure)?.message ?? "\(error)")

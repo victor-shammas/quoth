@@ -46,6 +46,8 @@ final class DictationController {
     var liveText = true
     /// Live text for the current locked recording, if any.
     private var live: LiveTranscription?
+    /// Whether the current recording is locked on.
+    private(set) var isLocked = false
 
     init(
         capture: AudioCapture,
@@ -84,6 +86,7 @@ final class DictationController {
     /// With live text on, segments are transcribed and typed at each pause.
     func lock() {
         guard state == .recording else { return }
+        isLocked = true
         Log.info("● locked\(liveText ? " · live text" : "")")
         if liveText {
             let capture = self.capture
@@ -95,7 +98,10 @@ final class DictationController {
                 context: context(),
                 processors: processors,
                 deliver: { try delivery.deliver($0, focusAtStart: focus) },
-                copy: { delivery.copyToClipboard($0) }
+                copy: { delivery.copyToClipboard($0) },
+                notice: { [weak self] error in
+                    self?.observers.forEach { $0.dictationNotice(error) }
+                }
             )
             live.start()
             self.live = live
@@ -119,9 +125,12 @@ final class DictationController {
 
     func release() {
         let released = CFAbsoluteTimeGetCurrent()
+        // A locked recording keeps what came before a microphone change.
+        let wasLocked = isLocked
+        isLocked = false
         let samples: [Float]
         do {
-            samples = try capture.finish()
+            samples = try capture.finish(keepBeforeRouteChange: wasLocked)
         } catch {
             // The route changed mid-recording: no partial capture is delivered.
             Log.error("capture failed: \(error)")
@@ -205,6 +214,7 @@ final class DictationController {
     func cancel() {
         guard state == .recording else { return }
         capture.stop()
+        isLocked = false
         live?.cancel()
         live = nil
         focusAtStart = nil

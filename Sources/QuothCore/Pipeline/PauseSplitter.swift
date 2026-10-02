@@ -24,8 +24,9 @@ enum PauseSplitter {
     static let minThreshold: Float = 0.008
     /// The threshold never rises above this, however noisy the room.
     static let maxThreshold: Float = 0.03
-    /// How many loud frames make speech rather than a click.
-    static let minSpeechFrames = 5
+    /// Consecutive loud frames that make speech rather than a key click or
+    /// a thump: 240 ms. A typed key is 30 to 160 ms.
+    static let minSpeechRun = 8
 
     struct Cut: Equatable {
         /// Samples from the start that make up the segment.
@@ -86,7 +87,12 @@ enum PauseSplitter {
     }
 
     private static func speech(in levels: ArraySlice<Float>, threshold: Float) -> Bool {
-        levels.lazy.filter { $0 >= threshold }.count >= minSpeechFrames
+        var run = 0
+        for level in levels {
+            run = level >= threshold ? run + 1 : 0
+            if run >= minSpeechRun { return true }
+        }
+        return false
     }
 
     private static func frames(_ seconds: TimeInterval) -> Int {

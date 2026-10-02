@@ -179,12 +179,24 @@ final class HotkeyMonitor {
         }
     }
 
+    /// End a locked recording now and transcribe it, as if the hotkey were
+    /// tapped: for the length cap and a microphone change.
+    func endLock(reason: String) {
+        guard let action = gesture.expireLock() else { return }
+        Log.info("ending the lock: \(reason)")
+        emit(action)
+    }
+
+    /// The press just reported started no recording: ignore the rest of its
+    /// hold, so it can't lock a recording that isn't running.
+    func abandonPress() {
+        gesture.abandonPress()
+    }
+
     private func startLockTimer() {
         lockTimer?.invalidate()
         let timer = Timer(timeInterval: Self.lockLimit, repeats: false) { [weak self] _ in
-            guard let self, let action = self.gesture.expireLock() else { return }
-            Log.info("lock reached \(Int(Self.lockLimit / 60)) min; transcribing")
-            self.emit(action)
+            self?.endLock(reason: "reached \(Int(Self.lockLimit / 60)) min")
         }
         RunLoop.main.add(timer, forMode: .common)
         lockTimer = timer

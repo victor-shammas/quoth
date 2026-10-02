@@ -88,7 +88,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
         let options = tuning.decodingOptions(
             language: language,
-            promptTokens: Self.promptTokens(for: prompt, tokenizer: pipeline.tokenizer),
+            promptTokens: Self.promptTokens(for: Self.prompt(prompt, continuing: context.previousText), tokenizer: pipeline.tokenizer),
             audioSeconds: Double(input.count) / Double(WhisperKit.sampleRate)
         )
         let results = try await pipeline.transcribe(audioArray: input, decodeOptions: options)
@@ -181,6 +181,19 @@ package actor WhisperKitTranscriber: Transcriber {
     /// the text spoken just before the audio. Special tokens are dropped: the
     /// decoder builds its own control sequence around the prompt, and a stray
     /// one there desynchronizes it.
+    /// The prompt for a segment of a live dictation: the dictionary's
+    /// sentence, then the end of the previous segment, which is what Whisper
+    /// conditions on to continue a sentence. Whisper reads at most 224
+    /// prompt tokens; about 200 characters of context is plenty.
+    static func prompt(_ prompt: String?, continuing previous: String?) -> String? {
+        guard let previous = previous?.trimmingCharacters(in: .whitespacesAndNewlines), !previous.isEmpty else {
+            return prompt
+        }
+        let tail = String(previous.suffix(200))
+        guard let prompt, !prompt.isEmpty else { return tail }
+        return prompt + " " + tail
+    }
+
     static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
         guard let tokenizer,
               let text = prompt?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty

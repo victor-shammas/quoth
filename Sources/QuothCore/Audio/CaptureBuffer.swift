@@ -29,6 +29,9 @@ package final class CaptureBuffer: @unchecked Sendable {
     private var samples: [Float] = []
     private var stats = Stats()
     private var routeChanged = false
+    /// Samples recorded before the route changed, for a locked recording
+    /// that keeps what came before the change.
+    private var routeChangedAt: Int?
     private var startedAt: UInt64 = 0
     private var isOpen = false
     private var closedBuffers = 0
@@ -41,6 +44,7 @@ package final class CaptureBuffer: @unchecked Sendable {
         samples.removeAll(keepingCapacity: true)
         stats = Stats()
         routeChanged = false
+        routeChangedAt = nil
         self.startedAt = startedAt
         isOpen = true
     }
@@ -122,6 +126,7 @@ package final class CaptureBuffer: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         routeChanged = true
+        if routeChangedAt == nil { routeChangedAt = samples.count }
     }
 
     /// A copy of the samples recorded so far from `offset` on, without
@@ -129,8 +134,9 @@ package final class CaptureBuffer: @unchecked Sendable {
     func samples(from offset: Int) -> [Float] {
         lock.lock()
         defer { lock.unlock() }
-        guard offset < samples.count else { return [] }
-        return Array(samples[offset...])
+        let end = routeChangedAt ?? samples.count
+        guard offset < end else { return [] }
+        return Array(samples[offset..<end])
     }
 
     var currentStats: Stats {
@@ -141,17 +147,31 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Ends the recording and returns its samples. If the route changed at
     /// any point, the partial capture is discarded and this throws
-    /// `CaptureError.routeChanged`, so it is never delivered as a success.
-    /// Either way the buffer is empty afterwards.
-    func finish() throws -> [Float] {
+    /// `CaptureError.routeChanged`, so it is never delivered as a success,
+    /// unless `keepBeforeRouteChange` asks for the samples recorded before
+    /// the change (a locked recording, where minutes are at stake). Either
+    /// way the buffer is empty afterwards.
+    func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
         lock.lock()
-        let captured = samples
         let changed = routeChanged
-        samples.removeAll(keepingCapacity: true)
+        let captured = changed && keepBeforeRouteChange
+            ? Array(samples[..<(routeChangedAt ?? samples.count)])
+            : samples
+        // Keep the allocation for the next short dictation, but give back
+        // the memory a long locked one took (about 3.8 MB a minute).
+        if samples.count > Self.keptCapacity {
+            samples = []
+        } else {
+            samples.removeAll(keepingCapacity: true)
+        }
         routeChanged = false
+        routeChangedAt = nil
         isOpen = false
         lock.unlock()
-        if changed { throw CaptureError.routeChanged }
+        if changed && !keepBeforeRouteChange { throw CaptureError.routeChanged }
         return captured
     }
+
+    /// Samples whose allocation is kept between recordings: 30 s.
+    static let keptCapacity = 30 * 16_000
 }

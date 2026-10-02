@@ -42,6 +42,9 @@ protocol DictationObserver: AnyObject {
     func dictationStarted()
     /// The recording was locked on with a double tap and continues hands-free.
     func dictationLocked()
+    /// A problem worth showing while recording continues, such as a live
+    /// segment that failed. The dictation goes on.
+    func dictationNotice(_ error: Error)
     /// The hotkey was released; the capture is being transcribed.
     func dictationTranscribing()
     /// The transcript was delivered.
@@ -55,6 +58,7 @@ protocol DictationObserver: AnyObject {
 extension DictationObserver {
     func dictationStarted() {}
     func dictationLocked() {}
+    func dictationNotice(_ error: Error) {}
     func dictationTranscribing() {}
     func dictationFinished(_ result: DictationResult) {}
     func dictationFailed(_ error: Error) {}
