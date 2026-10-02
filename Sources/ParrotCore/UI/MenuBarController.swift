@@ -75,7 +75,7 @@ final class MenuBarController {
         menu.addItem(checkForUpdatesItem)
 
         quitItem = NSMenuItem(
-            title: "Quit parrot",
+            title: "Quit Quoth",
             action: #selector(quitClicked),
             keyEquivalent: "q"
         )

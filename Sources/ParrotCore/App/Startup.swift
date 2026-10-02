@@ -38,7 +38,7 @@ public enum StartupFailure: Error {
         case .unknownModel(let id):
             return Self.permanent("unknown model: \(id)", fix: "pick one from `parrot models list` and update --model")
         case .noModelsRegistered:
-            return Self.permanent("no models registered", fix: "reinstall parrot")
+            return Self.permanent("no models registered", fix: "reinstall Quoth")
         case .checksFailed:
             return "\nfix the above or pass --skip-doctor"
         case .warmupFailed(let error):
@@ -50,7 +50,7 @@ public enum StartupFailure: Error {
 
     private static func permanent(_ problem: String, fix: String) -> String {
         "\(problem)\n"
-            + "  fix: \(fix), then restart parrot "
+            + "  fix: \(fix), then restart Quoth "
             + "(`open -a Quoth`, or log in again)."
     }
 }

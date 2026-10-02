@@ -64,7 +64,7 @@ struct Run: ParsableCommand {
     func run() throws {
         // The app and a foreground run would both paste every dictation.
         guard AppLaunch.claimSingleInstance() else {
-            Log.error("Parrot is already running. Quit it from the menu bar first.")
+            Log.error("Quoth is already running. Quit it from the menu bar first.")
             throw ExitCode(1)
         }
         do {
