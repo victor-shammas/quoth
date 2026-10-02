@@ -52,6 +52,9 @@ final class DictationController {
     /// (`LastDictation`, memory only). Not called for a password field.
     /// Observers never see text; this is the one place it leaves.
     var onTranscript: ((String) -> Void)?
+    /// Ends the lock as a tap of the hotkey would (`HotkeyMonitor.endLock`):
+    /// for a microphone change, and Stop Dictation in the menu.
+    var onEndLock: ((String) -> Void)?
 
     init(
         capture: AudioCapture,
@@ -91,6 +94,11 @@ final class DictationController {
     func lock() {
         guard state == .recording else { return }
         isLocked = true
+        // The microphone changed during the double tap itself: there is
+        // nothing more to record from it, so end the lock straight away.
+        if capture.hasRouteChanged {
+            DispatchQueue.main.async { [weak self] in self?.onEndLock?("the microphone changed") }
+        }
         // Live text types as it goes; a build that can only copy collects
         // the whole lock and copies it once at the end.
         let live = liveText && delivery.canInsert
@@ -225,7 +233,17 @@ final class DictationController {
         guard state == .recording else { return }
         capture.stop()
         isLocked = false
-        live?.cancel()
+        if let live {
+            // Its segments still running hold their transcriber; a model
+            // switch must wait for them.
+            live.cancel()
+            inFlight += 1
+            Task {
+                await live.waitForSegments()
+                inFlight -= 1
+                settle()
+            }
+        }
         live = nil
         focusAtStart = nil
         state = inFlight > 0 ? .transcribing : .idle
@@ -272,6 +290,12 @@ final class DictationController {
             )
             observers.forEach { $0.dictationFinished(result) }
         }
+    }
+
+    /// The input route changed (a headset connected): a locked recording
+    /// ends and keeps what came before; push-to-talk discards on release.
+    func routeChanged() {
+        if isLocked { onEndLock?("the microphone changed") }
     }
 
     /// After a transcription ends, return to idle unless a newer recording

@@ -23,11 +23,15 @@ final class ModelSwitcher {
     /// Bumped on every change, so a superseded load cannot swap or report.
     private var generation = 0
 
+    /// Called on the main actor each time a model is swapped in and ready.
+    var onReady: (() -> Void)?
+
     init(model: TranscriptionModel, transcriber: WhisperKitTranscriber, menuBar: MenuBarController, status: ModelLoadStatus? = nil) {
         self.model = model
         self.transcriber = transcriber
         self.menuBar = menuBar
         self.status = status ?? .shared
+        self.status.activeModelID = model.id
     }
 
     /// Loads and swaps in `id`, a `ModelRegistry` id or nil for the
@@ -85,12 +89,14 @@ final class ModelSwitcher {
         transcriber = incoming
         model = next
         load = nil
+        status.activeModelID = next.id
         status.show(nil)
         menuBar.setModelStatus(nil)
         Log.info("model: \(next.id)")
         // Free the old model's memory. Nothing is transcribing with it: the
         // swap waited for the controller to go idle.
         Task { await outgoing.unload() }
+        onReady?()
     }
 
     private func report(_ phase: ModelLoadStatus.Phase, _ next: TranscriptionModel, _ generation: Int) {
@@ -111,6 +117,10 @@ final class ModelSwitcher {
 @MainActor
 final class ModelLoadStatus: ObservableObject {
     static let shared = ModelLoadStatus()
+
+    /// The model transcribing now, which may differ from the one chosen in
+    /// Settings while that one loads. Neither may be deleted.
+    @Published var activeModelID: String?
 
     enum Phase: Equatable {
         /// Fraction done, 0 to 1, once the download reports one.

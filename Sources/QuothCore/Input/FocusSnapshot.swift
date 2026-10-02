@@ -25,9 +25,9 @@ struct FocusSnapshot {
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         // The App Store build can't read other apps' elements: it compares
         // the frontmost app, and treats secure input (which macOS turns on
-        // for password fields) as a secure field.
+        // for password fields) as a secure field when that app turned it on.
         guard Edition.readsFocusedField else {
-            return FocusSnapshot(pid: pid, element: nil, isSecure: IsSecureEventInputEnabled())
+            return FocusSnapshot(pid: pid, element: nil, isSecure: secureInputIsFrontmost(pid))
         }
         let systemWide = AXUIElementCreateSystemWide()
         // On the system-wide element, this sets the timeout for every element.
@@ -40,6 +40,19 @@ struct FocusSnapshot {
         }
         let element = value as! AXUIElement
         return FocusSnapshot(pid: pid, element: FocusedElement(element), isSecure: isSecure(element))
+    }
+
+    /// Whether the frontmost app (`pid`) has secure input on. Secure input is
+    /// system-wide, and Terminal's Secure Keyboard Entry or a password
+    /// manager can leave it on for every app, so the session's owner of it
+    /// must be the frontmost app. With no owner recorded, it counts: never
+    /// type into what may be a password field.
+    static func secureInputIsFrontmost(_ pid: pid_t?) -> Bool {
+        guard IsSecureEventInputEnabled() else { return false }
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any],
+              let owner = (session["kCGSSessionSecureInputPID"] as? NSNumber)?.int32Value
+        else { return true }
+        return pid.map { $0 == owner } ?? true
     }
 
     /// Whether focus moved from `self` to `now`. The app must match. The

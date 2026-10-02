@@ -136,7 +136,7 @@ public enum Daemon {
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,
-            processors: [DictionaryProcessor(store: dictionary)],
+            processors: [VoiceCommands(), DictionaryProcessor(store: dictionary)],
             observers: observers,
             dumpWav: options.dumpWav,
             delivery: TextDelivery(mode: options.injectMode),
@@ -148,18 +148,21 @@ public enum Daemon {
         let lastDictation = LastDictation()
         let fixWindow = FixDictationWindow(dictionary: dictionary)
         controller.onTranscript = { lastDictation.remember($0) }
-        lastDictation.onChange = { menuBar.setLastDictationAvailable($0) }
+        lastDictation.onChange = { available in
+            menuBar.setLastDictationAvailable(available)
+            if !available { fixWindow.forget() }
+        }
         menuBar.onCopyLast = { lastDictation.copy() }
         menuBar.onFixLast = { fixWindow.show(text: lastDictation.text) }
         // A headset connecting mid-lock ends the lock and keeps what was
         // said before it; push-to-talk still discards a changed route.
         capture.onRouteChange = {
             DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    if controller.isLocked { monitor.endLock(reason: "the microphone changed") }
-                }
+                MainActor.assumeIsolated { controller.routeChanged() }
             }
         }
+        controller.onEndLock = { monitor.endLock(reason: $0) }
+        menuBar.onStopLock = { monitor.endLock(reason: "stopped from the menu") }
         switcher.controller = controller
 
         // Each setting applies itself here when it changes, from the window
@@ -204,20 +207,28 @@ public enum Daemon {
         // unloaded transcriber. A failed load (offline first run) retries
         // with backoff rather than exiting: the login item does not relaunch.
         menuBar.setHotkeyHealth(.modelLoading)
+        // Choosing another model that loads ends the wait at once.
+        var switchedIn = false
+        switcher.onReady = { switchedIn = true }
         Task { @MainActor in
-            var retryDelay: UInt64 = 30
-            while true {
+            var retryDelay = 30
+            retrying: while true {
                 do {
                     try await transcriber.warmUp()
                     break
                 } catch {
                     Log.error("\(StartupFailure.warmupFailed(error).message); retrying in \(retryDelay)s")
                     menuBar.setHotkeyHealth(.modelFailed)
-                    try? await Task.sleep(nanoseconds: retryDelay * 1_000_000_000)
+                    for _ in 0..<retryDelay {
+                        if switchedIn { break retrying }
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    }
+                    if switchedIn { break }
                     retryDelay = min(retryDelay * 2, 600)
                     menuBar.setHotkeyHealth(.modelLoading)
                 }
             }
+            switcher.onReady = nil
             do {
                 try startHotkey(monitor, menuBar: menuBar) { event in
                     controller.handle(event)

@@ -37,6 +37,9 @@ final class MenuBarController {
     let fixLastItem: NSMenuItem
     var onCopyLast: (() -> Void)?
     var onFixLast: (() -> Void)?
+    /// Ends a locked recording, for when the hotkey can't (secure input).
+    let stopLockItem: NSMenuItem
+    var onStopLock: (() -> Void)?
 
     /// A degraded hotkey tap replaces the idle line, so the menu bar does not
     /// claim fn works when it does not (#37).
@@ -69,6 +72,10 @@ final class MenuBarController {
         grantPermissionsItem.isHidden = true
         menu.addItem(grantPermissionsItem)
 
+        stopLockItem = NSMenuItem(title: "Stop Dictation", action: #selector(stopLockClicked), keyEquivalent: "")
+        stopLockItem.isHidden = true
+        menu.addItem(stopLockItem)
+
         menu.addItem(.separator())
 
         copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastClicked), keyEquivalent: "")
@@ -88,10 +95,11 @@ final class MenuBarController {
             action: #selector(checkForUpdatesClicked),
             keyEquivalent: ""
         )
+        // The App Store build updates through the App Store only (2.4.5).
         #if !APPSTORE
         checkForUpdatesItem.isHidden = !Updater.isRunning
-        #endif
         menu.addItem(checkForUpdatesItem)
+        #endif
 
         menu.addItem(.separator())
 
@@ -106,6 +114,7 @@ final class MenuBarController {
         quitItem.target = self
         settingsItem.target = self
         copyLastItem.target = self
+        stopLockItem.target = self
         fixLastItem.target = self
         checkForUpdatesItem.target = self
         grantPermissionsItem.target = self
@@ -145,6 +154,10 @@ final class MenuBarController {
         copyLastItem.isEnabled = available
     }
 
+    @objc private func stopLockClicked() {
+        onStopLock?()
+    }
+
     @objc private func copyLastClicked() {
         onCopyLast?()
     }
@@ -181,12 +194,14 @@ extension MenuBarController: DictationObserver {
 
     func dictationLocked() {
         isIdle = false
+        stopLockItem.isHidden = false
         setGlyph(.locked)
         setStatus("Locked — tap \(hotkey.shortName) to stop")
     }
 
     func dictationTranscribing() {
         isIdle = false
+        stopLockItem.isHidden = true
         setGlyph(.transcribing)
         setStatus("Transcribing…")
     }
@@ -199,6 +214,7 @@ extension MenuBarController: DictationObserver {
 
     func dictationFailed(_ error: Error) {
         isIdle = true
+        stopLockItem.isHidden = true
         setGlyph(.idle)
         setStatus(idleStatus)
     }

@@ -14,6 +14,13 @@ final class FixDictationWindow {
         self.dictionary = dictionary
     }
 
+    /// The last dictation was forgotten (time, screen lock): take it off
+    /// the screen too, if the window is still open.
+    func forget() {
+        guard let window, window.isVisible else { return }
+        show(text: nil)
+    }
+
     func show(text: String?) {
         let window = self.window ?? make()
         self.window = window

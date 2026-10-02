@@ -167,8 +167,20 @@ public enum AppLaunch {
                 "Turn on Quoth in System Settings → Privacy & Security → Microphone, then open Quoth again.",
                 "Privacy_Microphone"
             )
-        default:
-            return ("Quoth couldn't start", failure.message, nil)
+        case .unknownModel, .noModelsRegistered:
+            return (
+                "Quoth couldn't find its speech model",
+                "Reinstall Quoth, then open it again. Your settings and dictionary are kept.",
+                nil
+            )
+        case .hotkeyUnavailable:
+            return (
+                "Quoth can't watch the dictation key",
+                "Allow Quoth under System Settings → Privacy & Security → \(HotkeyAccess.name), then open Quoth again.",
+                HotkeyAccess.settingsPane
+            )
+        case .checksFailed, .warmupFailed:
+            return ("Quoth couldn't start", Edition.hasDeveloperTools ? failure.message : "Quit Quoth and open it again. If this keeps happening, reinstall it.", nil)
         }
     }
 

@@ -129,6 +129,13 @@ package final class CaptureBuffer: @unchecked Sendable {
         if routeChangedAt == nil { routeChangedAt = samples.count }
     }
 
+    /// Whether the route changed during this recording.
+    var hasRouteChanged: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return routeChanged
+    }
+
     /// A copy of the samples recorded so far from `offset` on, without
     /// ending the recording; for live text (fork addition).
     func samples(from offset: Int) -> [Float] {

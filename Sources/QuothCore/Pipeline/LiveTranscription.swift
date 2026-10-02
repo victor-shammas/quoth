@@ -59,6 +59,10 @@ final class LiveTranscription {
     /// Text held back after a focus change, for the clipboard.
     private var held: [String] = []
     private var cancelled = false
+    /// When the last segment was delivered. Pastes closer together than
+    /// the clipboard's settle time could land out of order.
+    private var lastDelivery: CFAbsoluteTime?
+    static let minimumGap = TextInjector.settleDelay + 0.05
 
     init(
         samples: @escaping (Int) -> [Float],
@@ -172,6 +176,12 @@ final class LiveTranscription {
             if (failure as? DeliveryError) == .focusChanged { held.append(text) }
             return
         }
+        if let last = lastDelivery {
+            let wait = Self.minimumGap - (CFAbsoluteTimeGetCurrent() - last)
+            if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
+            guard !cancelled else { return }
+        }
+        lastDelivery = CFAbsoluteTimeGetCurrent()
         do {
             try deliver(text)
         } catch {

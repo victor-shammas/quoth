@@ -44,6 +44,9 @@ package final class AudioCapture {
     /// continues (live text). Safe from any thread.
     func samples(from offset: Int) -> [Float] { buffer.samples(from: offset) }
 
+    /// Whether the input route changed during this recording.
+    var hasRouteChanged: Bool { buffer.hasRouteChanged }
+
     private let input: CaptureInput
     private var recording = false
     private var device = InputDevice(sampleRate: 0, channels: 0)

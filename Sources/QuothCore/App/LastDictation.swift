@@ -43,10 +43,10 @@ final class LastDictation {
         onChange?(false)
     }
 
-    /// Puts the last dictation on the clipboard.
+    /// Puts the last dictation on the clipboard, marked concealed so
+    /// clipboard managers don't keep it in their history.
     func copy() {
         guard let text else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        SystemPasteboard(.general).write(text, markers: PasteboardSession.concealedMarkers)
     }
 }

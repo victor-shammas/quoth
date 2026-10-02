@@ -100,6 +100,6 @@ struct DownloadedModels: View {
     }
 
     private func isInUse(_ model: TranscriptionModel) -> Bool {
-        model.id == selected?.id || model.id == loading.current?.modelID
+        model.id == selected?.id || model.id == loading.current?.modelID || model.id == loading.activeModelID
     }
 }
