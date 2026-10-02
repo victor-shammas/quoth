@@ -87,8 +87,11 @@ final class DictationController {
     func lock() {
         guard state == .recording else { return }
         isLocked = true
-        Log.info("● locked\(liveText ? " · live text" : "")")
-        if liveText {
+        // Live text types as it goes; a build that can only copy collects
+        // the whole lock and copies it once at the end.
+        let live = liveText && delivery.canInsert
+        Log.info("● locked\(live ? " · live text" : "")")
+        if live {
             let capture = self.capture
             let delivery = self.delivery
             let focus = focusAtStart

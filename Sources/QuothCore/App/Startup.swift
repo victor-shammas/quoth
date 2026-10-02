@@ -61,6 +61,7 @@ enum Startup {
     /// Throws `StartupFailure`. `hotkey` is a `--hotkey` override, nil for
     /// the saved key; it decides whether the fn mapping is checked.
     static func check(modelID: String?, hotkey: HotkeyKey? = nil, skipDoctor: Bool) throws -> TranscriptionModel {
+        #if !APPSTORE
         if !skipDoctor {
             let checks = DoctorReport.run(hotkey: hotkey)
             if !DoctorReport.allOK(checks) {
@@ -69,6 +70,7 @@ enum Startup {
                 throw StartupFailure.checksFailed
             }
         }
+        #endif
 
         let model = try resolveModel(modelID)
 

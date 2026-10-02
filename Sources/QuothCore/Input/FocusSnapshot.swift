@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Carbon.HIToolbox
 import Foundation
 
 /// What had keyboard focus at one moment: the frontmost app, its focused
@@ -22,6 +23,12 @@ struct FocusSnapshot {
     @MainActor
     static func capture() -> FocusSnapshot {
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        // The App Store build can't read other apps' elements: it compares
+        // the frontmost app, and treats secure input (which macOS turns on
+        // for password fields) as a secure field.
+        guard Edition.readsFocusedField else {
+            return FocusSnapshot(pid: pid, element: nil, isSecure: IsSecureEventInputEnabled())
+        }
         let systemWide = AXUIElementCreateSystemWide()
         // On the system-wide element, this sets the timeout for every element.
         AXUIElementSetMessagingTimeout(systemWide, messagingTimeout)

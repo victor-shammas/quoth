@@ -9,15 +9,20 @@ import Foundation
 /// through the `/usr/local/bin/quoth` symlink, it is the CLI.
 public enum AppBundle {
     /// Quoth's bundle identifier. TCC grants and the login item key to it,
-    /// so it never changes (ADR-005). Quoth has its own, so it installs
-    /// beside the official Quoth with separate grants and login item.
-    static let identifier = "local.quoth"
+    /// so it never changes (ADR-005): `local.quoth` for local direct builds,
+    /// `com.victorshammas.quoth` for the App Store build.
+    static let identifiers: Set<String> = ["local.quoth", "com.victorshammas.quoth"]
+
+    /// This bundle's identifier, or the direct build's outside a bundle.
+    static var identifier: String {
+        Bundle.main.bundleIdentifier.flatMap { identifiers.contains($0) ? $0 : nil } ?? "local.quoth"
+    }
 
     /// The bundle's URL when the main bundle is Quoth.app, else nil (a bare
     /// `swift build` binary).
     static var current: URL? {
         let url = Bundle.main.bundleURL
-        guard url.pathExtension == "app", Bundle.main.bundleIdentifier == identifier else { return nil }
+        guard url.pathExtension == "app", let id = Bundle.main.bundleIdentifier, identifiers.contains(id) else { return nil }
         return url
     }
 

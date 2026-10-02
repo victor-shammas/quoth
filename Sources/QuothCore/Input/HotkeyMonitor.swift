@@ -87,7 +87,7 @@ final class HotkeyMonitor {
 
         // The caller waits for the grant before starting (Daemon.startHotkey);
         // this is a guard, not the place that asks.
-        if !AXIsProcessTrusted() {
+        if !HotkeyAccess.isGranted {
             throw HotkeyError.tapCreateFailed
         }
 

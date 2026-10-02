@@ -71,7 +71,9 @@ final class MenuBarController {
             action: #selector(checkForUpdatesClicked),
             keyEquivalent: ""
         )
+        #if !APPSTORE
         checkForUpdatesItem.isHidden = !Updater.isRunning
+        #endif
         menu.addItem(checkForUpdatesItem)
 
         quitItem = NSMenuItem(
@@ -124,7 +126,9 @@ final class MenuBarController {
     }
 
     @objc private func checkForUpdatesClicked() {
+        #if !APPSTORE
         Updater.checkForUpdates()
+        #endif
     }
 
     @objc private func quitClicked() {

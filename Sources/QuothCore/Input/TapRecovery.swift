@@ -22,7 +22,7 @@ enum HotkeyHealth: Equatable {
         case .ok: return nil
         case .secureInputActive: return "hotkey unavailable, secure input active"
         case .tapDisabled: return "hotkey tap disabled"
-        case .accessibilityMissing: return "grant Accessibility to start"
+        case .accessibilityMissing: return "grant \(HotkeyAccess.name) to start"
         case .modelLoading: return "loading model…"
         case .modelFailed: return "couldn't load the model, retrying"
         }

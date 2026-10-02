@@ -8,11 +8,15 @@ enum DeliveryError: UserFacingError, Equatable {
     case secureField
     /// Focus moved during the dictation. The transcript is on the clipboard.
     case focusChanged
+    /// This build can't paste at the cursor (the App Store build without its
+    /// grant). The transcript is on the clipboard.
+    case copied
 
     var userMessage: String {
         switch self {
         case .secureField: return "password field, transcript discarded"
         case .focusChanged: return "focus changed, transcript copied"
+        case .copied: return "Copied — press ⌘V to paste"
         }
     }
 }
@@ -53,11 +57,19 @@ final class TextDelivery {
         injector.copyToClipboard(text)
     }
 
+    /// Whether a transcript can be inserted at the cursor, rather than only
+    /// copied (`PasteAccess`).
+    var canInsert: Bool { PasteAccess.isGranted }
+
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
     func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {
+        case .inject where !canInsert:
+            injector.copyToClipboard(text)
+            Log.info("  no paste grant; transcript copied to clipboard")
+            throw DeliveryError.copied
         case .inject:
             let before = now.element?.textBeforeCursor() ?? .unknown
             let spaced = Spacing.spaced(text, before: before)

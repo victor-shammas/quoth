@@ -101,7 +101,9 @@ public enum Daemon {
             capture.onLevel = { level in overlay.pushLevel(level) }
         }
         // Before the menu, which shows "Check for Updates…" only when running.
+        #if !APPSTORE
         if AppLaunch.isApp { Updater.start() }
+        #endif
         let menuBar = MenuBarController(modelID: model.id)
         let settingsWindow = SettingsWindow(store: settings)
         menuBar.onOpenSettings = { settingsWindow.show() }
@@ -261,24 +263,23 @@ public enum Daemon {
             Log.info("listening on \(monitor.key.shortName) hold")
         }
 
-        if AXIsProcessTrusted() {
+        if HotkeyAccess.isGranted {
             try start()
             return
         }
 
-        Log.info("accessibility not granted; waiting (System Settings → Privacy & Security → Accessibility → quoth)")
+        Log.info("\(HotkeyAccess.name) not granted; waiting (System Settings → Privacy & Security → \(HotkeyAccess.name) → Quoth)")
         menuBar.setHotkeyHealth(.accessibilityMissing)
         // Quoth.app leaves the prompt to the onboarding window's Allow (#51).
         if !AppLaunch.isApp {
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(options)
+            HotkeyAccess.request()
         }
 
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
             MainActor.assumeIsolated {
-                guard AXIsProcessTrusted() else { return }
+                guard HotkeyAccess.isGranted else { return }
                 timer.invalidate()
-                Log.info("accessibility granted")
+                Log.info("\(HotkeyAccess.name) granted")
                 do {
                     try start()
                 } catch {

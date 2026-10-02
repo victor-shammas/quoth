@@ -21,16 +21,26 @@ enum MicrophonePermission: Equatable {
     }
 }
 
-/// Both grants Quoth needs, read at one moment.
+/// The grants Quoth needs, read at one moment.
 struct PermissionState: Equatable {
+    /// The hotkey's grant (`HotkeyAccess`): Accessibility in the direct
+    /// build, Input Monitoring in the App Store build.
     var accessibility: Bool
     var microphone: MicrophonePermission
+    /// Pasting at the cursor (`PasteAccess`). Optional in the App Store
+    /// build, which copies instead without it; covered by Accessibility in
+    /// the direct build.
+    var paste: Bool = true
 
     var allGranted: Bool { accessibility && microphone == .granted }
 
     /// This process's grants now.
     static var current: PermissionState {
-        PermissionState(accessibility: AXIsProcessTrusted(), microphone: MicrophonePermission(MicrophoneAccess.status))
+        PermissionState(
+            accessibility: HotkeyAccess.isGranted,
+            microphone: MicrophonePermission(MicrophoneAccess.status),
+            paste: Edition.isAppStore ? PasteAccess.isGranted : true
+        )
     }
 }
 
@@ -39,10 +49,13 @@ struct PermissionState: Equatable {
 enum Permissions {
     /// One thing an Allow button does.
     enum Step: Equatable {
-        /// `AXIsProcessTrustedWithOptions` with the prompt, which also lists
-        /// Quoth in the Accessibility pane.
+        /// The hotkey grant's prompt (`HotkeyAccess.request`), which also
+        /// lists Quoth in its pane.
         case promptAccessibility
         case openAccessibilitySettings
+        /// The paste grant's prompt, App Store build only.
+        case promptPaste
+        case openPasteSettings
         case requestMicrophone
         case openMicrophoneSettings
     }
@@ -52,6 +65,7 @@ enum Permissions {
     enum Kind: Equatable {
         case microphone
         case accessibility
+        case paste
     }
 
     /// What Allow does for `kind` in `state`: the microphone prompt while
@@ -68,16 +82,22 @@ enum Permissions {
             }
         case .accessibility:
             return state.accessibility ? [] : [.promptAccessibility, .openAccessibilitySettings]
+        case .paste:
+            return state.paste ? [] : [.promptPaste, .openPasteSettings]
         }
     }
 
     static func perform(_ step: Step) {
         switch step {
         case .promptAccessibility:
-            Log.info("asking for accessibility")
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(options)
+            Log.info("asking for \(HotkeyAccess.name)")
+            HotkeyAccess.request()
         case .openAccessibilitySettings:
+            openSettings(pane: HotkeyAccess.settingsPane)
+        case .promptPaste:
+            Log.info("asking to paste at the cursor")
+            PasteAccess.request()
+        case .openPasteSettings:
             openSettings(pane: "Privacy_Accessibility")
         case .requestMicrophone:
             MicrophoneAccess.requestIfUndetermined()

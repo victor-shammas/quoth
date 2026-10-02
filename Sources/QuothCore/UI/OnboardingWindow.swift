@@ -224,8 +224,15 @@ struct OnboardingView: View {
                 }
                 .padding(.top, 8)
                 GridRow {
-                    label("Accessibility")
+                    label(HotkeyAccess.name)
                     permission(.accessibility, granted: model.state.accessibility, action: "Allow")
+                }
+                if Edition.isAppStore && Edition.allowsAutoPaste {
+                    // Optional: without it, each transcript is copied for ⌘V.
+                    GridRow {
+                        label("Paste at cursor")
+                        permission(.paste, granted: model.state.paste, action: "Allow")
+                    }
                 }
             }
             .fixedSize()
