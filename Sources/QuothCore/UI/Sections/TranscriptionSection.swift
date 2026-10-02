@@ -32,8 +32,8 @@ struct TranscriptionSection: View {
                 }
                 Spacer()
                 PillMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
-                    modelGroup("English", ModelRegistry.shared.filter { !$0.isMultilingual })
-                    modelGroup("Multilingual", ModelRegistry.shared.filter(\.isMultilingual))
+                    modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
+                    modelGroup("All languages, including English", ModelRegistry.shared.filter(\.isMultilingual))
                 }
             }
 
@@ -108,10 +108,11 @@ struct TranscriptionSection: View {
         "whisper-large-v3-turbo-compressed": "Nearly as accurate, smaller",
     ]
 
-    /// "Fastest · English only · 145 MB". Not shown while the model loads:
+    /// "Fastest · English only · 145 MB", or "Fast · 99 languages, including
+    /// English · 490 MB". Not shown while the model loads:
     /// the progress line under the menu says that instead.
     private func summary(_ model: TranscriptionModel) -> String {
-        let languages = model.isMultilingual ? "99 languages" : "English only"
+        let languages = model.isMultilingual ? "99 languages, including English" : "English only"
         let size = model.sizeMB >= 1000
             ? String(format: "%.1f GB", Double(model.sizeMB) / 1000)
             : "\(model.sizeMB) MB"
