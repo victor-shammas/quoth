@@ -4,7 +4,7 @@ Last updated: `2026.09.28`
 
 > This document is the target structure. Contributors and agents working on an issue read it first: it says where each kind of change belongs, so parallel work composes instead of colliding.
 
-Parrot is a macOS menu-bar dictation app. Hold a key, speak, release, and the transcript appears at the cursor. Everything runs on the Mac: audio and text never leave it.
+Quoth is a macOS menu-bar dictation app. Hold a key, speak, release, and the transcript appears at the cursor. Everything runs on the Mac: audio and text never leave it.
 
 ## Contents
 
@@ -36,7 +36,7 @@ Parrot is a macOS menu-bar dictation app. Hold a key, speak, release, and the tr
 
 ### 1.2 — Non-goals
 
-- Cross-platform. Parrot depends on CoreML and the Apple Neural Engine.
+- Cross-platform. Quoth depends on CoreML and the Apple Neural Engine.
 - Cloud transcription providers.
 - Transcript history or search. Stats keep counts only.
 - Meeting recording and diarization. They may come later as a separate mode.
@@ -45,19 +45,19 @@ Parrot is a macOS menu-bar dictation app. Hold a key, speak, release, and the tr
 
 ```
 Package.swift
-  ParrotCore      library     all behaviour: capture, hotkey, transcription, pipeline, settings, UI
-  parrot          executable  thin entry point: ArgumentParser commands that call into ParrotCore
-  ParrotTests     tests       unit tests against ParrotCore
+  QuothCore      library     all behaviour: capture, hotkey, transcription, pipeline, settings, UI
+  quoth          executable  thin entry point: ArgumentParser commands that call into QuothCore
+  QuothTests     tests       unit tests against QuothCore
 ```
 
-`Parrot.app` wraps the `parrot` executable in a signed bundle. The same binary runs as the app (launched by `SMAppService` or from Finder) and as the CLI (through a symlink). Launching with no subcommand runs the dictation loop.
+`Quoth.app` wraps the `quoth` executable in a signed bundle. The same binary runs as the app (launched by `SMAppService` or from Finder) and as the CLI (through a symlink). Launching with no subcommand runs the dictation loop.
 
-The executable holds no logic beyond parsing flags and calling ParrotCore. Anything worth testing lives in ParrotCore.
+The executable holds no logic beyond parsing flags and calling QuothCore. Anything worth testing lives in QuothCore.
 
 ## 3. Layout
 
 ```
-Sources/ParrotCore/
+Sources/QuothCore/
   App/
     DictationController.swift   the dictation loop: gesture → capture → transcribe → process → deliver
     DictationObserver.swift     observer protocol and DictationResult (counts and timings, never text)
@@ -70,13 +70,13 @@ Sources/ParrotCore/
     Updater.swift               Sparkle auto-update, started only in the app role
     AppLaunch.swift             the app role: bundle detection, single instance, migration off the old LaunchAgent
     LoginItem.swift, CommandLineLink.swift
-                                launch at login (SMAppService) and the `parrot` symlink into the bundle
+                                launch at login (SMAppService) and the `quoth` symlink into the bundle
     Setup.swift, Doctor.swift, ModelCommands.swift
                                 bodies of the other commands
   Support/
-    Paths.swift                 every on-disk location Parrot uses
+    Paths.swift                 every on-disk location Quoth uses
     Log.swift                   stderr logging; never logs transcript text
-    SilentExit.swift            "message printed, exit with this code", so ParrotCore needs no ArgumentParser
+    SilentExit.swift            "message printed, exit with this code", so QuothCore needs no ArgumentParser
   Settings/
     Settings.swift              Codable settings value with defaults
     SettingsStore.swift         load, atomic save, file watching, change publishing
@@ -98,7 +98,7 @@ Sources/ParrotCore/
     Transcriber.swift           protocol and TranscriptionContext
     TranscriberTimings.swift    where a transcription spent its time, per stage
     WhisperKitTranscriber.swift
-    WhisperTuning.swift         compute units and decoding options, each measured with `parrot-bench transcription`
+    WhisperTuning.swift         compute units and decoding options, each measured with `quoth-bench transcription`
     SpokenLanguage.swift        the language each dictation decodes in: the setting, or detection among the user's languages (pure, tested)
     LanguageDetector.swift      Whisper's language detection with only the user's languages competing
     ModelRegistry.swift, TranscriptionModel.swift, ModelStore.swift
@@ -123,20 +123,20 @@ Sources/ParrotCore/
     Pill.swift                  the pill buttons and menus, bird and language checklist shared with the onboarding window
     Sections/                   one view per settings section
 
-Sources/parrot/
+Sources/quoth/
   main.swift                    ArgumentParser commands: run, setup, doctor, models, install
 
-Sources/parrot-bench/           developer benchmarks, never shipped in Parrot.app (`swift run -c release parrot-bench …`)
+Sources/quoth-bench/           developer benchmarks, never shipped in Quoth.app (`swift run -c release quoth-bench …`)
   main.swift                    ArgumentParser commands: transcription, capture
   TranscriptionBench.swift      the model over a folder of recordings: median and p90 per stage, word error rate
   CaptureBench.swift            press-to-first-sample, cold and warm, per capture mode
   InputActivity.swift           whether this process, or any, is running the input (checks the mic is off between presses)
 
-Tests/ParrotTests/
-Tests/ParrotBenchTests/
+Tests/QuothTests/
+Tests/QuothBenchTests/
 ```
 
-ParrotCore types the benchmarks need are marked `package`, visible to the package's own targets but not public API; nothing is made `public` for a benchmark.
+QuothCore types the benchmarks need are marked `package`, visible to the package's own targets but not public API; nothing is made `public` for a benchmark.
 
 Files that do not exist yet are created by the issue that needs them. The layout says where they go.
 
@@ -184,7 +184,7 @@ Features plug in at one of these points. They do not add branches to `DictationC
 
 ## 5. Settings
 
-One file: `~/.config/parrot/settings.json` (or `$XDG_CONFIG_HOME/parrot/`), a `Codable` `Settings` value. A missing key takes its default. Writes are atomic. `SettingsStore` watches the directory, so hand edits apply live, and a file that fails to parse keeps the last good settings and logs one line.
+One file: `~/.config/quoth/settings.json` (or `$XDG_CONFIG_HOME/quoth/`), a `Codable` `Settings` value. A missing key takes its default. Writes are atomic. `SettingsStore` watches the directory, so hand edits apply live, and a file that fails to parse keeps the last good settings and logs one line.
 
 Subsystems observe the settings they care about and reconfigure themselves. Launch at login carries no settings. CLI flags override a single foreground run and are never persisted.
 
@@ -194,10 +194,10 @@ Every location comes from `Paths`. No other code builds a path.
 
 | Location | Contents |
 |---|---|
-| `~/.config/parrot/` | `settings.json`, `dictionary` (a plain-text table; see [dictionary.md](dictionary.md)): what the user edits and may keep in dotfiles. `$XDG_CONFIG_HOME/parrot/` when that is set |
-| `~/Library/Application Support/parrot/` | `models/`, `stats.json`: downloaded data and machine state |
-| `~/Library/Logs/parrot/` | daemon logs, owner-only; timings and lengths, never transcript text |
-| `~/Library/Caches/parrot/` | `--dump-wav` debug captures, owner-only |
+| `~/.config/quoth/` | `settings.json`, `dictionary` (a plain-text table; see [dictionary.md](dictionary.md)): what the user edits and may keep in dotfiles. `$XDG_CONFIG_HOME/quoth/` when that is set |
+| `~/Library/Application Support/quoth/` | `models/`, `stats.json`: downloaded data and machine state |
+| `~/Library/Logs/quoth/` | daemon logs, owner-only; timings and lengths, never transcript text |
+| `~/Library/Caches/quoth/` | `--dump-wav` debug captures, owner-only |
 
 Uninstall removes logs and caches. It leaves config and models, so a reinstall keeps the dictionary and does not download the models again.
 
@@ -209,21 +209,21 @@ Everything after the checks happens behind the menu-bar icon, so the app is neve
 
 ## 8. Rules
 
-1. Never write transcript text to logs, disk, or stats. The dictionary is the only user-authored text Parrot stores.
+1. Never write transcript text to logs, disk, or stats. The dictionary is the only user-authored text Quoth stores.
 2. Every on-disk location comes from `Paths`.
-3. Every persistent preference lives in `Settings` and changes through `SettingsStore`. No `UserDefaults`, no plist flags. The one exception is state Sparkle owns (last check time, the user's auto-install choice), which Sparkle keeps in the `com.humanitas.parrot` defaults domain.
+3. Every persistent preference lives in `Settings` and changes through `SettingsStore`. No `UserDefaults`, no plist flags. The one exception is state Sparkle owns (last check time, the user's auto-install choice), which Sparkle keeps in the `com.victorshammas.quoth` defaults domain.
 4. New behaviour after transcription is a `TranscriptProcessor` or a `DictationObserver`, not an edit to `DictationController`.
-5. Pure logic (gesture recognition, replacement pass, settings decoding, stats aggregation) has unit tests in `ParrotTests`.
+5. Pure logic (gesture recognition, replacement pass, settings decoding, stats aggregation) has unit tests in `QuothTests`.
 6. The event tap listens to `flagsChanged` only.
 7. Shared types are extended, not reshaped. A feature adds its settings to its own `…Settings` struct in its own folder, fills existing fields of `TranscriptionContext`, and uses existing `StartupFailure` cases. Adding a field or case to a shared type is fine; renaming or restructuring one needs its own change.
 
 ## 9. Permissions
 
-Parrot needs Microphone and Accessibility. macOS keys both grants to the app's code identity. With a Developer ID signature and a stable bundle identifier, grants survive updates. With an ad-hoc signature, each new build is a new identity, and the grant silently stops applying. That is why the signed bundle matters, and why `scripts/dev-install.sh` signs local builds with the Developer ID certificate.
+Quoth needs Microphone and Accessibility. macOS keys both grants to the app's code identity. With a Developer ID signature and a stable bundle identifier, grants survive updates. With an ad-hoc signature, each new build is a new identity, and the grant silently stops applying. That is why the signed bundle matters, and why `scripts/dev-install.sh` signs local builds with the Developer ID certificate.
 
-A grant belongs to the process that asked: `parrot setup` grants the terminal, which covers foreground runs, but the launch-at-login daemon needs its own. So the daemon asks for itself. Without Accessibility it keeps running with "grant Accessibility to start" in the menu bar and starts the hotkey as soon as the grant appears; it never exits over it, because an exit would either leave the user with nothing running or, under a relaunching supervisor, re-fire the prompt.
+A grant belongs to the process that asked: `quoth setup` grants the terminal, which covers foreground runs, but the launch-at-login daemon needs its own. So the daemon asks for itself. Without Accessibility it keeps running with "grant Accessibility to start" in the menu bar and starts the hotkey as soon as the grant appears; it never exits over it, because an exit would either leave the user with nothing running or, under a relaunching supervisor, re-fire the prompt.
 
-Parrot.app never shows a system prompt unannounced. At launch it opens the onboarding window (`UI/OnboardingWindow.swift`) until the user has been through it once, and afterwards while either grant is missing. One page sets the hotkey and the languages the user speaks, and lists both permissions, each with its own Allow button: the microphone prompt (or the Microphone pane once denied), and the Accessibility prompt with its pane, so the two system prompts never stack. Get Started saves the hotkey and languages, moves an English-only model to multilingual Small when another language is ticked, and sets `onboarding.completed`; closing the window sets the flag without saving. The rules are in `App/Onboarding.swift`, pure and tested. "Grant Permissions…" in the menu bar reopens the window while a grant is missing. A foreground `parrot run` has no window: it shows the Accessibility prompt once when it starts the hotkey and requests an undecided microphone at startup.
+Quoth.app never shows a system prompt unannounced. At launch it opens the onboarding window (`UI/OnboardingWindow.swift`) until the user has been through it once, and afterwards while either grant is missing. One page sets the hotkey and the languages the user speaks, and lists both permissions, each with its own Allow button: the microphone prompt (or the Microphone pane once denied), and the Accessibility prompt with its pane, so the two system prompts never stack. Get Started saves the hotkey and languages, moves an English-only model to multilingual Small when another language is ticked, and sets `onboarding.completed`; closing the window sets the flag without saving. The rules are in `App/Onboarding.swift`, pure and tested. "Grant Permissions…" in the menu bar reopens the window while a grant is missing. A foreground `quoth run` has no window: it shows the Accessibility prompt once when it starts the hotkey and requests an undecided microphone at startup.
 
 ## 10. Decision log
 
@@ -232,7 +232,7 @@ Architecture decisions are recorded in [`decisions/`](decisions/). Each says wha
 | ADR | Decision |
 |---|---|
 | [001](decisions/001-core-library-and-extension-points.md) | Core library and extension points |
-| [002](decisions/002-settings-file.md) | Config in `~/.config/parrot`, data in Application Support |
+| [002](decisions/002-settings-file.md) | Config in `~/.config/quoth`, data in Application Support |
 | [003](decisions/003-push-to-talk-on-a-modifier.md) | Push-to-talk on a single modifier key |
 | [004](decisions/004-local-data-and-privacy.md) | Local data and privacy |
 | [005](decisions/005-signed-app-identity.md) | Signed app identity |

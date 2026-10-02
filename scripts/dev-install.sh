@@ -9,36 +9,36 @@
 # identity across rebuilds and releases.
 #
 # Installs to /Applications, or ~/Applications when /Applications is not
-# writable, and links /usr/local/bin/parrot to the app's executable. A plain
+# writable, and links /usr/local/bin/quoth to the app's executable. A plain
 # binary already at that path (an old CLI install) is only replaced after you
 # say yes. A running copy is quit and reopened.
 #
-#   PARROT_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
-#   PARROT_INSTALL_DIR    where Quoth.app goes
-#   PARROT_LINK_DIR       where the parrot link goes (default /usr/local/bin;
+#   QUOTH_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
+#   QUOTH_INSTALL_DIR    where Quoth.app goes
+#   QUOTH_LINK_DIR       where the quoth link goes (default /usr/local/bin;
 #                         set it empty to skip the link)
-#   PARROT_NO_RESTART=1   don't quit and reopen a running copy
+#   QUOTH_NO_RESTART=1   don't quit and reopen a running copy
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ -z "${PARROT_INSTALL_DIR:-}" ]; then
+if [ -z "${QUOTH_INSTALL_DIR:-}" ]; then
     if [ -w /Applications ]; then
-        PARROT_INSTALL_DIR=/Applications
+        QUOTH_INSTALL_DIR=/Applications
     else
-        PARROT_INSTALL_DIR="$HOME/Applications"
+        QUOTH_INSTALL_DIR="$HOME/Applications"
     fi
 fi
-LINK_DIR="${PARROT_LINK_DIR-/usr/local/bin}"
-BUILD="${PARROT_BUILD_DIR:-build}"
-DEST="$PARROT_INSTALL_DIR/Quoth.app"
-EXE="$DEST/Contents/MacOS/parrot"
+LINK_DIR="${QUOTH_LINK_DIR-/usr/local/bin}"
+BUILD="${QUOTH_BUILD_DIR:-build}"
+DEST="$QUOTH_INSTALL_DIR/Quoth.app"
+EXE="$DEST/Contents/MacOS/quoth"
 
 VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0)"
-PARROT_TIMESTAMP=none PARROT_BUILD_DIR="$BUILD" scripts/build-app.sh "${VERSION#v}"
+QUOTH_TIMESTAMP=none QUOTH_BUILD_DIR="$BUILD" scripts/build-app.sh "${VERSION#v}"
 
 WAS_RUNNING=0
-if [ -z "${PARROT_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
+if [ -z "${QUOTH_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
     WAS_RUNNING=1
     echo "→ quitting the running Quoth"
     pkill -TERM -f "^$EXE" || true
@@ -49,17 +49,17 @@ if [ -z "${PARROT_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
 fi
 
 echo "→ installing to $DEST"
-mkdir -p "$PARROT_INSTALL_DIR"
+mkdir -p "$QUOTH_INSTALL_DIR"
 rm -rf "$DEST"
 ditto "$BUILD/Quoth.app" "$DEST"
 
 if [ -n "$LINK_DIR" ]; then
-    LINK="$LINK_DIR/parrot"
+    LINK="$LINK_DIR/quoth"
     REPLACE=1
     if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
         REPLACE=0
         if [ -t 0 ]; then
-            printf '%s is a separate parrot binary (an old CLI install). Replace it with a link to %s? [y/N] ' "$LINK" "$EXE"
+            printf '%s is a separate quoth binary (an old CLI install). Replace it with a link to %s? [y/N] ' "$LINK" "$EXE"
             read -r answer
             case "$answer" in y|Y|yes) REPLACE=1 ;; esac
         fi
@@ -79,7 +79,7 @@ if [ "$WAS_RUNNING" = 1 ]; then
     open "$DEST"
 fi
 
-if [ -f "$HOME/Library/LaunchAgents/com.digimata.parrot.plist" ]; then
+if [ -f "$HOME/Library/LaunchAgents/com.digimata.quoth.plist" ]; then
     echo "note: the old LaunchAgent is still installed. Open $DEST once; it removes the agent."
 fi
 

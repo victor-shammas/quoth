@@ -26,29 +26,29 @@ Quoth does not update itself.
 
 If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shortcut** to Off, since macOS also uses a double press of `fn` to start its own dictation.
 
-Choose **Launch at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `parrot doctor` shows how to fix it.
+Choose **Launch at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `quoth doctor` shows how to fix it.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.
 
 ## 3. Dictionary
 
-Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-text table of each word and what the model writes instead, and Quoth spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
+Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text table of each word and what the model writes instead, and Quoth spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
 
 ## 4. CLI
 
 | Command | What it does |
 |---|---|
-| `parrot` | Run in the foreground (^C to quit) |
-| `parrot setup` | One-time setup: permissions and model download |
-| `parrot doctor` | Check permissions, and the `fn` key setting when the hotkey is `fn` |
-| `parrot install --launch-at-login` | Start Quoth at login |
-| `parrot install --cli` | Link `/usr/local/bin/parrot` to Quoth.app |
-| `parrot install --uninstall` | Stop launching at login and remove logs |
-| `parrot models list` | List available models |
-| `parrot --model whisper-large-v3-turbo` | Larger, multilingual model |
-| `parrot --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
-| `parrot --no-overlay` | Hide the recording pill |
-| `parrot --inject-mode type-unicode` | Type instead of paste (leaves the clipboard alone) |
+| `quoth` | Run in the foreground (^C to quit) |
+| `quoth setup` | One-time setup: permissions and model download |
+| `quoth doctor` | Check permissions, and the `fn` key setting when the hotkey is `fn` |
+| `quoth install --launch-at-login` | Start Quoth at login |
+| `quoth install --cli` | Link `/usr/local/bin/quoth` to Quoth.app |
+| `quoth install --uninstall` | Stop launching at login and remove logs |
+| `quoth models list` | List available models |
+| `quoth --model whisper-large-v3-turbo` | Larger, multilingual model |
+| `quoth --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
+| `quoth --no-overlay` | Hide the recording pill |
+| `quoth --inject-mode type-unicode` | Type instead of paste (leaves the clipboard alone) |
 
 ## 5. How it works
 

@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "parrot",
+    name: "quoth",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
@@ -11,44 +11,44 @@ let package = Package(
         // came back empty, which the dictionary's example sentence relies on.
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "1.1.0"),
         // In-app updates (#50). A binary framework: scripts/build-app.sh
-        // embeds it in Parrot.app/Contents/Frameworks and signs it.
+        // embeds it in Quoth.app/Contents/Frameworks and signs it.
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
     ],
     targets: [
         // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
         .target(
-            name: "ParrotCore",
+            name: "QuothCore",
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
         ),
-        // Thin entry point: ArgumentParser commands that call into ParrotCore.
+        // Thin entry point: ArgumentParser commands that call into QuothCore.
         .executableTarget(
-            name: "parrot",
+            name: "quoth",
             dependencies: [
-                "ParrotCore",
+                "QuothCore",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        // Developer benchmarks (#49, #52), not shipped in Parrot.app:
-        // swift run -c release parrot-bench transcription|capture ...
+        // Developer benchmarks (#49, #52), not shipped in Quoth.app:
+        // swift run -c release quoth-bench transcription|capture ...
         .executableTarget(
-            name: "parrot-bench",
+            name: "quoth-bench",
             dependencies: [
-                "ParrotCore",
+                "QuothCore",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        // Unit tests against ParrotCore.
+        // Unit tests against QuothCore.
         .testTarget(
-            name: "ParrotTests",
-            dependencies: ["ParrotCore"]
+            name: "QuothTests",
+            dependencies: ["QuothCore"]
         ),
         // Unit tests for the benchmarks' pure parts.
         .testTarget(
-            name: "ParrotBenchTests",
-            dependencies: ["parrot-bench"]
+            name: "QuothBenchTests",
+            dependencies: ["quoth-bench"]
         ),
     ]
 )

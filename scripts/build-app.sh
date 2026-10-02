@@ -12,40 +12,40 @@
 # hardened runtime, as notarization requires.
 #
 # Signs with the first "Developer ID Application" identity in the keychain,
-# with the hardened runtime and packaging/Parrot.entitlements. The
+# with the hardened runtime and packaging/Quoth.entitlements. The
 # designated requirement then names the bundle ID and the team, not a
 # cdhash, so macOS keeps the Microphone and Accessibility grants across
 # builds. Without an identity the app is ad-hoc signed and every build is a
 # new identity; the script says so.
 #
-#   PARROT_SIGN_IDENTITY   signing identity (default: the keychain's Developer ID)
-#   PARROT_TIMESTAMP=none  skip the secure timestamp (local builds, offline);
+#   QUOTH_SIGN_IDENTITY   signing identity (default: the keychain's Developer ID)
+#   QUOTH_TIMESTAMP=none  skip the secure timestamp (local builds, offline);
 #                          notarization needs it, so releases leave this unset
-#   PARROT_BUILD_DIR       output directory (default: build)
+#   QUOTH_BUILD_DIR       output directory (default: build)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${1:-$(git describe --tags --abbrev=0 2>/dev/null || echo 0.0.0)}"
 VERSION="${VERSION#v}"
-OUT="${PARROT_BUILD_DIR:-build}"
+OUT="${QUOTH_BUILD_DIR:-build}"
 APP="$OUT/Quoth.app"
 
-IDENTITY="${PARROT_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
+IDENTITY="${QUOTH_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
     | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)}"
 
-echo "→ building parrot $VERSION (release, arm64)"
-swift build -c release --arch arm64 --product parrot
-BIN="$(swift build -c release --arch arm64 --show-bin-path)/parrot"
+echo "→ building quoth $VERSION (release, arm64)"
+swift build -c release --arch arm64 --product quoth
+BIN="$(swift build -c release --arch arm64 --show-bin-path)/quoth"
 
 echo "→ assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/parrot"
+cp "$BIN" "$APP/Contents/MacOS/quoth"
 # SwiftPM links Sparkle through @rpath and puts the framework beside the
 # binary; in the bundle it lives in Contents/Frameworks.
-install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/parrot"
-strip -x "$APP/Contents/MacOS/parrot"
+install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/quoth"
+strip -x "$APP/Contents/MacOS/quoth"
 mkdir -p "$APP/Contents/Frameworks"
 ditto "$(dirname "$BIN")/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 cp packaging/Info.plist "$APP/Contents/Info.plist"
@@ -63,7 +63,7 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 TIMESTAMP="--timestamp"
-[ "${PARROT_TIMESTAMP:-}" = "none" ] && TIMESTAMP="--timestamp=none"
+[ "${QUOTH_TIMESTAMP:-}" = "none" ] && TIMESTAMP="--timestamp=none"
 
 if [ -n "$IDENTITY" ]; then
     echo "→ signing as $IDENTITY"
@@ -88,7 +88,7 @@ for nested in \
         --sign "$SIGN_AS" "$nested"
 done
 codesign --force --options runtime $TIMESTAMP \
-    --entitlements packaging/Parrot.entitlements \
+    --entitlements packaging/Quoth.entitlements \
     --sign "$SIGN_AS" "$APP"
 
 codesign --verify --deep --strict --verbose=2 "$APP"

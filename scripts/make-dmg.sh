@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds Parrot.app, notarizes and staples it, and packages it into a
+# Builds Quoth.app, notarizes and staples it, and packages it into a
 # signed, notarized, stapled DMG with an Applications shortcut, plus the
 # zipped app that Sparkle downloads as the in-app update (#50).
-#   scripts/make-dmg.sh <version>   → dist/Parrot-<version>.dmg and .dmg.sha256,
-#                                     dist/Parrot-<version>.zip
+#   scripts/make-dmg.sh <version>   → dist/Quoth-<version>.dmg and .dmg.sha256,
+#                                     dist/Quoth-<version>.zip
 #
 # The update archive is signed, and the appcast written, by the release
 # workflow, which holds the EdDSA key.
@@ -15,10 +15,10 @@
 #   NOTARY_ISSUER_ID=xxxxxxxx-...  the team's Issuer ID
 #
 # or a notarytool keychain profile, NOTARY_KEYCHAIN_PROFILE, default
-# "parrot-notary" (local builds; created once with
-# `xcrun notarytool store-credentials parrot-notary`).
+# "quoth-notary" (local builds; created once with
+# `xcrun notarytool store-credentials quoth-notary`).
 #
-# PARROT_NOTARIZE=0 builds a signed but unnotarized DMG, for a quick look.
+# QUOTH_NOTARIZE=0 builds a signed but unnotarized DMG, for a quick look.
 # Needs a Developer ID Application identity; see scripts/build-app.sh.
 
 set -euo pipefail
@@ -27,21 +27,21 @@ cd "$(dirname "$0")/.."
 VERSION="${1:?usage: scripts/make-dmg.sh <version>}"
 VERSION="${VERSION#v}"
 OUT="dist"
-DMG="$OUT/Parrot-$VERSION.dmg"
-BUILD="${PARROT_BUILD_DIR:-build}"
-APP="$BUILD/Parrot.app"
+DMG="$OUT/Quoth-$VERSION.dmg"
+BUILD="${QUOTH_BUILD_DIR:-build}"
+APP="$BUILD/Quoth.app"
 STAGE="$BUILD/dmg-stage"
 
-IDENTITY="${PARROT_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
+IDENTITY="${QUOTH_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
     | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)}"
 if [ -z "$IDENTITY" ]; then
     echo "no Developer ID Application identity in the keychain; a release DMG needs one" >&2
     exit 1
 fi
-export PARROT_SIGN_IDENTITY="$IDENTITY"
-unset PARROT_TIMESTAMP
+export QUOTH_SIGN_IDENTITY="$IDENTITY"
+unset QUOTH_TIMESTAMP
 
-NOTARIZE="${PARROT_NOTARIZE:-1}"
+NOTARIZE="${QUOTH_NOTARIZE:-1}"
 
 notarize() {
     # $1: the file to submit. Waits, and fails the build on rejection.
@@ -50,7 +50,7 @@ notarize() {
             --key "$NOTARY_KEY" --key-id "${NOTARY_KEY_ID:?}" --issuer "${NOTARY_ISSUER_ID:?}"
     else
         xcrun notarytool submit "$1" --wait \
-            --keychain-profile "${NOTARY_KEYCHAIN_PROFILE:-parrot-notary}"
+            --keychain-profile "${NOTARY_KEYCHAIN_PROFILE:-quoth-notary}"
     fi
 }
 
@@ -58,7 +58,7 @@ scripts/build-app.sh "$VERSION"
 
 if [ "$NOTARIZE" = 1 ]; then
     echo "→ notarizing the app"
-    ZIP="$BUILD/Parrot-$VERSION.zip"
+    ZIP="$BUILD/Quoth-$VERSION.zip"
     rm -f "$ZIP"
     ditto -c -k --keepParent "$APP" "$ZIP"
     notarize "$ZIP"
@@ -68,12 +68,12 @@ if [ "$NOTARIZE" = 1 ]; then
     xcrun stapler staple "$APP"
     spctl -a -vv -t exec "$APP"
 else
-    echo "! PARROT_NOTARIZE=0: signed but not notarized; Gatekeeper will block it on other Macs."
+    echo "! QUOTH_NOTARIZE=0: signed but not notarized; Gatekeeper will block it on other Macs."
 fi
 
 # The update archive: the stapled app, zipped the way Sparkle recommends,
 # so the ticket travels with it and the update opens offline.
-UPDATE="$OUT/Parrot-$VERSION.zip"
+UPDATE="$OUT/Quoth-$VERSION.zip"
 echo "→ packaging the update archive $UPDATE"
 mkdir -p "$OUT"
 rm -f "$UPDATE"
@@ -81,10 +81,10 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$UPDATE"
 
 echo "→ packaging $DMG"
 rm -rf "$STAGE" && mkdir -p "$STAGE" "$OUT"
-ditto "$APP" "$STAGE/Parrot.app"
+ditto "$APP" "$STAGE/Quoth.app"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
-hdiutil create -volname "Parrot" -srcfolder "$STAGE" -ov -format UDZO -fs HFS+ -quiet "$DMG"
+hdiutil create -volname "Quoth" -srcfolder "$STAGE" -ov -format UDZO -fs HFS+ -quiet "$DMG"
 rm -rf "$STAGE"
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 
@@ -95,6 +95,6 @@ if [ "$NOTARIZE" = 1 ]; then
     spctl -a -vv -t open --context context:primary-signature "$DMG"
 fi
 
-(cd "$OUT" && shasum -a 256 "Parrot-$VERSION.dmg" > "Parrot-$VERSION.dmg.sha256")
-cat "$OUT/Parrot-$VERSION.dmg.sha256"
+(cd "$OUT" && shasum -a 256 "Quoth-$VERSION.dmg" > "Quoth-$VERSION.dmg.sha256")
+cat "$OUT/Quoth-$VERSION.dmg.sha256"
 echo "$DMG"

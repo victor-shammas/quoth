@@ -20,7 +20,6 @@
 build/
 dist/
 
-# Vercel CLI link for site/ (perroquet.xyz)
 .vercel
 .env*
 .claude/worktrees/
