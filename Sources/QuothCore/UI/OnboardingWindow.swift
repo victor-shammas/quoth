@@ -75,6 +75,7 @@ enum OnboardingWindow {
         window.title = "Welcome to Quoth"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.backgroundColor = Latte.windowBackground
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.delegate = delegate
@@ -183,105 +184,94 @@ final class OnboardingModel: ObservableObject {
     func getStarted() { onGetStarted?() }
 }
 
-/// The page: the app icon, the name, the hotkey and languages as
-/// pills (`Pill.swift`), the two permissions, and Get Started.
+/// The page, in Quoth's latte look: the app icon and name, the hotkey and
+/// languages, the grants, each with its reason, and Get Started.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var showsLanguages = false
 
     var body: some View {
         VStack(spacing: 0) {
-            AppBadge()
-            Text("Quoth")
-                .font(.system(size: 24, weight: .semibold))
-                .padding(.top, 16)
-            Text("Hold a key, speak, and let go.")
-                .foregroundStyle(.secondary)
+            AppBadge(size: 72)
+            Text("Welcome to Quoth")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Latte.text)
+                .padding(.top, 14)
+            Text("Hold a key, speak, and let go. Your words appear where you type.")
+                .foregroundStyle(Latte.secondary)
+                .multilineTextAlignment(.center)
                 .padding(.top, 4)
 
-            Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 12) {
-                GridRow {
-                    label("Hotkey")
-                    hotkeyMenu
-                }
-                GridRow {
-                    label("Languages")
-                    Button { showsLanguages.toggle() } label: {
-                        PillLabel(
-                            title: Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) }),
-                            chevron: true
-                        )
+            VStack(alignment: .leading, spacing: 18) {
+                SettingsSection("Set up") {
+                    SettingRow("Hotkey", caption: "Hold it to dictate; double-tap for hands-free.") {
+                        Picker("Hotkey", selection: Binding(get: { model.hotkey }, set: { model.hotkey = $0 })) {
+                            ForEach(model.hotkeyChoices, id: \.self) { Text($0.displayName).tag($0) }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
                     }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showsLanguages, arrowEdge: .bottom) {
-                        OnboardingLanguages(model: model)
+                    RowDivider()
+                    SettingRow("Languages", caption: "The ones you dictate in.") {
+                        Button(Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) })) {
+                            showsLanguages.toggle()
+                        }
+                        .popover(isPresented: $showsLanguages, arrowEdge: .bottom) {
+                            OnboardingLanguages(model: model)
+                        }
                     }
                 }
-                GridRow {
-                    label("Microphone")
-                    permission(.microphone, granted: model.state.microphone == .granted,
-                               action: model.state.microphone == .denied ? "Open Settings" : "Allow")
-                }
-                .padding(.top, 8)
-                GridRow {
-                    label(HotkeyAccess.name)
-                    permission(.hotkey, granted: model.state.hotkey, action: "Allow")
-                }
-                if Edition.pasteNeedsOwnGrant {
-                    // Optional: without it, each transcript is copied for ⌘V.
-                    GridRow {
-                        label("Paste at cursor")
-                        permission(.paste, granted: model.state.paste, action: "Allow")
+
+                SettingsSection("Permissions") {
+                    SettingRow("Microphone", caption: "To hear you while you dictate.") {
+                        permission(.microphone, granted: model.state.microphone == .granted,
+                                   action: model.state.microphone == .denied ? "Open Settings" : "Allow")
+                    }
+                    RowDivider()
+                    SettingRow(HotkeyAccess.name, caption: Edition.isAppStore
+                        ? "To notice your hotkey. Quoth only watches keys like fn, never what you type."
+                        : "To notice your hotkey and paste at the cursor. Quoth never sees what you type.") {
+                        permission(.hotkey, granted: model.state.hotkey, action: "Allow")
+                    }
+                    if Edition.pasteNeedsOwnGrant {
+                        RowDivider()
+                        // Optional: without it, each transcript is copied for ⌘V.
+                        SettingRow("Paste at cursor", caption: "Optional. Without it, dictations are copied for ⌘V.") {
+                            permission(.paste, granted: model.state.paste, action: "Allow")
+                        }
                     }
                 }
             }
-            .fixedSize()
-            .padding(.top, 32)
+            .padding(.top, 26)
 
             Button("Get Started") { model.getStarted() }
-                .buttonStyle(PillButtonStyle(primary: true))
+                .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.canGetStarted)
-                .padding(.top, 32)
+                .padding(.top, 24)
 
             Label("Audio and text never leave your Mac.", systemImage: "lock.fill")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 14)
+                .foregroundStyle(Latte.secondary)
+                .padding(.top, 12)
         }
-        .padding(.horizontal, 40)
-        .padding(.top, 44)
-        .padding(.bottom, 28)
-        .frame(width: 420)
-    }
-
-    private func label(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary)
-    }
-
-    private var hotkeyMenu: some View {
-        PillMenu(title: model.hotkey.displayName) {
-            ForEach(model.hotkeyChoices, id: \.self) { key in
-                Toggle(key.displayName, isOn: Binding(
-                    get: { model.hotkey == key },
-                    set: { if $0 { model.hotkey = key } }
-                ))
-            }
-        }
+        .padding(.horizontal, 32)
+        .padding(.top, 40)
+        .padding(.bottom, 24)
+        .frame(width: 480)
+        .tint(Latte.tint)
+        .background(Latte.background)
     }
 
     @ViewBuilder
     private func permission(_ kind: Permissions.Kind, granted: Bool, action: String) -> some View {
         if granted {
-            Label("Allowed", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.multicolor)
-                .padding(.vertical, 6)
+            AllowedLabel()
         } else {
             Button(action) { model.allow(kind) }
-                // Filled, so the missing grants read as what to do next.
-                .buttonStyle(.primaryPill)
+                // Prominent, so the missing grants read as what to do next.
+                .buttonStyle(.borderedProminent)
         }
     }
 }

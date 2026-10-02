@@ -135,3 +135,14 @@ struct SettingMenu<Content: View>: View {
         .fixedSize()
     }
 }
+
+/// "Allowed", with an amber check, for a permission already given.
+struct AllowedLabel: View {
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Latte.tint)
+            Text("Allowed").foregroundStyle(Latte.secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}

@@ -131,8 +131,7 @@ private struct PasteRow: View {
     var body: some View {
         SettingRow("Paste at cursor", caption: "Allow Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
             if granted {
-                Label("Allowed", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(Latte.secondary)
+                AllowedLabel()
             } else {
                 Button("Allow…") {
                     Permissions.perform(.promptPaste)
