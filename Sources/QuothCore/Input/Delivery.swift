@@ -73,6 +73,27 @@ final class TextDelivery {
     /// copied (`PasteAccess`).
     var canInsert: Bool { PasteAccess.isGranted }
 
+    /// Inserts `text` at the cursor now, for the Quote Card's Insert: no
+    /// focus to compare with, but never into a password field. Returns
+    /// false, leaving the text on the clipboard, when this build can't paste.
+    @discardableResult
+    func insertNow(_ text: String) -> Bool {
+        let now = FocusSnapshot.capture()
+        guard !now.isSecure else {
+            Log.info("  secure field focused; card text not inserted")
+            return false
+        }
+        guard canInsert else {
+            injector.copyToClipboard(text)
+            return false
+        }
+        let before = now.element?.textBeforeCursor() ?? .unknown
+        let spaced = Spacing.spaced(text, before: before)
+        injector.inject(spaced)
+        insertions.append(Insertion(length: spaced.count, pid: now.pid, element: now.element, at: Date()))
+        return true
+    }
+
     /// Removes the last insertion ("scratch that"), if it was recent and the
     /// same app and field still have focus, so the Delete keys can only reach
     /// what Quoth typed. Each call removes one more, back through the

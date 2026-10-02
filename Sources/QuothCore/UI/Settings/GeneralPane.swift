@@ -28,13 +28,29 @@ struct GeneralPane: View {
                 ))
             }
 
+            PillRow("Hands-free goes to", caption: hotkey.lockTarget == .card || !PasteAccess.isGranted
+                ? "A Quote Card, to edit before you insert it with ⌘↩."
+                : "Straight to the cursor in the app you're in.") {
+                PillMenu(title: PasteAccess.isGranted ? hotkey.lockTarget.displayName : LockTarget.card.displayName) {
+                    ForEach(LockTarget.allCases, id: \.self) { target in
+                        Toggle(target.displayName, isOn: Binding(
+                            get: { hotkey.lockTarget == target },
+                            set: { on in if on { store.update { $0.hotkey.lockTarget = target } } }
+                        ))
+                    }
+                }
+                // Without the paste grant, the card is the only way.
+                .disabled(!PasteAccess.isGranted)
+            }
+            .disabled(!hotkey.doubleTapLock)
+
             PillRow("Live text while locked", caption: "Text appears each time you pause.") {
                 switchToggle("Live text while locked", isOn: Binding(
                     get: { hotkey.liveText },
                     set: { on in store.update { $0.hotkey.liveText = on } }
                 ))
             }
-            .disabled(!hotkey.doubleTapLock || !PasteAccess.isGranted)
+            .disabled(!hotkey.doubleTapLock)
 
             PillRow("Voice commands", caption: "Punctuation and editing by voice, in English for now.") {
                 VoiceCommandsButton()

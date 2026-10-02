@@ -133,16 +133,23 @@ public enum Daemon {
         if let overlay { observers.append(overlay) }
         observers.append(menuBar)
         observers.append(LatencyLog())
+        // The Quote Card follows the loop, to show what it's doing and to run
+        // Insert or Copy once a dictation still running has finished.
+        let card = QuoteCard()
+        observers.append(card)
+        let delivery = TextDelivery(mode: options.injectMode)
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,
             processors: [VoiceCommands(), DictionaryProcessor(store: dictionary)],
             observers: observers,
             dumpWav: options.dumpWav,
-            delivery: TextDelivery(mode: options.injectMode),
+            delivery: delivery,
             context: dictionaryContext
         )
         controller.liveText = settings.current.hotkey.liveText
+        controller.card = card
+        controller.lockOpensCard = { settings.current.hotkey.lockTarget == .card }
 
         // Copy and Fix Last Dictation: the last transcript, in memory only.
         let lastDictation = LastDictation()
@@ -153,6 +160,19 @@ public enum Daemon {
             if !available { fixWindow.forget() }
         }
         menuBar.onCopyLast = { lastDictation.copy() }
+        card.insert = { text in
+            if !delivery.insertNow(text) {
+                overlay?.showMessage(DeliveryError.copied.userMessage)
+            }
+            lastDictation.remember(text)
+        }
+        card.copy = { text in
+            SystemPasteboard(.general).write(text, markers: PasteboardSession.concealedMarkers)
+            overlay?.showMessage("Copied")
+        }
+        card.remember = { lastDictation.remember($0) }
+        card.isDictating = { controller.state != .idle }
+        menuBar.onNewCard = { card.open() }
         menuBar.onFixLast = { fixWindow.show(text: lastDictation.text) }
         // A headset connecting mid-lock ends the lock and keeps what was
         // said before it; push-to-talk still discards a changed route.
@@ -162,6 +182,7 @@ public enum Daemon {
             }
         }
         controller.onEndLock = { monitor.endLock(reason: $0) }
+        card.endLock = { monitor.endLock(reason: "the Quote Card") }
         menuBar.onStopLock = { monitor.endLock(reason: "stopped from the menu") }
         switcher.controller = controller
 

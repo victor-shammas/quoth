@@ -42,8 +42,12 @@ final class DictationController {
     private var inFlight = 0
     /// What had focus when the current recording started.
     private var focusAtStart: FocusSnapshot?
-    /// Whether a locked recording types text at each pause (fork addition).
+    /// Whether a locked recording types text at each pause.
     var liveText = true
+    /// The Quote Card: while it is open, every dictation goes into it.
+    weak var card: DictationTarget?
+    /// Whether a lock opens the Quote Card (Settings), read at each lock.
+    var lockOpensCard: () -> Bool = { false }
     /// Live text for the current locked recording, if any.
     private var live: LiveTranscription?
     /// Whether the current recording is locked on.
@@ -99,10 +103,16 @@ final class DictationController {
         if capture.hasRouteChanged {
             DispatchQueue.main.async { [weak self] in self?.onEndLock?("the microphone changed") }
         }
-        // Live text types as it goes; a build that can only copy collects
-        // the whole lock and copies it once at the end.
-        let live = liveText && delivery.canInsert
-        Log.info("● locked\(live ? " · live text" : "")")
+        // A lock goes to the Quote Card when it is open, when Settings says
+        // so, and in a build that can't paste, where the card beats copying
+        // the whole lock at the end.
+        let toCard: DictationTarget? = card.flatMap { card in
+            card.isOpen || lockOpensCard() || !delivery.canInsert ? card : nil
+        }
+        toCard?.open()
+        // Live text types as it goes, at the cursor or into the card.
+        let live = liveText && (toCard != nil || delivery.canInsert)
+        Log.info("● locked\(live ? " · live text" : "")\(toCard != nil ? " · card" : "")")
         if live {
             let capture = self.capture
             let delivery = self.delivery
@@ -112,8 +122,10 @@ final class DictationController {
                 transcriber: transcriber,
                 context: context(),
                 processors: processors,
-                deliver: { try delivery.deliver($0, focusAtStart: focus) },
-                scratch: { delivery.scratchLast() },
+                deliver: { text in
+                    if let toCard { toCard.append(text) } else { try delivery.deliver(text, focusAtStart: focus) }
+                },
+                scratch: { toCard?.scratchLast() ?? delivery.scratchLast() },
                 copy: { delivery.copyToClipboard($0) },
                 notice: { [weak self] error in
                     self?.observers.forEach { $0.dictationNotice(error) }
@@ -199,8 +211,12 @@ final class DictationController {
                 Log.info(String(format: "→ %.2fs · %d chars", elapsed, raw.text.count))
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
-                if transcript.scratchesPrevious { delivery.scratchLast() }
-                let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
+                // While the Quote Card is open, every dictation goes into it.
+                let card = self.card?.isOpen == true ? self.card : nil
+                if transcript.scratchesPrevious { _ = card?.scratchLast() ?? delivery.scratchLast() }
+                let delivered = Result {
+                    if let card { card.append(transcript.text) } else { try delivery.deliver(transcript.text, focusAtStart: focus) }
+                }
                 if case .failure(DeliveryError.secureField) = delivered {} else {
                     onTranscript?(transcript.text)
                 }

@@ -31,6 +31,8 @@ Requires macOS 14+ on Apple silicon. Open Quoth and allow it when macOS asks for
 
 If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shortcut** to Off, since macOS also uses a double press of `fn` to start its own dictation.
 
+**Quote Card:** choose **Hands-free goes to › Quote Card** in Settings, or **New Quote Card** in the menu, and dictation streams into a small floating card instead, where you can edit it before **⌘↩** inserts it where you were. While the card is open, every dictation goes into it. The App Store edition uses it whenever it can't paste.
+
 **Voice commands** (English): "new paragraph", "new line", "bullet point", "comma", "question mark", "quote … unquote", and "scratch that" to remove what was just typed. Settings › General lists them all. If Quoth misspells a word, **Fix Last Dictation…** in the menu teaches it; **Settings › Dictionary** lists your words.
 
 Choose **Open at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `quoth doctor` shows how to fix it.

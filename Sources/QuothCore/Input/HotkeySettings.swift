@@ -14,6 +14,9 @@ struct HotkeySettings: Codable, Equatable {
     /// Whether a locked recording types its text at each pause instead of
     /// all at the end (fork addition).
     var liveText = true
+    /// Where a locked dictation goes: typed at the cursor, or into the
+    /// Quote Card to edit first.
+    var lockTarget: LockTarget = .cursor
 
     init() {}
 
@@ -23,6 +26,7 @@ struct HotkeySettings: Codable, Equatable {
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
         doubleTapLock = try c.decodeIfPresent(Bool.self, forKey: .doubleTapLock) ?? true
         liveText = try c.decodeIfPresent(Bool.self, forKey: .liveText) ?? true
+        lockTarget = (try? c.decodeIfPresent(LockTarget.self, forKey: .lockTarget)) ?? .cursor
     }
 }
 
@@ -93,6 +97,19 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .leftCommand, .rightCommand: return .maskCommand
         case .leftControl, .rightControl: return .maskControl
         case .leftShift, .rightShift: return .maskShift
+        }
+    }
+}
+
+/// Where a hands-free dictation goes.
+enum LockTarget: String, Codable, CaseIterable {
+    case cursor
+    case card
+
+    var displayName: String {
+        switch self {
+        case .cursor: return "At the cursor"
+        case .card: return "Quote Card"
         }
     }
 }

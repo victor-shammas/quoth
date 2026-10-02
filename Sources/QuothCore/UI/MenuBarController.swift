@@ -37,6 +37,9 @@ final class MenuBarController {
     let fixLastItem: NSMenuItem
     var onCopyLast: (() -> Void)?
     var onFixLast: (() -> Void)?
+    /// Opens an empty Quote Card.
+    let newCardItem: NSMenuItem
+    var onNewCard: (() -> Void)?
     /// Ends a locked recording, for when the hotkey can't (secure input).
     let stopLockItem: NSMenuItem
     var onStopLock: (() -> Void)?
@@ -78,6 +81,9 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
+        newCardItem = NSMenuItem(title: "New Quote Card", action: #selector(newCardClicked), keyEquivalent: "")
+        menu.addItem(newCardItem)
+
         copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastClicked), keyEquivalent: "")
         copyLastItem.isEnabled = false
         menu.addItem(copyLastItem)
@@ -114,6 +120,7 @@ final class MenuBarController {
         quitItem.target = self
         settingsItem.target = self
         copyLastItem.target = self
+        newCardItem.target = self
         stopLockItem.target = self
         fixLastItem.target = self
         checkForUpdatesItem.target = self
@@ -152,6 +159,10 @@ final class MenuBarController {
     /// Whether there is a last dictation to copy.
     func setLastDictationAvailable(_ available: Bool) {
         copyLastItem.isEnabled = available
+    }
+
+    @objc private func newCardClicked() {
+        onNewCard?()
     }
 
     @objc private func stopLockClicked() {
