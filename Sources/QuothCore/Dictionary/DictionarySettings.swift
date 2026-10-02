@@ -1,4 +1,4 @@
-/// Custom dictionary preferences (#33). The words and replacements live in
+/// Custom dictionary preferences. The words and replacements live in
 /// their own file, `Paths.dictionaryFile`, which `DictionaryStore` reads; the
 /// example sentences live here, because they cost decoding time on every
 /// dictation and don't fit that table.

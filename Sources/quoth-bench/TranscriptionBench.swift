@@ -16,7 +16,7 @@ struct BenchOptions {
     var prompt: String?
     /// Run without any prompt, even if the dictionary has an example sentence.
     var noPrompt: Bool
-    /// Run with WhisperKit's defaults, as Quoth ran before #49, to compare.
+    /// Run with WhisperKit's defaults, as Quoth ran before, to compare.
     var baseline: Bool
     /// Compute units for the audio encoder and text decoder: ane, gpu, cpu or
     /// all. Nil keeps the tuning's choice.

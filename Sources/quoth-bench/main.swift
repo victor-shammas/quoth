@@ -15,7 +15,7 @@ struct Bench: ParsableCommand {
     )
 }
 
-/// Press-to-first-sample of the default input (#52).
+/// Press-to-first-sample of the default input.
 struct BenchCapture: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "capture",
@@ -54,7 +54,7 @@ struct BenchCapture: ParsableCommand {
     }
 }
 
-/// Transcription latency over local recordings (#49).
+/// Transcription latency over local recordings.
 struct BenchTranscription: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "transcription",
@@ -77,7 +77,7 @@ struct BenchTranscription: ParsableCommand {
 
     @Flag(name: .long, help: "Run without a prompt.") var noPrompt: Bool = false
 
-    @Flag(name: .long, help: "Use WhisperKit's default settings, as Quoth ran before #49, to compare.") var baseline: Bool = false
+    @Flag(name: .long, help: "Use WhisperKit's default settings, as earlier versions did, to compare.") var baseline: Bool = false
 
     @Option(name: .long, help: "Compute units for the audio encoder: ane, gpu, cpu or all.") var encoder: String?
 

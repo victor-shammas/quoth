@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Model: which Whisper model transcribes, in which language (#43), and
+/// Model: which Whisper model transcribes, in which language, and
 /// the models downloaded to this Mac.
 struct ModelPane: View {
     @ObservedObject var store: SettingsStore
@@ -22,7 +22,7 @@ struct ModelPane: View {
             PillRow("Model", caption: loading.current == nil ? selectedModel.map(summary) : nil) {
                 PillMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
                     modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
-                    modelGroup("All languages, including English", ModelRegistry.shared.filter(\.isMultilingual))
+                    modelGroup("Multilingual, including English", ModelRegistry.shared.filter(\.isMultilingual))
                 }
             }
 
@@ -83,7 +83,7 @@ struct ModelPane: View {
     }
 
     /// How each model trades speed for accuracy, measured with
-    /// `quoth-bench transcription` on an M4 Pro (#43).
+    /// `quoth-bench transcription` on an M4 Pro.
     private static let tradeOff: [String: String] = [
         "whisper-base.en": "Fastest",
         "whisper-small.en": "More accurate, slower",
@@ -94,11 +94,11 @@ struct ModelPane: View {
         "whisper-large-v3-turbo-compressed": "Nearly as accurate, smaller",
     ]
 
-    /// "Fastest · English only · 145 MB", or "Fast · 99 languages, including
+    /// "Fastest · English only · 145 MB", or "Fast · Multilingual, including
     /// English · 490 MB". Not shown while the model loads:
     /// the progress line under the menu says that instead.
     private func summary(_ model: TranscriptionModel) -> String {
-        let languages = model.isMultilingual ? "99 languages, including English" : "English only"
+        let languages = model.isMultilingual ? "Multilingual, including English" : "English only"
         let size = model.sizeMB >= 1000
             ? String(format: "%.1f GB", Double(model.sizeMB) / 1000)
             : "\(model.sizeMB) MB"
@@ -130,7 +130,7 @@ struct ModelPane: View {
 
         if !multilingual, let model = selectedModel {
             let only = SpokenLanguage.displayName(model.languages.first ?? "en")
-            caption("This model hears \(only) only. For other languages, choose one under All languages.")
+            caption("This model hears \(only) only. For other languages, choose a multilingual model.")
         } else if store.current.language.code == nil {
             PillRow("Languages you speak", caption: "Automatic picks among these.") {
                 SpokenLanguagesButton(store: store)

@@ -23,7 +23,7 @@ public enum InjectMode: String, CaseIterable, Sendable {
 @MainActor
 final class TextInjector {
     /// Where every synthesized event is posted. One constant, so the app
-    /// matrix in #38 can switch it in one line if a location fails there.
+    /// matrix in can switch it in one line if a location fails there.
     ///
     /// `.cgSessionEventTap` enters where hardware events enter the login
     /// session, so the event reaches the focused app exactly as a key press

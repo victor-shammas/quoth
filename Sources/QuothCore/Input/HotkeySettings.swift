@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// Push-to-talk key preferences (#42).
+/// Push-to-talk key preferences.
 ///
 /// The `settings.json` field for this feature; see `Settings`. Give each new
 /// field a default and decode it in `init(from:)` with

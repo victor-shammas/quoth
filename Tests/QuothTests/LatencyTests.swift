@@ -115,7 +115,7 @@ final class WhisperTuningTests: XCTestCase {
         XCTAssertFalse(tuning.decodingOptions(language: "en", promptTokens: nil, audioSeconds: 30.5).withoutTimestamps)
     }
 
-    /// #43: every decode transcribes, never translates, and never detects
+    ///: every decode transcribes, never translates, and never detects
     /// on its own; the language is chosen before it.
     func testAlwaysTranscribesWithDetectionOff() {
         for tuning in [WhisperTuning.standard, .baseline] {

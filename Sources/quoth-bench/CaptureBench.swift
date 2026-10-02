@@ -33,7 +33,7 @@ struct CaptureBenchOptions {
 /// `quoth-bench capture`: opens and closes the default input the way a
 /// dictation does and reports press-to-first-sample, cold (after an idle
 /// gap) and warm (seconds after the last capture), for one capture mode
-/// (#52). It also checks, between presses, that neither this process nor any
+///. It also checks, between presses, that neither this process nor any
 /// other runs the device, which is the promise every mode keeps.
 ///
 /// Prints timings and counts, never audio.

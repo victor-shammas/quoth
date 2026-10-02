@@ -47,7 +47,7 @@ package struct DictionaryContext {
     /// setting: a single-language model such as `whisper-base.en`. Nil for
     /// multilingual models, whose language comes from the Language setting or
     /// detection: an example sentence in the wrong language drags the decoder
-    /// into it (#23).
+    /// into it.
     package static func knownLanguage(of model: TranscriptionModel) -> String? {
         guard model.languages.count == 1, let only = model.languages.first, only != "multi" else { return nil }
         return only

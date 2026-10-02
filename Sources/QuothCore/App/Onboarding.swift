@@ -1,6 +1,6 @@
 import Foundation
 
-/// Whether the onboarding window has been through (#51).
+/// Whether the onboarding window has been through.
 ///
 /// The `settings.json` field for this feature; see `Settings`. Give each new
 /// field a default and decode it in `init(from:)` with

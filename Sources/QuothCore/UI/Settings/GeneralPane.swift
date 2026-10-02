@@ -36,6 +36,10 @@ struct GeneralPane: View {
             }
             .disabled(!hotkey.doubleTapLock || !PasteAccess.isGranted)
 
+            PillRow("Voice commands", caption: "Say “new paragraph” or “new line” to start one. English only, for now.") {
+                EmptyView()
+            }
+
             if hotkey.key == .fn && hotkey.doubleTapLock {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Caption("If a double tap of fn starts Apple's Dictation instead, turn off its shortcut in Keyboard settings.")
@@ -54,7 +58,7 @@ struct GeneralPane: View {
 
             LaunchAtLoginRow()
 
-            if Edition.isAppStore && Edition.allowsAutoPaste {
+            if Edition.pasteNeedsOwnGrant {
                 PasteRow()
             }
         }
@@ -107,7 +111,7 @@ private struct PasteRow: View {
     @State private var granted = PasteAccess.isGranted
 
     var body: some View {
-        PillRow("Paste at cursor", caption: "Without it, each dictation is copied, ready for ⌘V.") {
+        PillRow("Paste at cursor", caption: "Allow Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
             if granted {
                 Label("Allowed", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.secondary)

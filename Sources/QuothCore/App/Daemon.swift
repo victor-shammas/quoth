@@ -10,9 +10,9 @@ public struct DaemonOptions {
     public var model: String?
     /// How transcripts are inserted. Paste unless `--inject-mode` says otherwise.
     public var injectMode: InjectMode
-    /// How the microphone is run (#52). The standard mode unless `--capture` says otherwise.
+    /// How the microphone is run. The standard mode unless `--capture` says otherwise.
     public var captureMode: CaptureMode
-    /// The push-to-talk key for this run only (#42). Nil uses the saved setting.
+    /// The push-to-talk key for this run only. Nil uses the saved setting.
     public var hotkey: HotkeyKey?
 
     public init(
@@ -54,7 +54,7 @@ public enum Daemon {
         // Startup has already exited on denied access. If the system has never
         // asked, ask now, without waiting, so the prompt is answered while the
         // model loads rather than on the first press. Quoth.app asks from
-        // the onboarding window's Allow instead, never unannounced (#51).
+        // the onboarding window's Allow instead, never unannounced.
         if !AppLaunch.isApp {
             MicrophoneAccess.requestIfUndetermined()
         }
@@ -107,17 +107,17 @@ public enum Daemon {
         let menuBar = MenuBarController(modelID: model.id)
         menuBar.setHotkey(monitor.key)
         // Quoth.app sets up the hotkey, languages and permissions, and
-        // explains each permission before macOS asks (#51).
+        // explains each permission before macOS asks.
         OnboardingWindow.startIfNeeded(store: settings, menuBar: menuBar)
-        // A model change loads behind the menu bar and swaps in between dictations (#43).
+        // A model change loads behind the menu bar and swaps in between dictations.
         let switcher = ModelSwitcher(model: model, transcriber: transcriber, menuBar: menuBar)
 
-        // The dictionary (#33): created on first run, reloaded when it changes.
+        // The dictionary: created on first run, reloaded when it changes.
         let dictionary = DictionaryStore()
         dictionary.createIfMissing()
         let settingsWindow = SettingsWindow(store: settings, dictionary: dictionary)
         menuBar.onOpenSettings = { settingsWindow.show() }
-        // Read at each release, so a Language change applies at the next press (#43).
+        // Read at each release, so a Language change applies at the next press.
         let dictionaryContext = {
             var context = DictionaryContext(
                 store: dictionary,
@@ -166,7 +166,7 @@ public enum Daemon {
         switcher.controller = controller
 
         // Each setting applies itself here when it changes, from the window
-        // or a hand edit of settings.json (#41). CLI flags only set the
+        // or a hand edit of settings.json. CLI flags only set the
         // starting values of a foreground run.
         settings.observe { old, new in
             if old.hotkey.doubleTapLock != new.hotkey.doubleTapLock {
@@ -289,7 +289,7 @@ public enum Daemon {
 
         Log.info("\(HotkeyAccess.name) not granted; waiting (System Settings → Privacy & Security → \(HotkeyAccess.name) → Quoth)")
         menuBar.setHotkeyHealth(.accessibilityMissing)
-        // Quoth.app leaves the prompt to the onboarding window's Allow (#51).
+        // Quoth.app leaves the prompt to the onboarding window's Allow.
         if !AppLaunch.isApp {
             HotkeyAccess.request()
         }

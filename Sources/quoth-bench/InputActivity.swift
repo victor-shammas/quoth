@@ -4,7 +4,7 @@ import Foundation
 /// Whether the microphone is running, as Core Audio reports it: for this
 /// process (what the menu bar's microphone indicator follows) and for a
 /// device across every process. Used to check that nothing runs the input
-/// between presses (#52).
+/// between presses.
 enum InputActivity {
     /// True while this process has input running, nil if Core Audio cannot
     /// say.

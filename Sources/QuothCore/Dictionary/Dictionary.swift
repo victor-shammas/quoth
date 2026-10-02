@@ -1,6 +1,6 @@
 import Foundation
 
-/// The user's custom dictionary (#33).
+/// The user's custom dictionary.
 ///
 /// Three kinds of entry, all optional:
 /// - `terms`: canonical spellings. A term heard in any casing is rewritten to
@@ -52,7 +52,7 @@ struct UserDictionary: Codable, Equatable, Sendable {
     /// Matches the exact code first, then its primary subtag, ignoring case:
     /// `pt-BR` and `pt` share a section. There is no fallback to another
     /// language: a prompt in the wrong language pulls the decoder into that
-    /// language, which is worse than no prompt (#23).
+    /// language, which is worse than no prompt.
     func example(for language: String?) -> String? {
         guard let language, !language.isEmpty else { return nil }
         // Sorted so the choice among several matching sections is stable.

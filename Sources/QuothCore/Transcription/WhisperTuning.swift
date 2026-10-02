@@ -6,7 +6,7 @@ import WhisperKit
 /// app uses; `quoth-bench transcription` can run `baseline` or override the compute units
 /// to compare them on another chip or model.
 ///
-/// Each choice in `standard` was measured with `quoth-bench transcription` (#49); the
+/// Each choice in `standard` was measured with `quoth-bench transcription`; the
 /// commit that set it has the numbers.
 package struct WhisperTuning: Equatable, @unchecked Sendable {
     package var melCompute: MLComputeUnits = .cpuAndGPU
@@ -18,12 +18,12 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     /// Cut leading and trailing silence before transcription.
     package var trimSilence = false
     /// Seconds of silence put before the audio after the trim, so speech
-    /// never starts at the model's first sample (#53).
+    /// never starts at the model's first sample.
     package var leadPadding: Double = 0
     /// Seconds of silence put after the audio after the trim.
     package var trailPadding: Double = 0
 
-    /// WhisperKit's defaults, as Quoth ran before #49.
+    /// WhisperKit's defaults, as Quoth ran before.
     package static let baseline = WhisperTuning()
 
     package static let standard = WhisperTuning(
@@ -55,7 +55,7 @@ package struct WhisperTuning: Equatable, @unchecked Sendable {
     /// Options for one transcription. `language` is the language to decode
     /// in, already chosen (see `SpokenLanguage`), or nil for a model that has
     /// only one. Detection never runs in the decode, and the task is always
-    /// transcribe: no path falls into Whisper's translate-to-English (#43).
+    /// transcribe: no path falls into Whisper's translate-to-English.
     func decodingOptions(language: String?, promptTokens: [Int]?, audioSeconds: Double) -> DecodingOptions {
         var options = DecodingOptions(task: .transcribe, language: language, detectLanguage: false)
         options.promptTokens = promptTokens

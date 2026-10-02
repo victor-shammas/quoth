@@ -1,11 +1,11 @@
 import AVFoundation
 import Foundation
 
-/// How `AudioCapture` gets samples from the microphone (#52). Every mode
+/// How `AudioCapture` gets samples from the microphone. Every mode
 /// runs the input only while the hotkey is held.
 public enum CaptureMode: String, CaseIterable, Sendable {
-    /// A fresh `AVAudioEngine` per press, released on release (#39). The
-    /// default before #52; kept selectable for one release.
+    /// A fresh `AVAudioEngine` per press, released on release. The
+    /// default before; kept selectable for one release.
     case engine
     /// A Core Audio AUHAL input unit, built per press and disposed on release.
     case hal

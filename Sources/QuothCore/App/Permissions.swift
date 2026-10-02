@@ -25,34 +25,34 @@ enum MicrophonePermission: Equatable {
 struct PermissionState: Equatable {
     /// The hotkey's grant (`HotkeyAccess`): Accessibility in the direct
     /// build, Input Monitoring in the App Store build.
-    var accessibility: Bool
+    var hotkey: Bool
     var microphone: MicrophonePermission
     /// Pasting at the cursor (`PasteAccess`). Optional in the App Store
     /// build, which copies instead without it; covered by Accessibility in
     /// the direct build.
     var paste: Bool = true
 
-    var allGranted: Bool { accessibility && microphone == .granted }
+    var allGranted: Bool { hotkey && microphone == .granted }
 
     /// This process's grants now.
     static var current: PermissionState {
         PermissionState(
-            accessibility: HotkeyAccess.isGranted,
+            hotkey: HotkeyAccess.isGranted,
             microphone: MicrophonePermission(MicrophoneAccess.status),
-            paste: Edition.isAppStore ? PasteAccess.isGranted : true
+            paste: Edition.pasteNeedsOwnGrant ? PasteAccess.isGranted : true
         )
     }
 }
 
-/// Reading and asking for Accessibility and Microphone (#51). The onboarding
+/// Reading and asking for Accessibility and Microphone. The onboarding
 /// window explains both before any of these requests is made.
 enum Permissions {
     /// One thing an Allow button does.
     enum Step: Equatable {
         /// The hotkey grant's prompt (`HotkeyAccess.request`), which also
         /// lists Quoth in its pane.
-        case promptAccessibility
-        case openAccessibilitySettings
+        case promptHotkey
+        case openHotkeySettings
         /// The paste grant's prompt, App Store build only.
         case promptPaste
         case openPasteSettings
@@ -64,7 +64,7 @@ enum Permissions {
     /// window, so macOS never shows both prompts at once.
     enum Kind: Equatable {
         case microphone
-        case accessibility
+        case hotkey
         case paste
     }
 
@@ -80,8 +80,8 @@ enum Permissions {
             case .notDetermined: return [.requestMicrophone]
             case .denied: return [.openMicrophoneSettings]
             }
-        case .accessibility:
-            return state.accessibility ? [] : [.promptAccessibility, .openAccessibilitySettings]
+        case .hotkey:
+            return state.hotkey ? [] : [.promptHotkey, .openHotkeySettings]
         case .paste:
             return state.paste ? [] : [.promptPaste, .openPasteSettings]
         }
@@ -89,10 +89,10 @@ enum Permissions {
 
     static func perform(_ step: Step) {
         switch step {
-        case .promptAccessibility:
+        case .promptHotkey:
             Log.info("asking for \(HotkeyAccess.name)")
             HotkeyAccess.request()
-        case .openAccessibilitySettings:
+        case .openHotkeySettings:
             openSettings(pane: HotkeyAccess.settingsPane)
         case .promptPaste:
             Log.info("asking to paste at the cursor")

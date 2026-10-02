@@ -30,6 +30,10 @@ enum Edition {
     /// app and asks macOS whether secure input is on instead.
     static let readsFocusedField = !isAppStore
 
+    /// Whether pasting is a grant of its own, offered in onboarding and
+    /// Settings: in the App Store build, unless it is copy-only.
+    static let pasteNeedsOwnGrant = isAppStore && allowsAutoPaste
+
     /// Whether the build has Sparkle updates, the `quoth` command and its
     /// setup and doctor tools.
     static let hasDeveloperTools = !isAppStore

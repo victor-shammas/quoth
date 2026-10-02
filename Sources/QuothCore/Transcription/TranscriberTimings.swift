@@ -14,7 +14,7 @@ package struct TranscriberTimings: Equatable, Sendable {
     var audioSeconds: TimeInterval = 0
     /// Silence trimming, padding the window, and the log-mel spectrogram.
     package var preprocessing: TimeInterval = 0
-    /// Detecting the spoken language before decoding (Automatic, #43): its
+    /// Detecting the spoken language before decoding (Automatic): its
     /// own mel spectrogram and encoder pass, and one decoder step.
     package var languageDetection: TimeInterval = 0
     /// The audio encoder, over every 30 s window.
@@ -25,7 +25,7 @@ package struct TranscriberTimings: Equatable, Sendable {
     package var postprocessing: TimeInterval = 0
     /// The whole `transcribe` call, wall clock.
     package var total: TimeInterval = 0
-    /// The language decoded in, as a code (#43), or nil when unknown.
+    /// The language decoded in, as a code, or nil when unknown.
     package var language: String?
     /// 30 s windows encoded.
     package var windows = 0

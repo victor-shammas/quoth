@@ -17,12 +17,12 @@ final class MenuBarController {
     let statusLine: NSMenuItem
     /// Slot: a model downloading or loading; hidden otherwise.
     let modelLine: NSMenuItem
-    /// Slot: reopens the onboarding window (#51). Shown in Quoth.app while
+    /// Slot: reopens the onboarding window. Shown in Quoth.app while
     /// a permission is missing.
     let grantPermissionsItem: NSMenuItem
     /// What `grantPermissionsItem` does; set by `OnboardingWindow`.
     var onGrantPermissions: (() -> Void)?
-    /// Slot: opens the Settings window (#41) through `onOpenSettings`.
+    /// Slot: opens the Settings window through `onOpenSettings`.
     let settingsItem: NSMenuItem
     /// Called by Settings…; set by the daemon, which owns the window.
     var onOpenSettings: (() -> Void)?
@@ -42,9 +42,9 @@ final class MenuBarController {
     var onStopLock: (() -> Void)?
 
     /// A degraded hotkey tap replaces the idle line, so the menu bar does not
-    /// claim fn works when it does not (#37).
+    /// claim fn works when it does not.
     private var hotkeyHealth: HotkeyHealth = .ok
-    /// The key the idle line tells the user to hold (#42).
+    /// The key the idle line tells the user to hold.
     private var hotkey: HotkeyKey = .fn
     private var isIdle = true
     private var idleStatus: String { hotkeyHealth.statusText ?? Self.readyStatus(hotkey) }

@@ -204,7 +204,7 @@ final class OverlayModel: ObservableObject {
     static let voiceThreshold: Float = 0.01
 
     /// How often the bars move. Capture delivers a level per buffer, about
-    /// every 12 ms with the AUHAL input (#52); the bars are tuned for about
+    /// every 12 ms with the AUHAL input; the bars are tuned for about
     /// 100 ms and look twitchy any faster.
     static let refreshInterval: TimeInterval = 0.1
 

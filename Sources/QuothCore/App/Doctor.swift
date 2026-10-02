@@ -17,7 +17,7 @@ public struct Check {
 
 public enum DoctorReport {
     /// `hotkey` is the key in use, nil for the one saved in settings.json.
-    /// The fn mapping matters only when that key is fn (#42).
+    /// The fn mapping matters only when that key is fn.
     public static func run(hotkey: HotkeyKey? = nil) -> [Check] {
         // Doctor runs from the command line, on the main thread.
         let key = hotkey ?? MainActor.assumeIsolated { SettingsStore().current.hotkey.key }

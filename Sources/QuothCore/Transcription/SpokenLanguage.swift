@@ -1,7 +1,7 @@
 import Foundation
 import WhisperKit
 
-/// How a dictation's spoken language is chosen (#43). Pure, so it is tested.
+/// How a dictation's spoken language is chosen. Pure, so it is tested.
 ///
 /// - A single-language model such as `whisper-base.en` is never told a
 ///   language and never asked to detect one: it only knows one.
@@ -10,7 +10,7 @@ import WhisperKit
 ///   setting, or the Mac's preferred languages until it is set), and only
 ///   among them: `LanguageDetector` lets no other language compete. Whisper
 ///   confuses close languages on short clips (Spanish heard as Italian or
-///   Portuguese, #15: Serbian heard as Spanish), and a wrong language comes
+///   Portuguese: Serbian heard as Spanish), and a wrong language comes
 ///   back as a translation. With one language there is nothing to detect.
 package enum SpokenLanguage {
     /// What to do before decoding.

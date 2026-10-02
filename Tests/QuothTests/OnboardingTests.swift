@@ -2,8 +2,8 @@ import XCTest
 @testable import QuothCore
 
 final class OnboardingTests: XCTestCase {
-    private let granted = PermissionState(accessibility: true, microphone: .granted)
-    private let missing = PermissionState(accessibility: false, microphone: .notDetermined)
+    private let granted = PermissionState(hotkey: true, microphone: .granted)
+    private let missing = PermissionState(hotkey: false, microphone: .notDetermined)
 
     func testShowsOnceToEveryoneThenOnlyWhileAGrantIsMissing() {
         XCTAssertTrue(Onboarding.showsWindow(isApp: true, completed: false, state: granted))

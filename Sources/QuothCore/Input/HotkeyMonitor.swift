@@ -214,7 +214,7 @@ final class HotkeyMonitor {
     /// is already held. Pure, so the matching is tested without a tap.
     ///
     /// - Press: the key's keycode arrives with its flag set (fn: its flag is
-    ///   set on any event, as before #42).
+    ///   set on any event, as before).
     /// - Release: the key's keycode arrives again, or its flag is clear on
     ///   any event while held, which also covers a missed release.
     /// - Another modifier's keycode while held is a chord.

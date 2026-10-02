@@ -3,8 +3,8 @@ import XCTest
 @testable import QuothCore
 
 final class PermissionsTests: XCTestCase {
-    private func state(_ accessibility: Bool, _ microphone: MicrophonePermission) -> PermissionState {
-        PermissionState(accessibility: accessibility, microphone: microphone)
+    private func state(_ hotkey: Bool, _ microphone: MicrophonePermission) -> PermissionState {
+        PermissionState(hotkey: hotkey, microphone: microphone)
     }
 
     func testMicrophoneStatusMapping() {
@@ -29,9 +29,9 @@ final class PermissionsTests: XCTestCase {
 
     func testAccessibilityAllowPromptsAndOpensItsPane() {
         XCTAssertEqual(
-            Permissions.allowSteps(for: .accessibility, in: state(false, .granted)),
-            [.promptAccessibility, .openAccessibilitySettings]
+            Permissions.allowSteps(for: .hotkey, in: state(false, .granted)),
+            [.promptHotkey, .openHotkeySettings]
         )
-        XCTAssertEqual(Permissions.allowSteps(for: .accessibility, in: state(true, .notDetermined)), [])
+        XCTAssertEqual(Permissions.allowSteps(for: .hotkey, in: state(true, .notDetermined)), [])
     }
 }

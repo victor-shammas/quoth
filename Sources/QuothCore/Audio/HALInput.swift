@@ -3,7 +3,7 @@ import AVFoundation
 import CoreAudio
 import Foundation
 
-/// Capture through a Core Audio AUHAL input unit (#52), without
+/// Capture through a Core Audio AUHAL input unit, without
 /// `AVAudioEngine`'s graph on top.
 ///
 /// Per press the unit is bound to the default input, set to deliver Float32
@@ -15,7 +15,7 @@ import Foundation
 /// microphone indicator is off. A press only starts it. The unit is rebuilt
 /// on the next press if the default input or its format changed meanwhile.
 ///
-/// The #39 guarantees hold without an Objective-C exception to guard
+/// The guarantees hold without an Objective-C exception to guard
 /// against: every Core Audio call returns a status, and 0 Hz, 0 channel and
 /// non-finite formats are refused before the unit is configured with them.
 /// Mid-recording, the default input moving to another device or the device

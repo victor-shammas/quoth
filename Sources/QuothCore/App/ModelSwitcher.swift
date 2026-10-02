@@ -1,6 +1,6 @@
 import Foundation
 
-/// Applies a model change while Quoth runs (#43): loads the new model behind
+/// Applies a model change while Quoth runs: loads the new model behind
 /// the menu bar, downloading it first if needed, while the current one keeps
 /// serving presses, then swaps it into the `DictationController` between
 /// dictations.

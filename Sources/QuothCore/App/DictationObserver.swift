@@ -19,14 +19,14 @@ struct DictationResult: Equatable, Sendable {
     /// Seconds from the hotkey release to the text being delivered.
     var releaseToText: TimeInterval = 0
     /// Seconds from the hotkey press to the capture time of the first
-    /// recorded sample (#52): speech in that gap is lost. Nil if unknown.
+    /// recorded sample: speech in that gap is lost. Nil if unknown.
     var pressToFirstSample: TimeInterval?
 }
 
 enum DictationError: Error {
     /// The hotkey was released with no audio captured.
     case noAudio
-    /// The recording was discarded: a short tap, a chord, or a hotkey switch (#42).
+    /// The recording was discarded: a short tap, a chord, or a hotkey switch.
     case cancelled
 }
 

@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import Sparkle
 
-/// In-app updates through Sparkle (#50), in the app role only.
+/// In-app updates through Sparkle, in the app role only.
 ///
 /// Sparkle reads its configuration from Info.plist: `SUFeedURL` (the
 /// appcast published with each release), `SUPublicEDKey` (updates must be

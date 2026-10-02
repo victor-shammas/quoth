@@ -1,7 +1,7 @@
 import Foundation
 
 /// Logs one line per delivered dictation: where the time went between the
-/// hotkey release and the text reaching the cursor (#49). Timings and counts
+/// hotkey release and the text reaching the cursor. Timings and counts
 /// only, never text.
 @MainActor
 final class LatencyLog: DictationObserver {
@@ -25,14 +25,14 @@ final class LatencyLog: DictationObserver {
             "⏱ \(ms(result.releaseToText)) ms release→text",
             String(format: "%.1f s audio", result.captureDuration),
         ]
-        // The other end of the dictation (#52): what the start of it lost.
+        // The other end of the dictation: what the start of it lost.
         if let press = result.pressToFirstSample {
             parts.append("press→first sample \(ms(press)) ms")
         }
         parts.append("stop \(ms(result.captureStop))")
         if let t = result.transcriber {
             parts.append("pre \(ms(t.preprocessing))")
-            // Automatic language only (#43).
+            // Automatic language only.
             if t.languageDetection > 0 { parts.append("detect \(ms(t.languageDetection))") }
             parts += [
                 "enc \(ms(t.encoder))",

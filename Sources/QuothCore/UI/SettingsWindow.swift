@@ -24,7 +24,7 @@ enum SettingsPane: Int, CaseIterable {
     }
 }
 
-/// The Settings window (#41), opened from the menu bar's Settings… (⌘,):
+/// The Settings window, opened from the menu bar's Settings… (⌘,):
 /// toolbar tabs, as in Apple's own Settings windows, each sized to its pane
 /// so nothing scrolls but the dictionary's list. One instance: opening it
 /// again brings the same window to the front, on the pane it was left on,

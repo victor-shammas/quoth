@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The onboarding window (#51): one page with the hotkey, the languages the
+/// The onboarding window: one page with the hotkey, the languages the
 /// user speaks, and both permissions, each with its own Allow button, so
 /// macOS never asks before the window has said why. Quoth.app opens it at
 /// launch until the user has been through it once (Get Started or closing
@@ -225,9 +225,9 @@ struct OnboardingView: View {
                 .padding(.top, 8)
                 GridRow {
                     label(HotkeyAccess.name)
-                    permission(.accessibility, granted: model.state.accessibility, action: "Allow")
+                    permission(.hotkey, granted: model.state.hotkey, action: "Allow")
                 }
-                if Edition.isAppStore && Edition.allowsAutoPaste {
+                if Edition.pasteNeedsOwnGrant {
                     // Optional: without it, each transcript is copied for ⌘V.
                     GridRow {
                         label("Paste at cursor")

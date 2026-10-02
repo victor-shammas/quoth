@@ -28,7 +28,7 @@ final class DictationController {
     private(set) var state: State = .idle
 
     private let capture: AudioCapture
-    /// Replaced by `replaceTranscriber` when the model changes (#43).
+    /// Replaced by `replaceTranscriber` when the model changes.
     private var transcriber: Transcriber
     private let processors: [TranscriptProcessor]
     private let observers: [DictationObserver]
@@ -40,7 +40,7 @@ final class DictationController {
     private let context: @MainActor () -> TranscriptionContext
     /// Transcriptions started and not yet finished or failed.
     private var inFlight = 0
-    /// What had focus when the current recording started (#38).
+    /// What had focus when the current recording started.
     private var focusAtStart: FocusSnapshot?
     /// Whether a locked recording types text at each pause (fork addition).
     var liveText = true

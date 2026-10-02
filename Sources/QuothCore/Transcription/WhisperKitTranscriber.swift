@@ -60,7 +60,7 @@ package actor WhisperKitTranscriber: Transcriber {
         Log.info("✓ \(model.id) ready")
     }
 
-    /// Frees the model after a swap to another one (#43). A load still running
+    /// Frees the model after a swap to another one. A load still running
     /// finishes and is dropped, and a later `warmUp` returns at once.
     package func unload() async {
         retired = true
@@ -73,7 +73,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// (Automatic) detects one and takes its sentence from `context.examples`;
     /// see `SpokenLanguage`. `context.vocabulary` is ignored: Whisper takes no
     /// word list, and a list given as a prompt scores no better than nothing
-    /// (#23).
+    ///.
     package func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
         if pipeline == nil { try await warmUp() }
         guard let pipeline else { throw TranscriberError.notLoaded }
