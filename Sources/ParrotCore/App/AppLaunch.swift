@@ -93,7 +93,7 @@ public enum AppLaunch {
         }
 
         NSApplication.shared.setActivationPolicy(.accessory)
-        guard let bundle = AppBundle.current, let executable = Bundle.main.executableURL else { return }
+        guard let bundle = AppBundle.current else { return }
 
         if isOnDiskImageOrTranslocated(bundle) {
             _ = alert(
@@ -103,8 +103,6 @@ public enum AppLaunch {
             )
             exit(0)
         }
-
-        migrateLegacyInstall(executable: executable)
     }
 
     // MARK: - Single instance
@@ -133,75 +131,6 @@ public enum AppLaunch {
         }
         lockDescriptor = fd
         return true
-    }
-
-    // MARK: - Migration
-
-    /// Moves a machine off the pre-app install, once, on the app's launch:
-    /// stops and deletes the old LaunchAgent, keeps launch at login on if it
-    /// was, and offers to point the `parrot` command at this app. Models,
-    /// config, and logs stay where they are.
-    @MainActor
-    private static func migrateLegacyInstall(executable: URL) {
-        let hadAgent = LegacyLaunchAgent.remove()
-        LegacyLaunchAgent.removeTmpFiles()
-        if hadAgent {
-            // The user had chosen to start Parrot at login; keep that choice.
-            do {
-                try LoginItem.setEnabled(true)
-                Log.info("launch at login moved to the login item")
-            } catch {
-                Log.warning("couldn't register the login item: \(error)")
-            }
-        }
-        offerCommandLineLink(executable: executable, afterMigration: hadAgent)
-    }
-
-    /// Asks before touching `/usr/local/bin/parrot`. A plain binary from the
-    /// old install is always offered for replacement; a missing command only
-    /// right after a migration, so a fresh install doesn't ask on every launch.
-    @MainActor
-    private static func offerCommandLineLink(executable: URL, afterMigration: Bool) {
-        let link = Paths.commandLineLink
-        let title: String
-        let message: String
-        let action: String
-        switch CommandLineLink.state(at: link, target: executable) {
-        case .linked, .other:
-            return
-        case .plainFile:
-            title = "Replace the old parrot command?"
-            message = "An earlier Parrot install left a separate parrot program at \(link.path). "
-                + "Replace it with a link to this app, so the parrot command always runs this version?"
-            action = "Replace"
-        case .linkedElsewhere(let destination):
-            // A link into some other Parrot.app that no longer exists; never
-            // a link the user pointed at something of their own.
-            guard destination.contains("Parrot.app/"),
-                  !FileManager.default.fileExists(atPath: destination) else { return }
-            title = "Update the parrot command?"
-            message = "\(link.path) points to a Parrot that is no longer there. Point it at this app?"
-            action = "Update"
-        case .missing:
-            guard afterMigration else { return }
-            title = "Add the parrot command?"
-            message = "Link \(link.path) to this app, so `parrot setup` and `parrot doctor` work in a terminal."
-            action = "Add"
-        }
-
-        guard alert(title, message, buttons: [action, "Not Now"]) == .alertFirstButtonReturn else {
-            Log.info("left \(link.path) as it was")
-            return
-        }
-        do {
-            try CommandLineLink.install(at: link, target: executable, privileged: true)
-            Log.info("linked \(link.path) to \(executable.path)")
-        } catch CommandLineLink.LinkError.cancelled {
-            Log.info("left \(link.path) as it was")
-        } catch {
-            Log.warning("couldn't link \(link.path): \(error)")
-            _ = alert("Couldn't add the parrot command", "\(error)", buttons: ["OK"])
-        }
     }
 
     // MARK: - Startup failures

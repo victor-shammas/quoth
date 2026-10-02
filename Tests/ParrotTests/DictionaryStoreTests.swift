@@ -189,67 +189,6 @@ final class DictionaryParseTests: XCTestCase {
     }
 }
 
-/// The old `dictionary.json` parser, kept for the one-time conversion.
-final class LegacyDictionaryParseTests: XCTestCase {
-    private func parse(_ json: String) throws -> UserDictionary {
-        try UserDictionary.parseLegacyJSON(Data(json.utf8))
-    }
-
-    private func parseError(_ json: String) -> LegacyDictionaryError? {
-        do {
-            _ = try parse(json)
-            return nil
-        } catch {
-            return error as? LegacyDictionaryError
-        }
-    }
-
-    func testMissingKeysAreEmptyAndUnknownKeysIgnored() throws {
-        XCTAssertEqual(try parse("{}"), .empty)
-        XCTAssertEqual(try parse(#"{"terms": ["A"], "future": 1}"#), UserDictionary(terms: ["A"]))
-    }
-
-    func testFullFormat() throws {
-        let dictionary = try parse(#"""
-            {
-              "terms": ["PostHog"],
-              "replacements": [{ "from": ["post hog"], "to": "PostHog" }],
-              "examples": { "en": "One sentence.", "pt-BR": "Uma frase." }
-            }
-            """#)
-        XCTAssertEqual(dictionary.terms, ["PostHog"])
-        XCTAssertEqual(dictionary.replacements, [.init(from: ["post hog"], to: "PostHog")])
-        XCTAssertEqual(dictionary.examples, ["en": "One sentence.", "pt-BR": "Uma frase."])
-    }
-
-    func testSyntaxErrorNamesLineAndColumn() {
-        let error = parseError("{\n  \"terms\": [\"secret-word\" \"x\"]\n}")
-        guard case .syntax(let position?) = error else {
-            return XCTFail("expected a syntax error with a position, got \(String(describing: error))")
-        }
-        XCTAssertEqual(position.line, 2)
-        XCTAssertTrue(error!.description.hasPrefix("invalid JSON at line 2, column "), error!.description)
-        XCTAssertFalse(error!.description.contains("secret-word"))
-    }
-
-    func testSchemaErrorNamesTheKeyPath() {
-        XCTAssertEqual(parseError(#"{"terms": "PostHog"}"#)?.description, "terms: expected an array")
-        XCTAssertEqual(
-            parseError(#"{"replacements": [{"from": ["a"], "to": "A"}, {"from": ["b"]}]}"#)?.description,
-            "replacements[1].to: missing"
-        )
-        XCTAssertEqual(parseError(#"{"examples": {"en": 1}}"#)?.description, "examples.en: expected a string")
-        XCTAssertEqual(parseError(#"["PostHog"]"#), .notAnObject)
-        guard case .syntax = parseError("") else { return XCTFail("empty file is a syntax error") }
-    }
-
-    func testPositionCountsCharactersNotBytes() {
-        let data = Data("{\"é\": x}".utf8)
-        // Byte offset 7 is "x"; "é" is two bytes but one column.
-        XCTAssertEqual(UserDictionary.Position(offset: 7, in: data), .init(line: 1, column: 7))
-    }
-}
-
 final class DictionaryStoreTests: XCTestCase {
     private var dir: TemporaryDirectory!
     private var logs: [String] = []

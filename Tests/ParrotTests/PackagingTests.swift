@@ -86,56 +86,9 @@ final class PackagingTests: XCTestCase {
         XCTAssertEqual(CommandLineLink.shellQuote("it's"), "'it'\\''s'")
     }
 
-    // MARK: - Legacy LaunchAgent
-
-    func testRemovesALoadedAgentAndItsPlist() {
-        let plist = dir.appendingPathComponent("com.digimata.parrot.plist")
-        FileManager.default.createFile(atPath: plist.path, contents: Data("<plist/>".utf8))
-        var calls: [[String]] = []
-
-        let removed = LegacyLaunchAgent.remove(plist: plist, label: "com.digimata.parrot") { args in
-            calls.append(args)
-            return 0
-        }
-
-        XCTAssertTrue(removed)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: plist.path))
-        let service = "gui/\(getuid())/com.digimata.parrot"
-        XCTAssertEqual(calls, [["print", service], ["bootout", service]])
-    }
-
-    func testRemovesAPlistThatIsNotLoaded() {
-        let plist = dir.appendingPathComponent("com.digimata.parrot.plist")
-        FileManager.default.createFile(atPath: plist.path, contents: Data("<plist/>".utf8))
-        var calls: [[String]] = []
-
-        let removed = LegacyLaunchAgent.remove(plist: plist, label: "com.digimata.parrot") { args in
-            calls.append(args)
-            return args.first == "print" ? 113 : 0
-        }
-
-        XCTAssertTrue(removed)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: plist.path))
-        XCTAssertFalse(calls.contains { $0.first == "bootout" })
-    }
-
-    func testNothingToRemove() {
-        let plist = dir.appendingPathComponent("com.digimata.parrot.plist")
-        var calls: [[String]] = []
-
-        let removed = LegacyLaunchAgent.remove(plist: plist, label: "com.digimata.parrot") { args in
-            calls.append(args)
-            return 113
-        }
-
-        XCTAssertFalse(removed)
-        XCTAssertEqual(calls.count, 1)
-    }
-
     // MARK: - Paths
 
     func testPackagingPaths() {
-        XCTAssertEqual(Paths.legacyLaunchAgentPlist.lastPathComponent, "com.digimata.parrot.plist")
         XCTAssertEqual(Paths.commandLineLink.path, "/usr/local/bin/parrot")
         XCTAssertEqual(Paths.instanceLock.deletingLastPathComponent().path, Paths.appSupport.path)
     }

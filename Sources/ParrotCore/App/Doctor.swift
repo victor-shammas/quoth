@@ -40,13 +40,6 @@ public enum DoctorReport {
                 remediation: "make \(Paths.appSupport.path) a real folder, then `parrot models download <id>`"
             )
         }
-        if WhisperKitTranscriber.hasLegacyModels() {
-            return Check(
-                name: name,
-                status: .warn("models still in \(Paths.legacyModels.path)"),
-                remediation: "run `parrot setup` to move them"
-            )
-        }
         return Check(name: name, status: .ok, remediation: nil)
     }
 

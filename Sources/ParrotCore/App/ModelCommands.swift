@@ -22,7 +22,6 @@ public enum ModelCommands {
             print("unknown model: \(id)")
             throw SilentExit(1)
         }
-        WhisperKitTranscriber.migrateLegacyModels()
         let t = WhisperKitTranscriber(model: m)
 
         let sem = DispatchSemaphore(value: 0)

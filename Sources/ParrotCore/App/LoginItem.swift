@@ -17,14 +17,6 @@ public enum LoginItem {
             throw SilentExit(1)
         }
 
-        // Move old models now, while we have the terminal's ~/Documents
-        // access. The app can't read ~/Documents.
-        WhisperKitTranscriber.migrateLegacyModels()
-
-        if LegacyLaunchAgent.remove() {
-            print("✓ removed the old LaunchAgent (\(Paths.legacyLaunchAgentLabel))")
-        }
-
         do {
             try SMAppService.mainApp.register()
         } catch {
@@ -65,11 +57,6 @@ public enum LoginItem {
         } else {
             print("launch at login was not on")
         }
-        if LegacyLaunchAgent.remove() {
-            print("✓ removed the old LaunchAgent (\(Paths.legacyLaunchAgentLabel))")
-        }
-        LegacyLaunchAgent.removeTmpFiles()
-
         let me = ProcessInfo.processInfo.processIdentifier
         for running in NSRunningApplication.runningApplications(withBundleIdentifier: AppBundle.identifier)
         where running.processIdentifier != me {
@@ -104,76 +91,5 @@ public enum LoginItem {
         } else {
             try SMAppService.mainApp.unregister()
         }
-    }
-}
-
-/// The hand-written LaunchAgent that pre-app versions installed, which
-/// `SMAppService` replaced. Removing it stops the old daemon and keeps it
-/// from coming back at the next login. Models, config, and logs stay.
-enum LegacyLaunchAgent {
-    /// Boots out the agent and deletes its plist. Returns whether there was
-    /// an agent to remove.
-    ///
-    /// `launchctl` is injected so tests never touch the real launchd domain.
-    @discardableResult
-    static func remove(
-        plist: URL = Paths.legacyLaunchAgentPlist,
-        label: String = Paths.legacyLaunchAgentLabel,
-        launchctl: ([String]) -> Int32 = runLaunchctl
-    ) -> Bool {
-        let service = "gui/\(getuid())/\(label)"
-        let hasPlist = Paths.fileType(plist.path) != nil
-        let isLoaded = launchctl(["print", service]) == 0
-        guard hasPlist || isLoaded else { return false }
-
-        if isLoaded {
-            // Stops the old daemon. By service target, so it works even if
-            // the plist on disk no longer matches what launchd loaded.
-            let status = launchctl(["bootout", service])
-            if status != 0 {
-                Log.warning("launchctl bootout \(service) exited \(status)")
-            }
-        }
-        if hasPlist {
-            do {
-                try FileManager.default.removeItem(at: plist)
-            } catch {
-                Log.warning("couldn't remove \(plist.path): \(error)")
-            }
-        }
-        Log.info("removed the old LaunchAgent \(label)")
-        return true
-    }
-
-    /// Deletes the pre-0.0.6 /tmp logs and capture. They hold the user's
-    /// transcripts; only touch files this user owns.
-    static func removeTmpFiles() {
-        for path in Paths.legacyTmpFiles {
-            guard
-                let attrs = try? FileManager.default.attributesOfItem(atPath: path),
-                (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == getuid()
-            else { continue }
-            do {
-                try FileManager.default.removeItem(atPath: path)
-                Log.info("removed \(path)")
-            } catch {
-                Log.warning("couldn't remove \(path): \(error)")
-            }
-        }
-    }
-
-    static func runLaunchctl(_ args: [String]) -> Int32 {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        task.arguments = args
-        task.standardError = FileHandle.nullDevice
-        task.standardOutput = FileHandle.nullDevice
-        do {
-            try task.run()
-        } catch {
-            return -1
-        }
-        task.waitUntilExit()
-        return task.terminationStatus
     }
 }

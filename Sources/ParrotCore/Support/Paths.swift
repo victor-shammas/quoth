@@ -32,10 +32,6 @@ package enum Paths {
     /// plain-text table. No extension, so it reads as a name, not a format.
     static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
 
-    /// `dictionary.json` in `config`: the old format, converted once at
-    /// startup by `DictionaryMigration`.
-    static var legacyDictionaryFile: URL { config.appendingPathComponent("dictionary.json") }
-
     /// The app's stdout.
     static var daemonOutLog: URL { logs.appendingPathComponent("parrot.out.log") }
 
@@ -44,18 +40,6 @@ package enum Paths {
 
     /// Where `--dump-wav` writes the most recent capture.
     package static var dumpWav: URL { caches.appendingPathComponent("last-capture.wav") }
-
-    /// `~/Library/LaunchAgents/<label>.plist`.
-    static func launchAgentPlist(label: String) -> URL {
-        library("LaunchAgents").appendingPathComponent("\(label).plist")
-    }
-
-    /// The LaunchAgent that started pre-app versions at login. The app
-    /// removes it; `SMAppService` replaced it.
-    static var legacyLaunchAgentPlist: URL { launchAgentPlist(label: legacyLaunchAgentLabel) }
-
-    /// The old LaunchAgent's label.
-    static let legacyLaunchAgentLabel = "com.digimata.parrot"
 
     /// Where the `parrot` command lives on `PATH`: a symlink to the executable
     /// inside Parrot.app, or a plain binary from a pre-app install.
@@ -69,16 +53,6 @@ package enum Paths {
     /// `~/Documents`. The model cache must not resolve under it.
     static var documents: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
-    }
-
-    /// Pre-0.0.6 files that held transcripts and audio in world-readable /tmp.
-    static let legacyTmpFiles = ["/tmp/parrot.out.log", "/tmp/parrot.err.log", "/tmp/parrot-last.wav"]
-
-    /// Pre-0.0.6 model cache: swift-transformers' default download base,
-    /// shared with other apps. The launchd daemon can't read ~/Documents, so
-    /// only foreground commands may touch it.
-    static var legacyModels: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/huggingface", isDirectory: true)
     }
 
     /// Creates `dir` if needed and restricts it to the owner. Refuses a path
