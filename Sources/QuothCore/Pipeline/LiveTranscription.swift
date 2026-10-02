@@ -48,6 +48,8 @@ final class LiveTranscription {
     private let deliver: (String) throws -> Void
     /// Leaves text on the clipboard.
     private let copy: (String) -> Void
+    /// Removes the last thing delivered ("scratch that").
+    private let scratch: () -> Bool
     /// Reports a problem while recording continues.
     private let notice: (Error) -> Void
 
@@ -58,6 +60,9 @@ final class LiveTranscription {
     private var outcome = Outcome()
     /// Text held back after a focus change, for the clipboard.
     private var held: [String] = []
+    /// The segments typed so far, so "scratch that" can take the last one
+    /// back out of `outcome.text`.
+    private var typedSegments: [String] = []
     private var cancelled = false
     /// When the last segment was delivered. Pastes closer together than
     /// the clipboard's settle time could land out of order.
@@ -70,6 +75,7 @@ final class LiveTranscription {
         context: TranscriptionContext,
         processors: [TranscriptProcessor],
         deliver: @escaping (String) throws -> Void,
+        scratch: @escaping () -> Bool = { false },
         copy: @escaping (String) -> Void,
         notice: @escaping (Error) -> Void = { _ in }
     ) {
@@ -78,6 +84,7 @@ final class LiveTranscription {
         self.context = context
         self.processors = processors
         self.deliver = deliver
+        self.scratch = scratch
         self.copy = copy
         self.notice = notice
     }
@@ -165,10 +172,18 @@ final class LiveTranscription {
             context.language = language
         }
         if !raw.text.isEmpty { context.previousText = raw.text }
-        let text = processors.reduce(raw) { $1.process($0) }.text
+        let processed = processors.reduce(raw) { $1.process($0) }
+        let text = processed.text
         // Never log the text itself.
         Log.info(String(format: "→ live segment %.1fs · %.2fs · %d chars", seconds, elapsed, text.count))
-        guard !cancelled, !text.isEmpty else { return }
+        guard !cancelled else { return }
+        // "scratch that" removes the segment before this one, typed or held.
+        if processed.scratchesPrevious, outcome.deliveryError == nil {
+            if scratch() { outcome.text = Self.dropLastSegment(outcome.text, segments: &typedSegments) }
+        } else if processed.scratchesPrevious, !held.isEmpty {
+            held.removeLast()
+        }
+        guard !text.isEmpty else { return }
         outcome.chars += text.count
         outcome.text = Self.join([outcome.text, text].filter { !$0.isEmpty })
 
@@ -184,6 +199,7 @@ final class LiveTranscription {
         lastDelivery = CFAbsoluteTimeGetCurrent()
         do {
             try deliver(text)
+            typedSegments.append(text)
         } catch {
             outcome.deliveryError = error
             // The delivery copied this segment; the end copies it again with
@@ -191,6 +207,13 @@ final class LiveTranscription {
             if (error as? DeliveryError) == .focusChanged { held.append(text) }
             notice(error)
         }
+    }
+
+    /// `text` without its last typed segment, for "scratch that".
+    private static func dropLastSegment(_ text: String, segments: inout [String]) -> String {
+        guard !segments.isEmpty else { return text }
+        segments.removeLast()
+        return join(segments)
     }
 
     /// Held segments as one text, spaced as consecutive dictations are:

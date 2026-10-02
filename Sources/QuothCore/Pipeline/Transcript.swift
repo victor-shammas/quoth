@@ -9,6 +9,9 @@ package struct Transcript: Equatable, Sendable {
     /// Processors need not carry it on: the controller reads it from the
     /// transcriber's output.
     package var timings: TranscriberTimings?
+    /// "scratch that" opened this dictation: delivery removes the previous
+    /// one before inserting this (`VoiceCommands`).
+    var scratchesPrevious = false
 
     init(text: String, timings: TranscriberTimings? = nil) {
         self.text = text

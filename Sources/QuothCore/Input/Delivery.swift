@@ -47,6 +47,18 @@ enum DeliveryDecision: Equatable {
 final class TextDelivery {
     private let injector: TextInjector
 
+    /// What was last inserted, for "scratch that": how many characters, and
+    /// where. Never the text itself.
+    private struct Insertion {
+        let length: Int
+        let pid: pid_t?
+        let element: FocusedElement?
+        let at: Date
+    }
+    private var insertions: [Insertion] = []
+    /// How long after an insertion "scratch that" may still remove it.
+    static let scratchWindow: TimeInterval = 120
+
     init(mode: InjectMode) {
         self.injector = TextInjector(mode: mode)
     }
@@ -60,6 +72,28 @@ final class TextDelivery {
     /// Whether a transcript can be inserted at the cursor, rather than only
     /// copied (`PasteAccess`).
     var canInsert: Bool { PasteAccess.isGranted }
+
+    /// Removes the last insertion ("scratch that"), if it was recent and the
+    /// same app and field still have focus, so the Delete keys can only reach
+    /// what Quoth typed. Each call removes one more, back through the
+    /// segments of a hands-free dictation. Returns whether it removed one.
+    @discardableResult
+    func scratchLast() -> Bool {
+        guard canInsert, let last = insertions.last, Date().timeIntervalSince(last.at) < Self.scratchWindow else {
+            Log.info("  scratch that: nothing recent to remove")
+            return false
+        }
+        let now = FocusSnapshot.capture()
+        let sameField = last.element == nil || now.element == nil || last.element == now.element
+        guard !now.isSecure, now.pid == last.pid, sameField else {
+            Log.info("  scratch that: focus moved; nothing removed")
+            return false
+        }
+        insertions.removeLast()
+        injector.deleteBackward(last.length)
+        Log.info("  scratch that: removed \(last.length) characters")
+        return true
+    }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
     func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
@@ -76,6 +110,8 @@ final class TextDelivery {
             // The kind of character only: the log never carries text.
             Log.info("  before cursor: \(before.kind)\(spaced.first == " " && text.first != " " ? " · leading space" : "")")
             injector.inject(spaced)
+            insertions.append(Insertion(length: spaced.count, pid: now.pid, element: now.element, at: Date()))
+            if insertions.count > 20 { insertions.removeFirst() }
         case .discardSecure:
             let when = focusAtStart?.isSecure == true ? "recording start" : "delivery"
             Log.info("  secure field focused at \(when); transcript discarded")

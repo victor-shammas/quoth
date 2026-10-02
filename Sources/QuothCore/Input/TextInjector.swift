@@ -64,6 +64,26 @@ final class TextInjector {
         }
     }
 
+    /// Deletes `count` characters before the cursor, for "scratch that":
+    /// the Delete key, posted as `typeUnicode` posts its events.
+    func deleteBackward(_ count: Int) {
+        guard count > 0 else { return }
+        let source = CGEventSource(stateID: .privateState)
+        for _ in 0..<count {
+            guard
+                let down = CGEvent(keyboardEventSource: source, virtualKey: Self.keycodeDelete, keyDown: true),
+                let up = CGEvent(keyboardEventSource: source, virtualKey: Self.keycodeDelete, keyDown: false)
+            else { return }
+            down.flags = []
+            up.flags = []
+            down.post(tap: Self.postLocation)
+            up.post(tap: Self.postLocation)
+        }
+    }
+
+    /// Virtual keycode for Delete (kVK_Delete).
+    private static let keycodeDelete: CGKeyCode = 51
+
     /// Leaves `text` on the clipboard for the user to paste.
     func copyToClipboard(_ text: String) {
         guard !text.isEmpty else { return }

@@ -189,6 +189,36 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertEqual(LiveTranscription.join(["Hi", ", there"]), "Hi, there")
     }
 
+    func testScratchThatRemovesThePreviousSegment() async {
+        /// Turns the second segment into "scratch that, …".
+        struct ScratchSecond: TranscriptProcessor {
+            func process(_ transcript: Transcript) -> Transcript {
+                guard transcript.text == "6s" else { return transcript }
+                var out = Transcript(text: "Instead")
+                out.scratchesPrevious = true
+                return out
+            }
+        }
+        var scratched = 0
+        let live = LiveTranscription(
+            samples: { [unowned self] offset in offset < recording.count ? Array(recording[offset...]) : [] },
+            transcriber: transcriber,
+            context: TranscriptionContext(),
+            processors: [ScratchSecond()],
+            deliver: { [unowned self] in typed.append($0) },
+            scratch: { scratched += 1; return true },
+            copy: { [unowned self] in copied.append($0) }
+        )
+        recording = Audio.speech(10) + Audio.pause(1.5)
+        live.poll()
+        recording += Audio.speech(5) + Audio.pause(1.5)
+        live.poll()
+        let outcome = await live.finish(capture: recording)
+        XCTAssertEqual(scratched, 1)
+        XCTAssertEqual(typed, ["10s", "Instead"])
+        XCTAssertEqual(outcome.text, "Instead")
+    }
+
     func testSilentSegmentsAreNotTranscribed() async {
         let live = makeLive()
         recording = Audio.pause(8)

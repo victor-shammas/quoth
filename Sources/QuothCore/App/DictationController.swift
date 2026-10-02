@@ -113,6 +113,7 @@ final class DictationController {
                 context: context(),
                 processors: processors,
                 deliver: { try delivery.deliver($0, focusAtStart: focus) },
+                scratch: { delivery.scratchLast() },
                 copy: { delivery.copyToClipboard($0) },
                 notice: { [weak self] error in
                     self?.observers.forEach { $0.dictationNotice(error) }
@@ -198,6 +199,7 @@ final class DictationController {
                 Log.info(String(format: "→ %.2fs · %d chars", elapsed, raw.text.count))
                 let transcript = processors.reduce(raw) { $1.process($0) }
                 let processed = CFAbsoluteTimeGetCurrent()
+                if transcript.scratchesPrevious { delivery.scratchLast() }
                 let delivered = Result { try delivery.deliver(transcript.text, focusAtStart: focus) }
                 if case .failure(DeliveryError.secureField) = delivered {} else {
                     onTranscript?(transcript.text)

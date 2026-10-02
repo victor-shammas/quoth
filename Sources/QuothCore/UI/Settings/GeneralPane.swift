@@ -36,8 +36,8 @@ struct GeneralPane: View {
             }
             .disabled(!hotkey.doubleTapLock || !PasteAccess.isGranted)
 
-            PillRow("Voice commands", caption: "Say “new paragraph” or “new line” to start one. English only, for now.") {
-                EmptyView()
+            PillRow("Voice commands", caption: "Punctuation and editing by voice, in English for now.") {
+                VoiceCommandsButton()
             }
 
             if hotkey.key == .fn && hotkey.doubleTapLock {
@@ -126,5 +126,41 @@ private struct PasteRow: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             granted = PasteAccess.isGranted
         }
+    }
+}
+
+/// The list of voice commands, in a popover.
+private struct VoiceCommandsButton: View {
+    @State private var isOpen = false
+
+    private static let commands: [(say: String, does: String)] = [
+        ("“new paragraph”, “new line”", "Break the text"),
+        ("“bullet point”", "Start a bulleted line"),
+        ("“comma”, “semicolon”, “question mark”, “exclamation point”, “full stop”", "Type the mark"),
+        ("“period”, “colon”", "Type the mark, when you pause around the word"),
+        ("“quote” … “unquote”", "Put the words between in “quotes”"),
+        ("“scratch that”", "Remove what was just typed, or what you said before it"),
+    ]
+
+    var body: some View {
+        Button("Show…") { isOpen.toggle() }
+            .buttonStyle(.pill)
+            .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 10) {
+                    GridRow {
+                        Text("Say").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("To").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    }
+                    ForEach(Self.commands, id: \.say) { command in
+                        GridRow {
+                            Text(command.say).frame(maxWidth: 230, alignment: .leading)
+                            Text(command.does).foregroundStyle(.secondary).frame(maxWidth: 200, alignment: .leading)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .font(.callout)
+                .padding(16)
+            }
     }
 }
