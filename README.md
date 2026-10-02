@@ -61,6 +61,14 @@ swift build -c release && swift test
 scripts/dev-install.sh      # build, sign, install Quoth.app, link the CLI
 ```
 
+### App Store edition
+
+The Mac App Store build is generated from `project.yml` and compiles the same sources, sandboxed (see [ADR-006](docs/decisions/006-two-editions.md)):
+
+```sh
+xcodegen && open Quoth.xcodeproj
+```
+
 ## 7. License
 
 [MIT](LICENSE). Based on Parrot, copyright © 2026 Humanitas Labs.

@@ -1,0 +1,13 @@
+// Identity and version of the App Store build. The direct build's identity
+// is in packaging/Info.plist.
+PRODUCT_NAME = Quoth
+PRODUCT_BUNDLE_IDENTIFIER = com.victorshammas.quoth
+MARKETING_VERSION = 1.0.0
+// Must increase with every App Store Connect upload.
+CURRENT_PROJECT_VERSION = 1
+MACOSX_DEPLOYMENT_TARGET = 14.0
+
+// Signing. Xcode manages certificates and profiles for this team. The Team ID
+// is not a secret; certificates and keys never go in this repo.
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM = JPP8RN6BJB

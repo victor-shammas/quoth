@@ -1,8 +1,9 @@
 // Draws Quoth's icon: an amber closing quote on an espresso squircle, in the
 // same family as Plainview's ".md" and Gaugeline's gauge. Every size is drawn
 // natively, so 16 and 32 px stay crisp. Writes packaging/AppIcon.icns, which
-// scripts/build-app.sh copies into the app, and docs/assets/quoth-icon.png
-// (1024 px) for the README.
+// scripts/build-app.sh copies into the direct build, the App Store build's
+// AppStore/Assets.xcassets, and docs/assets/quoth-icon.png (1024 px) for the
+// README.
 //
 //     swift scripts/make-quoth-icon.swift
 import AppKit
@@ -124,4 +125,21 @@ iconutil.arguments = ["-c", "icns", iconset, "-o", "packaging/AppIcon.icns"]
 try iconutil.run()
 iconutil.waitUntilExit()
 try writePNG(makeIcon(pixels: 1024), to: "docs/assets/quoth-icon.png")
-print("wrote packaging/AppIcon.icns and docs/assets/quoth-icon.png")
+
+// The App Store build's asset catalog: the same images, plus Contents.json.
+let catalog = "AppStore/Assets.xcassets"
+let appIcon = "\(catalog)/AppIcon.appiconset"
+try FileManager.default.createDirectory(atPath: appIcon, withIntermediateDirectories: true)
+try #"{"info":{"author":"xcode","version":1}}"#.write(toFile: "\(catalog)/Contents.json", atomically: true, encoding: .utf8)
+var images: [String] = []
+for size in [16, 32, 128, 256, 512] {
+    for scale in [1, 2] {
+        let name = "icon_\(size)x\(size)\(scale == 2 ? "@2x" : "").png"
+        try? FileManager.default.removeItem(atPath: "\(appIcon)/\(name)")
+        try FileManager.default.copyItem(atPath: "\(iconset)/\(name)", toPath: "\(appIcon)/\(name)")
+        images.append(#"{"filename":"\#(name)","idiom":"mac","scale":"\#(scale)x","size":"\#(size)x\#(size)"}"#)
+    }
+}
+try "{\"images\":[\(images.joined(separator: ","))],\"info\":{\"author\":\"xcode\",\"version\":1}}"
+    .write(toFile: "\(appIcon)/Contents.json", atomically: true, encoding: .utf8)
+print("wrote packaging/AppIcon.icns, \(appIcon) and docs/assets/quoth-icon.png")
