@@ -1,27 +1,6 @@
 import Foundation
 import QuothDomain
 
-/// A transcript that was not inserted at the cursor, with the line the
-/// overlay shows.
-enum DeliveryError: UserFacingError, Equatable {
-    /// A password field had focus at start or at delivery. Nothing was typed
-    /// or copied.
-    case secureField
-    /// Focus moved during the dictation. The transcript is on the clipboard.
-    case focusChanged
-    /// This build can't paste at the cursor (the App Store build without its
-    /// grant). The transcript is on the clipboard.
-    case copied
-
-    var userMessage: String {
-        switch self {
-        case .secureField: return "password field, transcript discarded"
-        case .focusChanged: return "focus changed, transcript copied"
-        case .copied: return "Copied — press ⌘V to paste"
-        }
-    }
-}
-
 /// Where a finished transcript goes. Pure, so it is tested.
 enum DeliveryDecision: Equatable {
     /// Insert at the cursor.

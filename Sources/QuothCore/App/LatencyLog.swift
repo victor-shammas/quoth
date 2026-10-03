@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Logs one line per delivered dictation: where the time went between the
 /// hotkey release and the text reaching the cursor. Timings and counts

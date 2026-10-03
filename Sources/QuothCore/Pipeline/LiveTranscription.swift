@@ -1,11 +1,11 @@
 import Foundation
 import QuothDomain
 
-/// Live text for a locked recording (fork addition): while recording runs,
-/// each segment `PauseSplitter` cuts off is transcribed and delivered, in
-/// order, so text appears at every pause instead of all at the end.
+/// Live text for a locked recording: while recording runs, each segment
+/// `PauseSplitter` cuts off is transcribed and delivered, in order, so text
+/// appears at every pause instead of all at the end.
 ///
-/// One instance per lock. `DictationController` starts it when a recording
+/// One instance per lock. `DictationSession` starts it when a recording
 /// locks and hands it the whole capture when the lock ends; it then
 /// transcribes what is left and waits for every segment.
 ///
@@ -13,11 +13,9 @@ import QuothDomain
 /// so a sentence cut at a pause carries on, and in the language the first
 /// segment settled on, so Automatic doesn't flip between segments.
 ///
-/// When a delivery fails, later segments are not typed: after a focus
-/// change everything from that segment on ends up on the clipboard, and
-/// after a password field nothing more is delivered. Either is reported at
-/// once through `notice`, as is a segment that fails to transcribe. Text
-/// already typed stays, including when the recording is discarded.
+/// What happens to each segment's text is `LiveTextLedger`'s call. A
+/// delivery failure and a segment that fails to transcribe are reported at
+/// once through `notice`.
 @MainActor
 final class LiveTranscription {
     /// How often the recording is checked for a pause.
@@ -35,7 +33,7 @@ final class LiveTranscription {
         /// The last segment's breakdown.
         var timings: TranscriberTimings?
         /// The first delivery failure, which stops typing.
-        var deliveryError: Error?
+        var deliveryError: DeliveryError?
         /// The last transcription failure. Other segments still deliver.
         var transcriptionError: Error?
     }
@@ -58,12 +56,8 @@ final class LiveTranscription {
     private(set) var committed = 0
     private var chain: Task<Void, Never>?
     private var timer: Timer?
-    private var outcome = Outcome()
-    /// Text held back after a focus change, for the clipboard.
-    private var held: [String] = []
-    /// The segments typed so far, so "scratch that" can take the last one
-    /// back out of `outcome.text`.
-    private var typedSegments: [String] = []
+    private var ledger = LiveTextLedger()
+    private var stats = Outcome()
     private var cancelled = false
     /// When the last segment was delivered. Pastes closer together than
     /// the clipboard's settle time could land out of order.
@@ -119,9 +113,13 @@ final class LiveTranscription {
             committed = capture.count
         }
         await chain?.value
-        if !held.isEmpty {
-            copy(Self.join(held))
+        if let held = ledger.heldText {
+            copy(held)
         }
+        var outcome = stats
+        outcome.text = ledger.text
+        outcome.chars = ledger.chars
+        outcome.deliveryError = ledger.deliveryError
         return outcome
     }
 
@@ -159,15 +157,15 @@ final class LiveTranscription {
             raw = try await transcriber.transcribe(audio, context: context)
         } catch {
             Log.error("live segment failed: \(error)")
-            outcome.transcriptionError = error
+            stats.transcriptionError = error
             if !cancelled { notice(LiveTextNotice.segmentFailed) }
             return
         }
         let elapsed = CFAbsoluteTimeGetCurrent() - started
-        outcome.segments += 1
-        outcome.audio += seconds
-        outcome.transcribing += elapsed
-        outcome.timings = raw.timings
+        stats.segments += 1
+        stats.audio += seconds
+        stats.transcribing += elapsed
+        stats.timings = raw.timings
         // Later segments continue this one, in its language.
         if context.language == nil, let language = raw.timings?.language {
             context.language = language
@@ -179,19 +177,11 @@ final class LiveTranscription {
         Log.info(String(format: "→ live segment %.1fs · %.2fs · %d chars", seconds, elapsed, text.count))
         guard !cancelled else { return }
         // "scratch that" removes the segment before this one, typed or held.
-        if processed.scratchesPrevious, outcome.deliveryError == nil {
-            if scratch() { outcome.text = Self.dropLastSegment(outcome.text, segments: &typedSegments) }
-        } else if processed.scratchesPrevious, !held.isEmpty {
-            held.removeLast()
+        if processed.scratchesPrevious, ledger.scratch(), scratch() {
+            ledger.scratched()
         }
-        guard !text.isEmpty else { return }
-        outcome.chars += text.count
-        outcome.text = Self.join([outcome.text, text].filter { !$0.isEmpty })
+        guard ledger.add(text) else { return }
 
-        if let failure = outcome.deliveryError {
-            if (failure as? DeliveryError) == .focusChanged { held.append(text) }
-            return
-        }
         if let last = lastDelivery {
             let wait = Self.minimumGap - (CFAbsoluteTimeGetCurrent() - last)
             if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
@@ -200,40 +190,10 @@ final class LiveTranscription {
         lastDelivery = CFAbsoluteTimeGetCurrent()
         do {
             try deliver(text)
-            typedSegments.append(text)
+            ledger.delivered(text)
         } catch {
-            outcome.deliveryError = error
-            // The delivery copied this segment; the end copies it again with
-            // everything after it.
-            if (error as? DeliveryError) == .focusChanged { held.append(text) }
+            ledger.deliveryFailed(text, error: error as? DeliveryError)
             notice(error)
-        }
-    }
-
-    /// `text` without its last typed segment, for "scratch that".
-    private static func dropLastSegment(_ text: String, segments: inout [String]) -> String {
-        guard !segments.isEmpty else { return text }
-        segments.removeLast()
-        return join(segments)
-    }
-
-    /// Held segments as one text, spaced as consecutive dictations are:
-    /// no space between Chinese, Japanese or Thai segments.
-    static func join(_ segments: [String]) -> String {
-        segments.reduce("") { text, segment in
-            guard let last = text.last else { return segment }
-            return text + (Spacing.needsSpace(after: last, text: segment) ? " " : "") + segment
-        }
-    }
-}
-
-/// A live-text problem shown while the lock keeps recording.
-enum LiveTextNotice: UserFacingError, Equatable {
-    case segmentFailed
-
-    var userMessage: String {
-        switch self {
-        case .segmentFailed: return "Part of this dictation couldn't be transcribed"
         }
     }
 }

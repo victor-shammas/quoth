@@ -184,12 +184,6 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertEqual(notices, [DeliveryError.focusChanged.userMessage])
     }
 
-    func testHeldTextJoinsLikeDictations() {
-        XCTAssertEqual(LiveTranscription.join(["One.", "Two."]), "One. Two.")
-        XCTAssertEqual(LiveTranscription.join(["今日は", "晴れです"]), "今日は晴れです")
-        XCTAssertEqual(LiveTranscription.join(["Hi", ", there"]), "Hi, there")
-    }
-
     func testScratchThatRemovesThePreviousSegment() async {
         /// Turns the second segment into "scratch that, …".
         struct ScratchSecond: TranscriptProcessor {
@@ -240,7 +234,7 @@ final class LiveTranscriptionTests: XCTestCase {
         recording += Audio.speech(6)
         let outcome = await live.finish(capture: recording)
         XCTAssertEqual(typed, ["10s"])
-        XCTAssertEqual(outcome.deliveryError as? DeliveryError, .focusChanged)
+        XCTAssertEqual(outcome.deliveryError, .focusChanged)
         // The failed segment and everything after it, once, at the end.
         // Segments start inside the previous pause, so they run long.
         XCTAssertEqual(copied.last, "6s 7s")
@@ -255,7 +249,7 @@ final class LiveTranscriptionTests: XCTestCase {
         let outcome = await live.finish(capture: recording)
         XCTAssertTrue(typed.isEmpty)
         XCTAssertTrue(copied.isEmpty)
-        XCTAssertEqual(outcome.deliveryError as? DeliveryError, .secureField)
+        XCTAssertEqual(outcome.deliveryError, .secureField)
     }
 
     func testCancelDeliversNothingMore() async {

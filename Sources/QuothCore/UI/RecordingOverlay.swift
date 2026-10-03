@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 /// Borderless, click-through pill near the bottom of the active screen.

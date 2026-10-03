@@ -6,7 +6,7 @@
 public struct Transcript: Equatable, Sendable {
     public var text: String
     /// Where the transcriber spent its time, when the engine reports it.
-    /// Processors need not carry it on: the controller reads it from the
+    /// Processors need not carry it on: the session reads it from the
     /// transcriber's output.
     public var timings: TranscriberTimings?
     /// "scratch that" opened this dictation: delivery removes the previous
