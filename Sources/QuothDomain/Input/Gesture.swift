@@ -22,20 +22,20 @@ import Foundation
 /// discarded as any short tap is, and the second press records from
 /// key-down, so a second press held past `minimumHold` is ordinary
 /// push-to-talk and never locks.
-struct Gesture {
+public struct Gesture {
     /// Holds shorter than this are taps or shortcuts, not dictation.
-    static let minimumHold: TimeInterval = 0.3
+    public static let minimumHold: TimeInterval = 0.3
     /// The longest gap between a tap's release and the next press for the
     /// pair to count as a double tap.
-    static let doubleTapWindow: TimeInterval = 0.4
+    public static let doubleTapWindow: TimeInterval = 0.4
     /// A lock shorter than this is an accidental triple tap.
-    static let minimumLock: TimeInterval = 1.0
+    public static let minimumLock: TimeInterval = 1.0
 
     /// Whether a double tap locks the recording on. When false the gesture
     /// is push-to-talk only, as upstream.
-    var lockEnabled: Bool
+    public var lockEnabled: Bool
 
-    enum Input: Equatable {
+    public enum Input: Equatable {
         /// The hotkey went down. `othersHeld`: another modifier was already
         /// down, so this is a chord.
         case hotkeyDown(othersHeld: Bool)
@@ -45,7 +45,7 @@ struct Gesture {
         case otherModifier
     }
 
-    enum Action: Equatable {
+    public enum Action: Equatable {
         /// Start recording.
         case start
         /// Stop recording and transcribe.
@@ -75,12 +75,12 @@ struct Gesture {
 
     private var phase: Phase = .idle
 
-    init(lockEnabled: Bool = true) {
+    public init(lockEnabled: Bool = true) {
         self.lockEnabled = lockEnabled
     }
 
     /// Whether the hotkey is down, as far as the edges seen so far say.
-    var isHeld: Bool {
+    public var isHeld: Bool {
         switch phase {
         case .idle, .tapped, .locked: return false
         case .recording, .latching, .ignoring: return true
@@ -88,13 +88,13 @@ struct Gesture {
     }
 
     /// Whether a recording is locked on.
-    var isLocked: Bool {
+    public var isLocked: Bool {
         if case .locked = phase { return true }
         return false
     }
 
     /// Feed one edge at `time` (seconds on a monotonic clock).
-    mutating func handle(_ input: Input, at time: TimeInterval) -> Action? {
+    public mutating func handle(_ input: Input, at time: TimeInterval) -> Action? {
         switch (phase, input) {
         case (.idle, .hotkeyDown(let othersHeld)), (.tapped, .hotkeyDown(let othersHeld)):
             if othersHeld {
@@ -142,7 +142,7 @@ struct Gesture {
     /// Forget the current hold, for a switch to another key. A held
     /// recording is cancelled, as its key is no longer the hotkey; a locked
     /// one is transcribed, so a settings change never loses a dictation.
-    mutating func reset() -> Action? {
+    public mutating func reset() -> Action? {
         defer { phase = .idle }
         switch phase {
         case .recording, .latching: return .cancel
@@ -153,7 +153,7 @@ struct Gesture {
 
     /// End a lock early (it ran too long, or the microphone changed):
     /// transcribe what was recorded.
-    mutating func expireLock() -> Action? {
+    public mutating func expireLock() -> Action? {
         guard isLocked else { return nil }
         phase = .idle
         return .transcribe
@@ -161,7 +161,7 @@ struct Gesture {
 
     /// The press just seen started no recording (the microphone failed):
     /// ignore the rest of this hold, so it cannot lock or transcribe.
-    mutating func abandonPress() {
+    public mutating func abandonPress() {
         switch phase {
         case .recording, .latching: phase = .ignoring
         default: break

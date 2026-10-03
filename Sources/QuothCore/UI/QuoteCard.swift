@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 /// Where a dictation goes instead of the cursor (`DictationController.card`).

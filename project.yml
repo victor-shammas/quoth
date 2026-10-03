@@ -2,7 +2,8 @@
 #   xcodegen
 # and build with `scripts/appstore.sh`. The direct build stays a Swift
 # package (Package.swift, scripts/build-app.sh); both compile the same
-# Sources/QuothCore, this one with the APPSTORE flag (Support/Edition.swift).
+# sources, this one with the APPSTORE flag (Support/Edition.swift). Modules
+# other than QuothCore are static libraries here (ADR-007).
 name: Quoth
 options:
   bundleIdPrefix: com.victorshammas
@@ -23,6 +24,15 @@ packages:
     url: https://github.com/apple/swift-argument-parser.git
     exactVersion: 1.7.1
 targets:
+  QuothDomain:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/QuothDomain
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        PRODUCT_NAME: QuothDomain
   Quoth:
     type: application
     platform: macOS
@@ -41,6 +51,7 @@ targets:
       - path: AppStore/PrivacyInfo.xcprivacy
         buildPhase: resources
     dependencies:
+      - target: QuothDomain
       - package: argmax-oss-swift
         product: WhisperKit
     settings:

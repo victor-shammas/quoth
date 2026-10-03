@@ -1,6 +1,7 @@
 import WhisperKit
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class TranscriberTimingsTests: XCTestCase {
     func testFoldsWhisperKitStagesIntoQuothStages() {

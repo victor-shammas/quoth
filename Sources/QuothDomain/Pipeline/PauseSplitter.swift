@@ -9,37 +9,37 @@ import Foundation
 /// the quietest moment before `maxSegment`, since Whisper hears 30 s at a
 /// time. Loudness is the RMS of 30 ms frames, against a threshold that
 /// rises with the background noise.
-enum PauseSplitter {
-    static let sampleRate = 16_000.0
+public enum PauseSplitter {
+    public static let sampleRate = 16_000.0
     /// 30 ms at 16 kHz.
-    static let frameLength = 480
+    public static let frameLength = 480
     /// Segments shorter than this give Whisper too little context.
-    static let minSegment: TimeInterval = 4
+    public static let minSegment: TimeInterval = 4
     /// A gap this long is a pause between sentences. Shorter ones happen
     /// mid-sentence, and a cut there makes Whisper end the segment with a
     /// period that can't be taken back once typed.
-    static let minPause: TimeInterval = 1.0
+    public static let minPause: TimeInterval = 1.0
     /// Cut even without a pause by now.
-    static let maxSegment: TimeInterval = 25
+    public static let maxSegment: TimeInterval = 25
     /// Frames quieter than this are silence on a quiet microphone. Silent
     /// recordings measure about 0.001; speech averages 0.06 to 0.08.
-    static let minThreshold: Float = 0.008
+    public static let minThreshold: Float = 0.008
     /// The threshold never rises above this, however noisy the room.
-    static let maxThreshold: Float = 0.03
+    public static let maxThreshold: Float = 0.03
     /// Consecutive loud frames that make speech rather than a key click or
     /// a thump: 240 ms. A typed key is 30 to 160 ms.
-    static let minSpeechRun = 8
+    public static let minSpeechRun = 8
 
-    struct Cut: Equatable {
+    public struct Cut: Equatable {
         /// Samples from the start that make up the segment.
-        var end: Int
+        public var end: Int
         /// Whether the segment holds speech. A silent one is dropped, since
         /// Whisper invents text ("Thank you.") for silence.
-        var hasSpeech: Bool
+        public var hasSpeech: Bool
     }
 
     /// The next segment of `samples`, or nil to wait for more audio.
-    static func cut(_ samples: [Float]) -> Cut? {
+    public static func cut(_ samples: [Float]) -> Cut? {
         let levels = frameLevels(samples)
         guard !levels.isEmpty else { return nil }
         let threshold = self.threshold(levels)
@@ -79,13 +79,13 @@ enum PauseSplitter {
     /// Whether `samples` hold speech: for the tail left when a lock ends,
     /// and for a push-to-talk dictation, which takes a shorter `minRun`
     /// (150 ms) so a short "Yes." still counts.
-    static func hasSpeech(_ samples: [Float], minRun: Int = minSpeechRun) -> Bool {
+    public static func hasSpeech(_ samples: [Float], minRun: Int = minSpeechRun) -> Bool {
         let levels = frameLevels(samples)
         return speech(in: levels[...], threshold: threshold(levels), minRun: minRun)
     }
 
     /// Consecutive loud frames for push-to-talk: 150 ms.
-    static let minPushToTalkRun = 5
+    public static let minPushToTalkRun = 5
 
     // MARK: - Helpers
 
@@ -106,7 +106,7 @@ enum PauseSplitter {
         Int(seconds * sampleRate) / frameLength
     }
 
-    static func frameLevels(_ samples: [Float]) -> [Float] {
+    public static func frameLevels(_ samples: [Float]) -> [Float] {
         let count = samples.count / frameLength
         guard count > 0 else { return [] }
         return samples.withUnsafeBufferPointer { buffer in
@@ -121,7 +121,7 @@ enum PauseSplitter {
     }
 
     /// 2.5 × the background noise (the 20th percentile frame), clamped.
-    static func threshold(_ levels: [Float]) -> Float {
+    public static func threshold(_ levels: [Float]) -> Float {
         guard !levels.isEmpty else { return minThreshold }
         let floor = levels.sorted()[levels.count / 5]
         return min(maxThreshold, max(minThreshold, floor * 2.5))

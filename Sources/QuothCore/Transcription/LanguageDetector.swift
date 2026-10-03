@@ -1,5 +1,6 @@
 import CoreML
 import Foundation
+import QuothDomain
 import WhisperKit
 
 /// Whisper's language detection, choosing only among the user's languages.

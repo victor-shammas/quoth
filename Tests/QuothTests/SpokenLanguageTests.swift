@@ -1,5 +1,7 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
+import WhisperKit
 
 final class SpokenLanguageTests: XCTestCase {
     private var base: TranscriptionModel { ModelRegistry.find("whisper-base.en")! }
@@ -85,5 +87,11 @@ final class SpokenLanguageTests: XCTestCase {
         XCTAssertEqual(SpokenLanguage.plan(setting: nil, spoken: SpokenLanguage.preferredCodes(["en-US", "nb-NO"]), model: turbo),
                        .detect(among: ["en", "no"]))
         XCTAssertEqual(SpokenLanguage.plan(setting: "nb", spoken: ["en"], model: turbo), .fixed("no"))
+    }
+
+    // MARK: Whisper's languages
+
+    func testLanguageTableMatchesWhisperKits() {
+        XCTAssertEqual(WhisperLanguages.names, Constants.languages)
     }
 }

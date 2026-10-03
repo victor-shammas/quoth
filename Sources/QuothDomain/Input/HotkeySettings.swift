@@ -1,26 +1,26 @@
-import CoreGraphics
+import Foundation
 
 /// Push-to-talk key preferences.
 ///
 /// The `settings.json` field for this feature; see `Settings`. Give each new
 /// field a default and decode it in `init(from:)` with
 /// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
-struct HotkeySettings: Codable, Equatable {
+public struct HotkeySettings: Codable, Equatable {
     /// The modifier held to dictate. An unknown name decodes to the default.
-    var key: HotkeyKey = .fn
+    public var key: HotkeyKey = .fn
     /// Whether a double tap of the key locks recording on, for hands-free
     /// dictation (fork addition). The next tap stops it.
-    var doubleTapLock = true
+    public var doubleTapLock = true
     /// Whether a locked recording types its text at each pause instead of
     /// all at the end (fork addition).
-    var liveText = true
+    public var liveText = true
     /// Where a locked dictation goes: typed at the cursor, or into the
     /// Quote Card to edit first.
-    var lockTarget: LockTarget = .cursor
+    public var lockTarget: LockTarget = .cursor
 
-    init() {}
+    public init() {}
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let name = try c.decodeIfPresent(String.self, forKey: .key)
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
@@ -44,7 +44,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     case rightShift = "right-shift"
 
     /// How the key is named in the menu and the Settings window.
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .fn: return "fn"
         case .leftOption: return "Left Option (⌥)"
@@ -59,7 +59,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     }
 
     /// The short name in the menu bar and log lines: "hold right ⌥ to dictate".
-    var shortName: String {
+    public var shortName: String {
         switch self {
         case .fn: return "fn"
         case .leftOption: return "left ⌥"
@@ -75,7 +75,7 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
 
     /// The virtual keycode a `flagsChanged` event carries for this key
     /// (`kVK_Function`, `kVK_Option`, `kVK_RightOption`, …).
-    var keycode: Int64 {
+    public var keycode: Int64 {
         switch self {
         case .fn: return 63
         case .leftOption: return 58
@@ -88,25 +88,14 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
         case .rightShift: return 60
         }
     }
-
-    /// The device-independent flag this key sets. Left and right share it.
-    var flag: CGEventFlags {
-        switch self {
-        case .fn: return .maskSecondaryFn
-        case .leftOption, .rightOption: return .maskAlternate
-        case .leftCommand, .rightCommand: return .maskCommand
-        case .leftControl, .rightControl: return .maskControl
-        case .leftShift, .rightShift: return .maskShift
-        }
-    }
 }
 
 /// Where a hands-free dictation goes.
-enum LockTarget: String, Codable, CaseIterable {
+public enum LockTarget: String, Codable, CaseIterable {
     case cursor
     case card
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .cursor: return "At the cursor"
         case .card: return "Quote Card"

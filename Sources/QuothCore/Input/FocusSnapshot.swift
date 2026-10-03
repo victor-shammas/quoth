@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import Carbon.HIToolbox
 import Foundation
+import QuothDomain
 
 /// What had keyboard focus at one moment: the frontmost app, its focused
 /// element, and whether that element is a secure (password) field.

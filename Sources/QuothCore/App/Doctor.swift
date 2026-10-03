@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import ApplicationServices
 import Foundation
+import QuothDomain
 
 public enum CheckStatus {
     case ok

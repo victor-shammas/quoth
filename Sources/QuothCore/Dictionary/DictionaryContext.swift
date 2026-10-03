@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Fills a dictation's `TranscriptionContext` from the dictionary: the example
 /// sentence for the active language as the prompt, and the canonical spellings

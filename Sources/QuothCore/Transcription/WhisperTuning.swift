@@ -1,5 +1,6 @@
 import CoreML
 import Foundation
+import QuothDomain
 import WhisperKit
 
 /// Where the Whisper models run and how they decode. `standard` is what the

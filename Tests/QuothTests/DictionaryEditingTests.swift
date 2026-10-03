@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 /// Saving the dictionary from Settings and adding a word from Fix Last
 /// Dictation, against a file in a temporary folder.

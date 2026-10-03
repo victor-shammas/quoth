@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Counts and timings for one delivered dictation. Never the text.
 struct DictationResult: Equatable, Sendable {

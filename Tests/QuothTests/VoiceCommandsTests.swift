@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class VoiceCommandsTests: XCTestCase {
     private func run(_ text: String, language: String? = "en") -> Transcript {

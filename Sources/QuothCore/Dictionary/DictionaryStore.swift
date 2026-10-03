@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Loads the dictionary file (`Paths.dictionaryFile`, a plain-text table) and
 /// reloads it when it changes, without a restart.

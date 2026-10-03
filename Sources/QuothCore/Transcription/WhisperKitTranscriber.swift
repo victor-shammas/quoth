@@ -1,9 +1,10 @@
 import CoreML
 import Foundation
+import QuothDomain
 import WhisperKit
 
 package actor WhisperKitTranscriber: Transcriber {
-    let modelID: String
+    package let modelID: String
     private let model: TranscriptionModel
     let tuning: WhisperTuning
     private var pipeline: WhisperKit?

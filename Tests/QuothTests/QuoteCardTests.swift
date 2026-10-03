@@ -1,6 +1,7 @@
 import AppKit
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 @MainActor
 final class QuoteCardTests: XCTestCase {

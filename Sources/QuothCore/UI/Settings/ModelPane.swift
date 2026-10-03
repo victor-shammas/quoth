@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 /// Model: which Whisper model transcribes, in which language, and

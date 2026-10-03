@@ -3,17 +3,17 @@
 ///
 /// Holds the user's words. Never log it, write it to disk, or keep it after
 /// delivery; observers get counts and timings (`DictationResult`) instead.
-package struct Transcript: Equatable, Sendable {
-    package var text: String
+public struct Transcript: Equatable, Sendable {
+    public var text: String
     /// Where the transcriber spent its time, when the engine reports it.
     /// Processors need not carry it on: the controller reads it from the
     /// transcriber's output.
-    package var timings: TranscriberTimings?
+    public var timings: TranscriberTimings?
     /// "scratch that" opened this dictation: delivery removes the previous
     /// one before inserting this (`VoiceCommands`).
-    var scratchesPrevious = false
+    public var scratchesPrevious = false
 
-    init(text: String, timings: TranscriberTimings? = nil) {
+    public init(text: String, timings: TranscriberTimings? = nil) {
         self.text = text
         self.timings = timings
     }

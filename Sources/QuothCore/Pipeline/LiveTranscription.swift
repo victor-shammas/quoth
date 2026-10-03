@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Live text for a locked recording (fork addition): while recording runs,
 /// each segment `PauseSplitter` cuts off is transcribed and delivered, in

@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// The dictation loop: gesture → capture → transcribe → process → deliver.
 ///

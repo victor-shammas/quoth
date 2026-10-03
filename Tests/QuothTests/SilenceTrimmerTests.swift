@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class SilenceTrimmerTests: XCTestCase {
     private func tone(_ seconds: Double, level: Float) -> [Float] {

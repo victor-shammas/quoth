@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 
 /// Status bar item in the top-right of the menu bar. Shows recording state at
 /// a glance and provides the only persistent control surface for the daemon

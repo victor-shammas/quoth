@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 /// Synthetic audio: "speech" is a loud tone, a pause is near-silence.
 private enum Audio {

@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class DictionaryParseTests: XCTestCase {
     private func parse(_ text: String) throws -> UserDictionary {

@@ -1,6 +1,7 @@
 import ApplicationServices
 import AVFoundation
 import Foundation
+import QuothDomain
 
 /// Why the daemon could not start.
 ///

@@ -3,6 +3,7 @@ import ApplicationServices
 import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
+import QuothDomain
 
 /// Watches a single modifier key (default: fn) and emits dictation edges.
 /// Requires Accessibility permission. If the tap fails to register, callers

@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 // Views the onboarding and Settings windows share.
