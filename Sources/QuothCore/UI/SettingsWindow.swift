@@ -26,7 +26,7 @@ enum SettingsPane: Int, CaseIterable {
     }
 }
 
-/// The Settings window, opened from the menu bar's Settings… (⌘,):
+/// The Settings window, opened from the menu bar's Settings (⌘,):
 /// toolbar tabs, as in Apple's own Settings windows, each sized to its pane
 /// so nothing scrolls but the dictionary's list. One instance: opening it
 /// again brings the same window to the front, on the pane it was left on,
@@ -39,12 +39,15 @@ enum SettingsPane: Int, CaseIterable {
 final class SettingsWindow {
     private let store: SettingsStore
     private let dictionary: DictionaryStore
+    /// For the Dictionary pane's Fix Last Dictation.
+    private weak var app: AppModel?
     private var window: NSWindow?
     private var tabs: SettingsTabs?
 
-    init(store: SettingsStore, dictionary: DictionaryStore) {
+    init(store: SettingsStore, dictionary: DictionaryStore, app: AppModel? = nil) {
         self.store = store
         self.dictionary = dictionary
+        self.app = app
     }
 
     /// Brings the window forward, on `pane` if given.
@@ -89,7 +92,7 @@ final class SettingsWindow {
         switch pane {
         case .general: return AnyView(GeneralPane(store: store))
         case .model: return AnyView(ModelPane(store: store))
-        case .dictionary: return AnyView(DictionaryPane(settings: store, dictionary: dictionary))
+        case .dictionary: return AnyView(DictionaryPane(settings: store, dictionary: dictionary, app: app))
         case .help: return AnyView(HelpPane(store: store))
         case .about: return AnyView(AboutPane(store: store))
         }

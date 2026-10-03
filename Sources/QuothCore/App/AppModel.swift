@@ -42,7 +42,7 @@ final class AppModel {
     @ObservationIgnored let overlay: RecordingOverlay
     @ObservationIgnored let card: QuoteCard
     @ObservationIgnored let switcher: ModelSwitcher
-    @ObservationIgnored private let settingsWindow: SettingsWindow
+    @ObservationIgnored private lazy var settingsWindow = SettingsWindow(store: settings, dictionary: dictionary, app: self)
     @ObservationIgnored private let fixWindow: FixDictationWindow
     @ObservationIgnored private let lastDictation = LastDictation()
     /// Set once the session exists, which needs this model for its context.
@@ -65,7 +65,6 @@ final class AppModel {
         self.card = card
         self.switcher = switcher
         self.hotkey = monitor.key
-        self.settingsWindow = SettingsWindow(store: settings, dictionary: dictionary)
         self.fixWindow = FixDictationWindow(dictionary: dictionary)
         lastDictation.onChange = { [weak self] available in
             guard let self else { return }
@@ -119,6 +118,7 @@ final class AppModel {
         lastDictation.copy()
     }
 
+    /// From Settings › Dictionary.
     func fixLastDictation() {
         fixWindow.show(text: lastDictation.text)
     }

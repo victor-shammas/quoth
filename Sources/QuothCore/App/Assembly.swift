@@ -15,7 +15,7 @@ enum Assembly {
         let model = try Startup.check(modelID: knownModel(settings.current.model.id))
         let options = DeveloperOptions.current
         NSApplication.shared.setActivationPolicy(.accessory)
-        // Before the menu, which offers "Check for Updates…" only when running.
+        // Before the menu, which offers "Check for Updates" only when running.
         #if !APPSTORE
         if AppBundle.current != nil { Updater.start() }
         #endif

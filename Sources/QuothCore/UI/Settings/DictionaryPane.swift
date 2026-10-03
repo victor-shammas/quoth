@@ -141,9 +141,12 @@ struct DictionaryPane: View {
     @ObservedObject var settings: SettingsStore
     @StateObject private var editor: DictionaryEditor
     @State private var selection = Set<DictionaryEditor.Row.ID>()
+    /// For Fix Last Dictation; nil in tests.
+    private let app: AppModel?
 
-    init(settings: SettingsStore, dictionary: DictionaryStore) {
+    init(settings: SettingsStore, dictionary: DictionaryStore, app: AppModel? = nil) {
         self.settings = settings
+        self.app = app
         _editor = StateObject(wrappedValue: DictionaryEditor(store: dictionary))
     }
 
@@ -210,7 +213,7 @@ struct DictionaryPane: View {
             if editor.rows.isEmpty {
                 VStack(spacing: 4) {
                     Text("No words yet").font(.headline)
-                    Text("Add names and terms Quoth gets wrong, or use Fix Last Dictation in the menu bar right after dictating.")
+                    Text("Add names and terms Quoth gets wrong, or use Fix Last Dictation right after dictating.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Latte.secondary)
                 }
@@ -244,6 +247,16 @@ struct DictionaryPane: View {
             Text(count == 1 ? "1 word" : "\(count) words")
                 .font(.caption)
                 .foregroundStyle(Latte.secondary)
+            if let app {
+                // Teach Quoth a word from a real mistake, while the last
+                // dictation is still in memory (10 minutes).
+                Button("Fix Last Dictation…") { app.fixLastDictation() }
+                    .buttonStyle(.link)
+                    .font(.caption)
+                    .padding(.leading, 8)
+                    .disabled(!app.hasLastDictation)
+                    .help(app.hasLastDictation ? "Choose the word Quoth got wrong in your last dictation" : "Dictate something first")
+            }
             if Edition.opensConfigFiles {
                 Button("Edit as Text…") { ConfigFiles.open(Paths.dictionaryFile) }
                     .buttonStyle(.link)

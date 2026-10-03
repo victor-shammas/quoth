@@ -24,7 +24,7 @@ Requires macOS 14+ on Apple silicon. Open Quoth and allow it when macOS asks for
 ## 2. Usage
 
 1. Click into any text field.
-2. **Hold `fn` and speak.** A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift.
+2. **Hold `fn` and speak.** A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings**: left or right Option, Command, Control, or Shift.
 3. Release. The transcript is pasted at the cursor and your clipboard is restored.
 
 **Hands-free:** double-tap the hotkey to lock recording on. The pill shows a lock. Tap the hotkey again to stop and transcribe. A lock never throws your words away: a shortcut typed on the hotkey, changing the hotkey, or switching microphones ends it and transcribes what you said. While locked, text appears at the cursor at each pause in your speech, so a long dictation builds up as you talk and finishes almost at once. If you click into another window mid-dictation, the pill says so and the rest goes to the clipboard instead. A locked recording stops by itself after 10 minutes. Turn these off with **Double-tap to lock** and **Live text while locked** in Settings.
@@ -33,9 +33,9 @@ If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shor
 
 **Quote Card:** choose **Hands-free goes to › Quote Card** in Settings, or **New Quote Card** in the menu, and dictation streams into a small floating card instead, where you can edit it before **⌘↩** inserts it where you were. While the card is open, every dictation goes into it. The App Store edition uses it whenever it can't paste.
 
-**Voice commands** (English): "new paragraph", "new line", "bullet point", "comma", "question mark", "quote … unquote", and "scratch that" to remove what was just typed. Settings › General lists them all. If Quoth misspells a word, **Fix Last Dictation…** in the menu teaches it; **Settings › Dictionary** lists your words.
+**Voice commands** (English): "new paragraph", "new line", "bullet point", "comma", "question mark", "quote … unquote", and "scratch that" to remove what was just typed. Settings › General lists them all. If Quoth misspells a word, **Fix Last Dictation…** in **Settings › Dictionary** teaches it, and the same pane lists your words.
 
-Choose **Open at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` changes the input source or shows emoji, set **System Settings → Keyboard → Press 🌐 key to** to **Do Nothing**.
+Choose **Open at login** in **Settings** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` changes the input source or shows emoji, set **System Settings → Keyboard → Press 🌐 key to** to **Do Nothing**.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.
 
@@ -45,7 +45,7 @@ Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text
 
 ## 4. Settings and developer options
 
-Everything is in **Settings…**: the hotkey, models (download, switch and delete them under **Model**), languages, the dictionary, and launch at login. Quoth has no command line ([ADR-007](docs/decisions/007-modules-and-app-model.md)).
+Everything is in **Settings**: the hotkey, models (download, switch and delete them under **Model**), languages, the dictionary, and launch at login. Quoth has no command line ([ADR-007](docs/decisions/007-modules-and-app-model.md)).
 
 For working on Quoth, start the app from a terminal with any of these, and its log prints there:
 

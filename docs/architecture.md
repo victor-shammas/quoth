@@ -188,7 +188,7 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ Dictat
 
 `DictationMachine` decides: it holds the recording, its lock and where its live text goes, and counts the transcriptions in flight, so its state (`idle`, `recording`, `transcribing`) is derived rather than set. Each event returns a list of effects. `DictationSession` performs them and reports back how they went (the capture, the transcript, the delivery), and makes no decisions of its own. The machine is pure and unit tested (`DictationMachineTests`); the session is `@MainActor`, and transcription runs off the main actor.
 
-`AppModel` is the app's lasting state (what the loop is doing, the hotkey and whether it works, a model loading, missing grants, the last dictation) and its intents (Copy Last Dictation, New Quote Card, Settings…). The menu bar renders it with Observation and sends every click to an intent; the Quote Card asks for what it needs through `QuoteCardHost`. Moments stay `DictationObserver`s: the pill's messages and level, the card's status, the latency log. `Assembly` builds all of this once and holds no behaviour.
+`AppModel` is the app's lasting state (what the loop is doing, the hotkey and whether it works, a model loading, missing grants, the last dictation) and its intents (Copy Last Dictation, New Quote Card, Settings, Fix Last Dictation). The menu bar renders it with Observation and sends every click to an intent; the Quote Card asks for what it needs through `QuoteCardHost`. Moments stay `DictationObserver`s: the pill's messages and level, the card's status, the latency log. `Assembly` builds all of this once and holds no behaviour.
 
 ### 4.2 — Extension points
 
@@ -242,7 +242,7 @@ Everything after the checks happens behind the menu-bar icon: the model loads (d
 
 macOS keys grants to the app's code identity, so builds are signed with a stable identity (`scripts/dev-install.sh` takes `QUOTH_SIGN_IDENTITY`). Without the hotkey's grant the app keeps running with "Allow … to start" in the menu and starts the hotkey as soon as the grant appears.
 
-The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Allow button, so prompts never stack; "Finish Setup…" in the menu reopens it while a grant is missing. The rules are in `App/Onboarding.swift` and `App/Permissions.swift`, pure and tested.
+The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Allow button, so prompts never stack; "Finish Setup" in the menu reopens it while a grant is missing. The rules are in `App/Onboarding.swift` and `App/Permissions.swift`, pure and tested.
 
 ## 10. Decision log
 

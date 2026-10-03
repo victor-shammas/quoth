@@ -14,7 +14,7 @@ struct HelpPane: View {
                     tip("Hold \(key)", "Speak, then let go: the text lands at your cursor.")
                     tip("Double-tap \(key)", "Dictate hands-free, with text at each pause. Tap once to stop.")
                     tip("Quote Card", "New Quote Card in the menu: dictate, edit, then ⌘↩ inserts it where you were.")
-                    tip("Fix Last Dictation…", "In the menu: teach Quoth a word it got wrong.")
+                    tip("Fix Last Dictation…", "In Settings › Dictionary: teach Quoth a word it got wrong.")
                 }
                 .padding(14)
             }

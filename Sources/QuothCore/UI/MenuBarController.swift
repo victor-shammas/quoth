@@ -18,7 +18,7 @@ final class MenuBarController: NSObject {
     /// A model downloading or loading; hidden otherwise.
     private let modelLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     /// Reopens the onboarding window while a grant is missing.
-    private let finishSetupItem = NSMenuItem(title: "Finish Setup…", action: #selector(finishSetup), keyEquivalent: "")
+    private let finishSetupItem = NSMenuItem(title: "Finish Setup", action: #selector(finishSetup), keyEquivalent: "")
     /// Ends a locked recording, for when the hotkey can't (secure input).
     private let stopLockItem = NSMenuItem(title: "Stop Dictation", action: #selector(stopDictation), keyEquivalent: "")
     private let copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastDictation), keyEquivalent: "")
@@ -39,13 +39,12 @@ final class MenuBarController: NSObject {
         menu.addItem(.separator())
         menu.addItem(item("New Quote Card", #selector(newQuoteCard)))
         menu.addItem(copyLastItem)
-        menu.addItem(item("Fix Last Dictation…", #selector(fixLastDictation)))
         menu.addItem(.separator())
-        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
+        menu.addItem(item("Settings", #selector(openSettings), key: ","))
         // The App Store build updates through the App Store only (2.4.5).
         #if !APPSTORE
         if Updater.isRunning {
-            menu.addItem(item("Check for Updates…", #selector(checkForUpdates)))
+            menu.addItem(item("Check for Updates", #selector(checkForUpdates)))
         }
         #endif
         menu.addItem(.separator())
@@ -82,7 +81,6 @@ final class MenuBarController: NSObject {
     @objc private func stopDictation() { model.stopDictation() }
     @objc private func newQuoteCard() { model.newQuoteCard() }
     @objc private func copyLastDictation() { model.copyLastDictation() }
-    @objc private func fixLastDictation() { model.fixLastDictation() }
     @objc private func openSettings() { model.openSettings() }
     @objc private func quit() { model.quit() }
 
