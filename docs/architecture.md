@@ -100,6 +100,7 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
     ModelRegistry.swift, TranscriptionModel.swift, ModelSettings.swift, TranscriberTimings.swift
   Audio/
     SilenceTrimmer.swift
+    LevelMeter.swift            microphone levels into the pill's six bars
   Support/
     Log.swift                   stderr logging; never logs transcript text
 
@@ -159,7 +160,8 @@ Sources/QuothCore/
   UI/
     MenuBarController.swift, QuoteGlyph.swift
                                 the menu and its state glyph: a view of AppModel
-    RecordingOverlay.swift      the pill: recording, locked, transcribing, messages
+    RecordingOverlay.swift      the pill's panel: when it shows, hides and says something
+    OverlayPill.swift           the pill itself: quotes around a waveform that settles into dots
     OnboardingWindow.swift      hotkey, languages and the grants on one page
     SettingsWindow.swift        toolbar tabs, each pane sizing the window
     Settings/                   GeneralPane, ModelPane, DownloadedModels, DictionaryPane, HelpPane, AboutPane, Latte

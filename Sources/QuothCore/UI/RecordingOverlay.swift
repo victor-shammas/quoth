@@ -2,110 +2,89 @@ import AppKit
 import QuothDomain
 import SwiftUI
 
-/// Borderless, click-through pill near the bottom of the active screen.
-/// Driven by the dictation loop as a `DictationObserver`.
-///
-/// Besides the recording and transcribing states, the pill can show a
-/// one-line message (`showMessage`). A `UserFacingError` reaching
-/// `dictationFailed` is shown that way; any other error just hides the pill.
+/// The pill: a small, click-through panel at the bottom of the screen that
+/// shows the dictation loop as it happens (a `DictationObserver`), and a
+/// one-line message when there's something to say. A `UserFacingError` is
+/// shown that way; any other failure just hides the pill.
 @MainActor
 final class RecordingOverlay {
     enum State: Equatable {
         case hidden
         case recording
-        /// Recording, locked on by a double tap (fork addition).
+        /// Recording, locked on by a double tap.
         case locked
         case transcribing
-        /// One line of text, for example why a recording failed.
+        /// One line, such as why nothing was typed. Never transcript text.
         case message(String)
     }
 
-    /// How long a message stays up unless another state replaces it.
+    /// How long a message stays unless something replaces it.
     nonisolated static let messageDuration: TimeInterval = 4
-
-    /// Wide enough for a one-line message; the panel is transparent and
-    /// click-through, so the unused width is invisible. Taller than the pill
-    /// so its SwiftUI shadow is not clipped.
+    /// How long the pill takes to grow or shrink. A hidden panel is ordered
+    /// out once it has.
+    nonisolated static let scaleDuration: TimeInterval = 0.3
+    /// Wide enough for a message and tall enough for the pill's shadow;
+    /// transparent and click-through, so the extra is invisible.
     private static let panelSize = NSSize(width: 640, height: 64)
 
-    /// How long the pill takes to grow or shrink; on hide, the window is
-    /// ordered out once it has.
-    nonisolated static let scaleDuration: TimeInterval = 0.3
+    private let model = OverlayModel()
+    private var panel: NSPanel?
+    /// Bumped by every change, so a message's timer only clears its own.
+    private var generation = 0
 
     init() {
-        // Build the panel now, not on the first press, so the first pill
-        // appears as quickly as every later one.
-        ensureWindow()
+        // Built now, so the first pill appears as quickly as every later one.
+        _ = makePanelIfNeeded()
     }
-
-    private var window: NSPanel?
-    private let model = OverlayModel()
-    /// Bumped by every `show`, so a message timer only hides its own message.
-    private var generation = 0
 
     func show(_ state: State) {
         generation += 1
-        ensureWindow()
-        if state == .recording {
-            model.resetLevels()
-        }
-
-        guard let window else { return }
-        let needsAppear = !window.isVisible
-        if needsAppear {
-            positionAtBottomCenter(window)
-            window.orderFrontRegardless()
-            // Defer the state change so SwiftUI lays out in the .hidden style
-            // first, then animates to the visible style on the next runloop tick.
-            DispatchQueue.main.async { [model] in
-                model.state = state
-            }
-        } else {
+        let panel = makePanelIfNeeded()
+        if state == .recording { model.resetLevels() }
+        if panel.isVisible {
             model.state = state
+            return
         }
+        placeAtBottomCenter(panel)
+        panel.orderFrontRegardless()
+        // Let SwiftUI lay the pill out hidden first, so it grows in.
+        DispatchQueue.main.async { [model] in model.state = state }
     }
 
     func hide() {
         model.state = .hidden
-        // Let the SwiftUI scale+fade animation play out before yanking the
-        // window — otherwise it just pops away. Skip it if something was
-        // shown again in the meantime.
-        let window = self.window
-        let model = self.model
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.scaleDuration) {
-            guard model.state == .hidden else { return }
-            window?.orderOut(nil)
+        // Order the panel out once the shrink has played, unless something
+        // was shown meanwhile.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.scaleDuration) { [model, panel] in
+            if model.state == .hidden { panel?.orderOut(nil) }
         }
     }
 
-    /// Shows `text` on one line in the pill for `duration` seconds, then
-    /// hides it, unless another state has replaced it by then. Never pass
-    /// transcript text.
-    func showMessage(_ text: String, for duration: TimeInterval = RecordingOverlay.messageDuration) {
+    /// Shows `text` for `duration`, then whatever `after` is (hidden by
+    /// default), unless something else has been shown by then.
+    func showMessage(_ text: String, for duration: TimeInterval = messageDuration, then after: State = .hidden) {
         show(.message(text))
         let shown = generation
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, self.generation == shown else { return }
-                self.hide()
+                after == .hidden ? self.hide() : self.show(after)
             }
         }
     }
 
-    /// The message to show for a failed dictation, or nil to just hide.
+    /// The message for a failed dictation, or nil to just hide.
     nonisolated static func message(for error: Error) -> String? {
         (error as? UserFacingError)?.userMessage
     }
 
-    /// Push a new audio level (0…~1). Safe to call from any thread.
+    /// A new microphone level, 0 to about 1. Safe from any thread.
     nonisolated func pushLevel(_ level: Float) {
-        Task { @MainActor in
-            self.model.pushLevel(level)
-        }
+        Task { @MainActor in self.model.pushLevel(level) }
     }
 
-    private func ensureWindow() {
-        if window != nil { return }
+    private func makePanelIfNeeded() -> NSPanel {
+        if let panel { return panel }
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: Self.panelSize),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -116,263 +95,69 @@ final class RecordingOverlay {
         panel.level = .statusBar
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        // The pill draws its own shadow. A window shadow is computed from the
-        // window's contents when it is shown, so it would not follow the pill
-        // as it grows and shrinks, and would linger after it had gone.
+        // The pill draws its own shadow. A window's would be computed once,
+        // when shown, and neither follow the pill as it grows nor leave with it.
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
-
         let host = NSHostingView(rootView: OverlayPill(model: model))
-        // Keep the panel its fixed size and let SwiftUI center the pill in it,
-        // so a wider message grows both ways instead of off to the right.
+        // The panel keeps its size and SwiftUI centres the pill in it, so a
+        // longer message grows both ways, not off to the right.
         host.sizingOptions = []
         host.frame = panel.contentView?.bounds ?? .zero
         host.autoresizingMask = [.width, .height]
         panel.contentView = host
-
-        window = panel
+        self.panel = panel
+        return panel
     }
 
-    private func positionAtBottomCenter(_ window: NSPanel) {
+    /// 32 pt above the bottom of the visible screen.
+    private func placeAtBottomCenter(_ panel: NSPanel) {
         guard let screen = NSScreen.main else { return }
-        let frame = window.frame
         let visible = screen.visibleFrame
-        let x = visible.midX - frame.width / 2
-        // The pill sits 32 pt above the bottom of the visible frame; the
-        // panel extends below it by half its extra height.
-        let y = visible.minY + 32 - (frame.height - 44) / 2
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+        let size = panel.frame.size
+        panel.setFrameOrigin(NSPoint(x: visible.midX - size.width / 2, y: visible.minY + 32 - (size.height - 44) / 2))
     }
 }
 
 extension RecordingOverlay: DictationObserver {
-    func dictationStarted() {
-        show(.recording)
-    }
+    func dictationStarted() { show(.recording) }
+    func dictationLocked() { show(.locked) }
+    func dictationTranscribing() { show(.transcribing) }
+    func dictationFinished(_ result: DictationResult) { hide() }
 
-    func dictationLocked() {
-        show(.locked)
-    }
-
+    /// A problem mid-recording: say so, then go back to what was showing.
     func dictationNotice(_ error: Error) {
         guard let text = Self.message(for: error) else { return }
-        let resume = model.state
-        show(.message(text))
-        let shown = generation
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.messageDuration) { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self, self.generation == shown else { return }
-                self.show(resume)
-            }
-        }
-    }
-
-    func dictationTranscribing() {
-        show(.transcribing)
-    }
-
-    func dictationFinished(_ result: DictationResult) {
-        hide()
+        showMessage(text, then: model.state)
     }
 
     func dictationFailed(_ error: Error) {
-        if let text = Self.message(for: error) {
-            showMessage(text)
-        } else {
-            hide()
-        }
+        if let text = Self.message(for: error) { showMessage(text) } else { hide() }
     }
 }
 
-/// Observable state for the SwiftUI pill.
+/// What the pill shows.
 @MainActor
 final class OverlayModel: ObservableObject {
-    static let barCount = 6
-    /// Per-bar height multiplier — center bars peak higher than edge bars.
-    private static let envelope: [Float] = [0.55, 0.85, 1.0, 1.0, 0.85, 0.55]
+    static let barCount = LevelMeter.barCount
 
     @Published var state: RecordingOverlay.State = .hidden
-    @Published var levels: [Float] = Array(repeating: 0, count: barCount)
-    /// Whether the current recording has been louder than silence, so a
-    /// recording with nothing said gets no loading animation.
+    @Published var levels = [Float](repeating: 0, count: LevelMeter.barCount)
+    /// Whether this recording has been louder than silence.
     @Published private(set) var heardVoice = false
+    private var meter = LevelMeter()
 
-    /// RMS over one refresh interval above which the recording counts as
-    /// speech. Silent recordings measure about 0.001 over their whole length;
-    /// speech averages 0.007 to 0.018 and peaks well above.
-    static let voiceThreshold: Float = 0.01
-
-    /// How often the bars move. Capture delivers a level per buffer, about
-    /// every 12 ms with the AUHAL input; the bars are tuned for about
-    /// 100 ms and look twitchy any faster.
-    static let refreshInterval: TimeInterval = 0.1
-
-    private var pendingPower: Float = 0
-    private var pendingCount = 0
-    private var lastRefresh: TimeInterval = 0
-
-    /// Collects levels and moves the bars once per `refreshInterval`, with
-    /// the RMS over that interval.
     func pushLevel(_ level: Float) {
-        pendingPower += level * level
-        pendingCount += 1
-        let now = ProcessInfo.processInfo.systemUptime
-        guard now - lastRefresh >= Self.refreshInterval else { return }
-        let rms = (pendingPower / Float(pendingCount)).squareRoot()
-        pendingPower = 0
-        pendingCount = 0
-        lastRefresh = now
-        if rms > Self.voiceThreshold, !heardVoice {
-            heardVoice = true
-        }
-        showLevel(rms)
-    }
-
-    private func showLevel(_ level: Float) {
-        let shaped = min(1.0, sqrt(max(0, level)) * 3.4)
-        var next = [Float]()
-        next.reserveCapacity(Self.barCount)
-        for i in 0..<Self.barCount {
-            // Small per-bar jitter so the bars don't all move in lockstep.
-            let jitter = Float.random(in: 0.78...1.0)
-            next.append(shaped * Self.envelope[i] * jitter)
-        }
-        levels = next
+        guard let bars = meter.add(level, at: ProcessInfo.processInfo.systemUptime) else { return }
+        if meter.heardVoice, !heardVoice { heardVoice = true }
+        levels = bars
     }
 
     func resetLevels() {
-        pendingPower = 0
-        pendingCount = 0
+        meter.reset()
         heardVoice = false
-        levels = Array(repeating: 0, count: Self.barCount)
-    }
-}
-
-/// The pill: your words in quotes. Amber quotation marks, as in the app
-/// icon, around a cream waveform on espresso; a lock when the recording is
-/// locked, and the bars settling into dots while transcribing. The marks
-/// lean in with your voice, unless Reduce Motion is on.
-struct OverlayPill: View {
-    @ObservedObject var model: OverlayModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        content
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(
-                Capsule()
-                    .fill(Brand.espresso)
-                    .shadow(color: .black.opacity(0.32), radius: 7, y: 2)
-            )
-            // A faint cream rim, so the pill holds its shape on a dark background.
-            .overlay(
-                Capsule()
-                    .strokeBorder(Brand.cream.opacity(0.16), lineWidth: 1)
-            )
-            .scaleEffect(model.state == .hidden ? 0 : 1)
-            .animation(
-                .timingCurve(0.16, 1, 0.3, 1, duration: RecordingOverlay.scaleDuration),
-                value: model.state
-            )
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        switch model.state {
-        case .hidden, .recording, .locked, .transcribing:
-            HStack(spacing: 8) {
-                quotes(opening: true, level: model.levels.first ?? 0)
-                if model.state == .locked {
-                    // The key is free; the next tap stops.
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Brand.amber)
-                        .transition(.scale.combined(with: .opacity))
-                }
-                // The same bars throughout, so transcribing is the recording
-                // bars settling rather than a swap to a spinner.
-                Waveform(
-                    levels: model.levels,
-                    transcribing: model.state == .transcribing,
-                    heardVoice: model.heardVoice
-                )
-                .frame(width: 51, height: 20)
-                quotes(opening: false, level: model.levels.last ?? 0)
-            }
-            .animation(.easeOut(duration: 0.2), value: model.state)
-        case .message(let text):
-            HStack(spacing: 8) {
-                QuotePair(opening: true).frame(width: 15, height: 12)
-                Text(text)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Brand.cream)
-                    .lineLimit(1)
-                    .fixedSize()
-                QuotePair().frame(width: 15, height: 12)
-            }
-            .frame(height: 20)
-        }
-    }
-
-    /// A pair of marks that leans toward the waveform as you speak: the
-    /// opening pair rises, the closing one dips.
-    private func quotes(opening: Bool, level: Float) -> some View {
-        let lift = reduceMotion || model.state == .transcribing ? 0 : CGFloat(min(1, level)) * 2.5
-        return QuotePair(opening: opening)
-            .frame(width: 17, height: 14)
-            .offset(y: opening ? 2 - lift : -2 + lift)
-            .scaleEffect(1 + lift * 0.05)
-            .animation(.easeOut(duration: 0.12), value: lift)
-    }
-}
-
-private struct Waveform: View {
-    let levels: [Float]
-    var transcribing = false
-    var heardVoice = false
-    private let color = Brand.cream
-
-    /// Height of an idle bar after a silent recording, as a fraction of the
-    /// full height.
-    private static let restHeight: CGFloat = 0.2
-    /// Size of the dots the middle bars settle into while transcribing.
-    private static let dotSize: CGFloat = 3.5
-    /// How long the bars take to settle into dots.
-    private static let settleDuration = 0.25
-
-    var body: some View {
-        GeometryReader { geo in
-            HStack(alignment: .center, spacing: 3.75) {
-                ForEach(Array(levels.enumerated()), id: \.offset) { i, level in
-                    let bar = bar(i, level: level, height: geo.size.height)
-                    Capsule()
-                        .fill(color)
-                        .frame(width: bar.width, height: bar.height)
-                        .opacity(bar.opacity)
-                        .animation(
-                            transcribing ? .easeInOut(duration: Self.settleDuration) : .easeOut(duration: 0.09),
-                            value: bar.height
-                        )
-                        .animation(.easeInOut(duration: Self.settleDuration), value: bar.opacity)
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-        }
-    }
-
-    /// While recording, each bar follows the level. While transcribing, the
-    /// outer bars fade where they stand and the middle ones settle into dots;
-    /// after a silent recording, every bar just rests.
-    private func bar(_ i: Int, level: Float, height: CGFloat) -> (width: CGFloat, height: CGFloat, opacity: Double) {
-        let live = max(0.10, CGFloat(level)) * height
-        guard transcribing else { return (2.5, live, 1) }
-        guard heardVoice else { return (2.5, Self.restHeight * height, 1) }
-        if i == 0 || i == levels.count - 1 {
-            return (2.5, live, 0)
-        }
-        return (Self.dotSize, Self.dotSize, 1)
+        levels = [Float](repeating: 0, count: LevelMeter.barCount)
     }
 }
