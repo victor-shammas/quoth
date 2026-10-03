@@ -20,6 +20,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var model: OnboardingModel?
     private var poll: Timer?
+    private var settingsObserver: NSObjectProtocol?
 
     init(store: SettingsStore, app: AppModel) {
         self.store = store
@@ -39,6 +40,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         let window = self.window ?? makeWindow()
         self.window = window
         startPolling()
+        watchSystemSettings()
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
         // Activation can be refused (a login-item launch while the user
@@ -54,6 +56,9 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
             Log.info("onboarding done: hold \(model.hotkey.shortName); languages \(model.languages.joined(separator: ", "))")
             self.window?.close()
         }
+        // Quoth has no Dock icon: when macOS's prompt or System Settings
+        // closes, focus goes back to the app before, over this window.
+        model.onGrantsChanged = { [weak self] in self?.show() }
         self.model = model
         let hosting = NSHostingView(rootView: OnboardingView(model: model))
         let window = NSWindow(
@@ -71,6 +76,21 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         window.delegate = self
         window.center()
         return window
+    }
+
+    /// Brings the window back when the user leaves System Settings. In the
+    /// App Store edition a switch flipped there changes nothing this launch
+    /// can read, so `onGrantsChanged` never fires; this is when Reopen Quoth
+    /// is wanted.
+    private func watchSystemSettings() {
+        guard settingsObserver == nil else { return }
+        settingsObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didDeactivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard app?.bundleIdentifier == "com.apple.systempreferences" else { return }
+            MainActor.assumeIsolated { self?.show() }
+        }
     }
 
     // MARK: Grants
@@ -112,6 +132,8 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         MainActor.assumeIsolated {
             window = nil
             model = nil
+            if let settingsObserver { NSWorkspace.shared.notificationCenter.removeObserver(settingsObserver) }
+            settingsObserver = nil
             refresh()
         }
     }
