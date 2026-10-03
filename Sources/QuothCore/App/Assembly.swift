@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import QuothDomain
+import QuothPlatform
 
 /// Builds Quoth's objects, connects them, and runs the AppKit loop
 /// (ADR-007). No behaviour of its own: what happens on a press is

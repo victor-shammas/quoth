@@ -1,6 +1,8 @@
 import AVFoundation
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
+@testable import QuothPlatform
 
 final class PermissionsTests: XCTestCase {
     private func state(_ hotkey: Bool, _ microphone: MicrophonePermission) -> PermissionState {

@@ -2,6 +2,7 @@ import CoreGraphics
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
 
 final class GestureTests: XCTestCase {
     private let down = Gesture.Input.hotkeyDown(othersHeld: false)

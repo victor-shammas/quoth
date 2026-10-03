@@ -2,7 +2,7 @@ import Foundation
 import QuothDomain
 
 /// Where a finished transcript goes. Pure, so it is tested.
-enum DeliveryDecision: Equatable {
+public enum DeliveryDecision: Equatable {
     /// Insert at the cursor.
     case inject
     /// A secure field had focus at start or at delivery: drop the transcript.
@@ -12,7 +12,7 @@ enum DeliveryDecision: Equatable {
 
     /// `start` is nil when no recording start was seen; then only the
     /// secure-field check applies.
-    static func decide(start: FocusSnapshot?, now: FocusSnapshot) -> DeliveryDecision {
+    public static func decide(start: FocusSnapshot?, now: FocusSnapshot) -> DeliveryDecision {
         if start?.isSecure == true || now.isSecure { return .discardSecure }
         if let start, start.hasChanged(to: now) { return .copyToClipboard }
         return .inject
@@ -24,7 +24,7 @@ enum DeliveryDecision: Equatable {
 /// injected transcript gets a trailing space, and a leading one when the
 /// text before the cursor needs it (`Spacing`).
 @MainActor
-final class TextDelivery {
+public final class TextDelivery {
     private let injector: TextInjector
 
     /// What was last inserted, for "scratch that": how many characters, and
@@ -37,27 +37,27 @@ final class TextDelivery {
     }
     private var insertions: [Insertion] = []
     /// How long after an insertion "scratch that" may still remove it.
-    static let scratchWindow: TimeInterval = 120
+    public static let scratchWindow: TimeInterval = 120
 
-    init(mode: InjectMode) {
+    public init(mode: InjectMode) {
         self.injector = TextInjector(mode: mode)
     }
 
     /// Leaves `text` on the clipboard, for live text held back after a
     /// focus change.
-    func copyToClipboard(_ text: String) {
+    public func copyToClipboard(_ text: String) {
         injector.copyToClipboard(text)
     }
 
     /// Whether a transcript can be inserted at the cursor, rather than only
     /// copied (`PasteAccess`).
-    var canInsert: Bool { PasteAccess.isGranted }
+    public var canInsert: Bool { PasteAccess.isGranted }
 
     /// Inserts `text` at the cursor now, for the Quote Card's Insert: no
     /// focus to compare with, but never into a password field. Returns
     /// false, leaving the text on the clipboard, when this build can't paste.
     @discardableResult
-    func insertNow(_ text: String) -> Bool {
+    public func insertNow(_ text: String) -> Bool {
         let now = FocusSnapshot.capture()
         guard !now.isSecure else {
             Log.info("  secure field focused; card text not inserted")
@@ -79,7 +79,7 @@ final class TextDelivery {
     /// what Quoth typed. Each call removes one more, back through the
     /// segments of a hands-free dictation. Returns whether it removed one.
     @discardableResult
-    func scratchLast() -> Bool {
+    public func scratchLast() -> Bool {
         guard canInsert, let last = insertions.last, Date().timeIntervalSince(last.at) < Self.scratchWindow else {
             Log.info("  scratch that: nothing recent to remove")
             return false
@@ -97,7 +97,7 @@ final class TextDelivery {
     }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
-    func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
+    public func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {

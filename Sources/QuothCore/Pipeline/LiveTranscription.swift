@@ -1,5 +1,6 @@
 import Foundation
 import QuothDomain
+import QuothPlatform
 
 /// Live text for a locked recording: while recording runs, each segment
 /// `PauseSplitter` cuts off is transcribed and delivered, in order, so text

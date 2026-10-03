@@ -1,6 +1,7 @@
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
 
 final class AppModelTests: XCTestCase {
     func testIdleTellsTheUserWhichKeyToHold() {

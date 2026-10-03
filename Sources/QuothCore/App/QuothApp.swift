@@ -1,4 +1,6 @@
 import Foundation
+import QuothDomain
+import QuothPlatform
 
 /// Where both editions start (ADR-007): Quoth is the menu-bar app, with no
 /// command line. `Sources/quoth/main.swift` and `AppStore/main.swift` call

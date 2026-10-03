@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import QuothDomain
 
 /// Captures microphone audio while recording is active and returns a 16 kHz
 /// mono Float32 buffer when stopped. Format-converts on the fly so callers
@@ -9,10 +10,10 @@ import Foundation
 /// the `CaptureMode`'s `CaptureInput`; the checks before it (permission, a
 /// usable device) and the conversion and bookkeeping after it are here and
 /// shared by every mode.
-package final class AudioCapture {
-    package static let targetSampleRate: Double = 16_000
+public final class AudioCapture {
+    public static let targetSampleRate: Double = 16_000
 
-    static let targetFormat = AVAudioFormat(
+    public static let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32,
         sampleRate: targetSampleRate,
         channels: 1,
@@ -21,31 +22,31 @@ package final class AudioCapture {
 
     /// Called for every audio buffer with the buffer's RMS level (0…~1).
     /// Invoked on an arbitrary thread; hop to main if you touch UI.
-    var onLevel: ((Float) -> Void)?
+    public var onLevel: ((Float) -> Void)?
 
     /// Called when the input route changes mid-recording (a headset
     /// connects, the default input changes). Invoked on an arbitrary thread.
-    var onRouteChange: (() -> Void)?
+    public var onRouteChange: (() -> Void)?
 
-    let mode: CaptureMode
+    public let mode: CaptureMode
 
     /// Counts and timings of the last finished capture, including press to
     /// first sample. Nil until one finishes.
-    package private(set) var lastStats: CaptureBuffer.Stats?
+    public private(set) var lastStats: CaptureBuffer.Stats?
 
     /// Buffers any input delivered while no recording was open. Stays 0
     /// unless an input ran between presses.
-    package var buffersWhileStopped: Int { buffer.buffersWhileClosed }
+    public var buffersWhileStopped: Int { buffer.buffersWhileClosed }
 
     /// The recording so far, for callers that wait on the first sample.
-    package var currentStats: CaptureBuffer.Stats { buffer.currentStats }
+    public var currentStats: CaptureBuffer.Stats { buffer.currentStats }
 
     /// The 16 kHz samples recorded so far from `offset` on, while recording
     /// continues (live text). Safe from any thread.
-    func samples(from offset: Int) -> [Float] { buffer.samples(from: offset) }
+    public func samples(from offset: Int) -> [Float] { buffer.samples(from: offset) }
 
     /// Whether the input route changed during this recording.
-    var hasRouteChanged: Bool { buffer.hasRouteChanged }
+    public var hasRouteChanged: Bool { buffer.hasRouteChanged }
 
     private let input: CaptureInput
     private var recording = false
@@ -55,7 +56,7 @@ package final class AudioCapture {
     private let converters = ConverterCache(targetFormat: AudioCapture.targetFormat)
     private let buffer = CaptureBuffer()
 
-    package init(mode: CaptureMode = .standard) {
+    public init(mode: CaptureMode = .standard) {
         self.mode = mode
         self.input = mode.makeInput()
         input.prepareIdle()
@@ -63,7 +64,7 @@ package final class AudioCapture {
 
     /// Begin recording. Idempotent — calling while already recording is a no-op.
     /// Throws `CaptureError`; on a throw nothing is left running.
-    package func start() throws {
+    public func start() throws {
         guard !recording else { return }
         // The press. Press-to-first-sample is measured from here.
         let startedAt = HostClock.now()
@@ -106,7 +107,7 @@ package final class AudioCapture {
     /// route changed mid-recording; the failure is logged. `finish()` is the
     /// same with the failure thrown instead.
     @discardableResult
-    func stop() -> [Float] {
+    public func stop() -> [Float] {
         do {
             return try finish()
         } catch {
@@ -119,7 +120,7 @@ package final class AudioCapture {
     /// Throws `CaptureError.routeChanged` instead of returning a partial
     /// capture if the input route changed mid-recording, unless
     /// `keepBeforeRouteChange` asks for what came before the change.
-    package func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
+    public func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
         guard recording else { return [] }
         recording = false
         input.stop()
@@ -136,7 +137,7 @@ package final class AudioCapture {
     /// and its first non-zero sample, were captured, then convert to 16 kHz
     /// and append. `firstFrame` and `now` are `HostClock` nanoseconds. A
     /// buffer outside a recording is counted and dropped.
-    static func inputHandler(
+    public static func inputHandler(
         buffer: CaptureBuffer,
         converters: ConverterCache,
         onLevel: ((Float) -> Void)?
@@ -157,7 +158,7 @@ package final class AudioCapture {
     }
 
     /// The first frame in which any channel is not exactly zero, or nil.
-    static func firstNonZeroFrame(_ pcm: AVAudioPCMBuffer) -> Int? {
+    public static func firstNonZeroFrame(_ pcm: AVAudioPCMBuffer) -> Int? {
         guard let channels = pcm.floatChannelData else { return nil }
         let interleaved = pcm.format.isInterleaved
         let stride = pcm.stride
@@ -201,9 +202,9 @@ package final class AudioCapture {
 
 // MARK: - WAV writer (for debugging M3 captures)
 
-package enum WAVWriter {
+public enum WAVWriter {
     /// Write Float32 mono samples as 16-bit PCM WAV to `path`.
-    package static func write(samples: [Float], sampleRate: Int, to path: String) throws {
+    public static func write(samples: [Float], sampleRate: Int, to path: String) throws {
         let bytesPerSample = 2
         let dataSize = samples.count * bytesPerSample
 
@@ -241,7 +242,7 @@ package enum WAVWriter {
     }
 }
 
-func computeRMS<C: Collection>(_ samples: C) -> Float where C.Element == Float {
+public func computeRMS<C: Collection>(_ samples: C) -> Float where C.Element == Float {
     guard !samples.isEmpty else { return 0 }
     var sum: Double = 0
     for s in samples { sum += Double(s * s) }

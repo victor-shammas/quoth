@@ -1,6 +1,8 @@
 import AppKit
 import ApplicationServices
 import Foundation
+import QuothDomain
+import QuothPlatform
 
 /// Quoth.app, when this process runs from it.
 public enum AppBundle {

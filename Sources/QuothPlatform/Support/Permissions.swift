@@ -2,16 +2,17 @@ import AppKit
 import ApplicationServices
 import AVFoundation
 import Foundation
+import QuothDomain
 
 /// The microphone grant as the onboarding window shows it.
-enum MicrophonePermission: Equatable {
+public enum MicrophonePermission: Equatable {
     case granted
     /// The system has never asked; a request shows its prompt.
     case notDetermined
     /// Denied or restricted: only System Settings can change it.
     case denied
 
-    init(_ status: AVAuthorizationStatus) {
+    public init(_ status: AVAuthorizationStatus) {
         switch status {
         case .authorized: self = .granted
         case .notDetermined: self = .notDetermined
@@ -22,20 +23,20 @@ enum MicrophonePermission: Equatable {
 }
 
 /// The grants Quoth needs, read at one moment.
-struct PermissionState: Equatable {
+public struct PermissionState: Equatable {
     /// The hotkey's grant (`HotkeyAccess`): Accessibility in the direct
     /// build, Input Monitoring in the App Store build.
-    var hotkey: Bool
-    var microphone: MicrophonePermission
+    public var hotkey: Bool
+    public var microphone: MicrophonePermission
     /// Pasting at the cursor (`PasteAccess`). Optional in the App Store
     /// build, which copies instead without it; covered by Accessibility in
     /// the direct build.
-    var paste: Bool = true
+    public var paste: Bool = true
 
-    var allGranted: Bool { hotkey && microphone == .granted }
+    public var allGranted: Bool { hotkey && microphone == .granted }
 
     /// This process's grants now.
-    static var current: PermissionState {
+    public static var current: PermissionState {
         PermissionState(
             hotkey: HotkeyAccess.isGranted,
             microphone: MicrophonePermission(MicrophoneAccess.status),
@@ -46,9 +47,9 @@ struct PermissionState: Equatable {
 
 /// Reading and asking for Accessibility and Microphone. The onboarding
 /// window explains both before any of these requests is made.
-enum Permissions {
+public enum Permissions {
     /// One thing an Allow button does.
-    enum Step: Equatable {
+    public enum Step: Equatable {
         /// The hotkey grant's prompt (`HotkeyAccess.request`), which also
         /// lists Quoth in its pane.
         case promptHotkey
@@ -62,7 +63,7 @@ enum Permissions {
 
     /// The two grants, each with its own Allow button in the onboarding
     /// window, so macOS never shows both prompts at once.
-    enum Kind: Equatable {
+    public enum Kind: Equatable {
         case microphone
         case hotkey
         case paste
@@ -72,7 +73,7 @@ enum Permissions {
     /// the system has never asked, its System Settings pane once denied;
     /// the Accessibility prompt and its pane, so the user ends up where the
     /// switch is. Nothing once granted.
-    static func allowSteps(for kind: Kind, in state: PermissionState) -> [Step] {
+    public static func allowSteps(for kind: Kind, in state: PermissionState) -> [Step] {
         switch kind {
         case .microphone:
             switch state.microphone {
@@ -87,7 +88,7 @@ enum Permissions {
         }
     }
 
-    static func perform(_ step: Step) {
+    public static func perform(_ step: Step) {
         switch step {
         case .promptHotkey:
             Log.info("asking for \(HotkeyAccess.name)")
@@ -107,7 +108,7 @@ enum Permissions {
     }
 
     /// Opens System Settings → Privacy & Security at `pane`.
-    static func openSettings(pane: String) {
+    public static func openSettings(pane: String) {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") else { return }
         NSWorkspace.shared.open(url)
     }

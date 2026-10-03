@@ -3,26 +3,26 @@ import Foundation
 /// What one recording has captured so far. The audio thread appends to it;
 /// `AudioCapture.stop()` reads it once. It holds no engine, so the rules
 /// about what a stop returns are testable without hardware.
-package final class CaptureBuffer: @unchecked Sendable {
+public final class CaptureBuffer: @unchecked Sendable {
     /// Counts and timings for one recording. Never audio.
-    package struct Stats: Equatable {
+    public struct Stats: Equatable {
         /// Tap callbacks that delivered converted audio.
-        var buffers = 0
+        public var buffers = 0
         /// Frames received at the input's own sample rate.
-        var inputFrames = 0
+        public var inputFrames = 0
         /// Buffers the converter failed on.
-        var conversionFailures = 0
+        public var conversionFailures = 0
         /// Seconds from `start()` to the first buffer, or nil if none arrived.
-        package var firstBufferDelay: TimeInterval?
+        public var firstBufferDelay: TimeInterval?
         /// Seconds from `start()` (the press) to the moment the first sample
         /// of the recording was captured, by the buffer's host timestamp:
         /// anything said before it is lost. Nil if no buffer arrived.
-        package var firstSampleDelay: TimeInterval?
+        public var firstSampleDelay: TimeInterval?
         /// The same to the first sample that is not exactly zero. Some inputs
         /// deliver digital silence while they settle; that is lost too.
-        package var firstSoundDelay: TimeInterval?
+        public var firstSoundDelay: TimeInterval?
         /// Buffers the input failed to deliver (a render error).
-        var inputFailures = 0
+        public var inputFailures = 0
     }
 
     private let lock = NSLock()
@@ -38,7 +38,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Clears everything for a new recording that started at `startedAt`
     /// (`HostClock` nanoseconds).
-    func reset(startedAt: UInt64) {
+    public func reset(startedAt: UInt64) {
         lock.lock()
         defer { lock.unlock() }
         samples.removeAll(keepingCapacity: true)
@@ -51,7 +51,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// True while a recording is open. A buffer arriving outside one is
     /// counted and must be dropped: it means the input ran between presses.
-    func admit() -> Bool {
+    public func admit() -> Bool {
         lock.lock()
         defer { lock.unlock() }
         if !isOpen { closedBuffers += 1 }
@@ -60,20 +60,20 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Buffers that arrived while no recording was open, over this buffer's
     /// lifetime. Zero unless an input ran between presses.
-    var buffersWhileClosed: Int {
+    public var buffersWhileClosed: Int {
         lock.lock()
         defer { lock.unlock() }
         return closedBuffers
     }
 
-    func recordInputFailure() {
+    public func recordInputFailure() {
         lock.lock()
         defer { lock.unlock() }
         stats.inputFailures += 1
     }
 
     /// Appends converted 16 kHz samples from one tap callback.
-    func append(_ chunk: UnsafeBufferPointer<Float>, inputFrames: Int, at now: UInt64) {
+    public func append(_ chunk: UnsafeBufferPointer<Float>, inputFrames: Int, at now: UInt64) {
         lock.lock()
         defer { lock.unlock() }
         if stats.firstBufferDelay == nil {
@@ -87,7 +87,7 @@ package final class CaptureBuffer: @unchecked Sendable {
     /// Records when the first frame of an input buffer was captured, and
     /// the first non-zero frame if it has one (host nanoseconds). Only the
     /// first of each counts.
-    func noteInput(firstFrameAt: UInt64, firstSoundAt: UInt64?) {
+    public func noteInput(firstFrameAt: UInt64, firstSoundAt: UInt64?) {
         lock.lock()
         defer { lock.unlock() }
         if stats.firstSampleDelay == nil {
@@ -100,7 +100,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// True until a non-zero sample has been noted, so the audio thread
     /// scans for one only while it matters.
-    var awaitingSound: Bool {
+    public var awaitingSound: Bool {
         lock.lock()
         defer { lock.unlock() }
         return stats.firstSoundDelay == nil
@@ -108,13 +108,13 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Appends the converter's tail after the last callback. Not counted as
     /// a buffer.
-    func appendTail(_ chunk: UnsafeBufferPointer<Float>) {
+    public func appendTail(_ chunk: UnsafeBufferPointer<Float>) {
         lock.lock()
         defer { lock.unlock() }
         samples.append(contentsOf: chunk)
     }
 
-    func recordConversionFailure() {
+    public func recordConversionFailure() {
         lock.lock()
         defer { lock.unlock() }
         stats.conversionFailures += 1
@@ -122,7 +122,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// Called from the configuration-change notification. Only sets a flag;
     /// the engine is torn down in `stop()`, never inside the notification.
-    func markRouteChanged() {
+    public func markRouteChanged() {
         lock.lock()
         defer { lock.unlock() }
         routeChanged = true
@@ -130,7 +130,7 @@ package final class CaptureBuffer: @unchecked Sendable {
     }
 
     /// Whether the route changed during this recording.
-    var hasRouteChanged: Bool {
+    public var hasRouteChanged: Bool {
         lock.lock()
         defer { lock.unlock() }
         return routeChanged
@@ -138,7 +138,7 @@ package final class CaptureBuffer: @unchecked Sendable {
 
     /// A copy of the samples recorded so far from `offset` on, without
     /// ending the recording; for live text (fork addition).
-    func samples(from offset: Int) -> [Float] {
+    public func samples(from offset: Int) -> [Float] {
         lock.lock()
         defer { lock.unlock() }
         let end = routeChangedAt ?? samples.count
@@ -146,7 +146,7 @@ package final class CaptureBuffer: @unchecked Sendable {
         return Array(samples[offset..<end])
     }
 
-    var currentStats: Stats {
+    public var currentStats: Stats {
         lock.lock()
         defer { lock.unlock() }
         return stats
@@ -158,7 +158,7 @@ package final class CaptureBuffer: @unchecked Sendable {
     /// unless `keepBeforeRouteChange` asks for the samples recorded before
     /// the change (a locked recording, where minutes are at stake). Either
     /// way the buffer is empty afterwards.
-    func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
+    public func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
         lock.lock()
         let changed = routeChanged
         let captured = changed && keepBeforeRouteChange
@@ -180,5 +180,5 @@ package final class CaptureBuffer: @unchecked Sendable {
     }
 
     /// Samples whose allocation is kept between recordings: 30 s.
-    static let keptCapacity = 30 * 16_000
+    public static let keptCapacity = 30 * 16_000
 }

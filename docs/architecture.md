@@ -42,20 +42,22 @@ Quoth is a macOS menu-bar dictation app. Hold a key, speak, release, and the tra
 ```
 Package.swift (the direct edition)
   QuothDomain     library     pure logic, Foundation only: gesture, dictionary, voice commands, settings values, models
-  QuothCore       library     everything else: capture, hotkey, transcription, the loop, stores, UI
+  QuothPlatform   library     macOS: capture, the hotkey tap, text insertion, focus, permissions, Edition
+  QuothCore       library     everything else: transcription, the loop, stores, UI
   quoth           executable  the entry point: `QuothApp.main()`
   quoth-bench     executable  developer benchmarks, never shipped
   QuothTests, QuothBenchTests
 
 project.yml (the App Store edition, generated with xcodegen)
   QuothDomain     static lib  Sources/QuothDomain
+  QuothPlatform   static lib  Sources/QuothPlatform, compiled with APPSTORE
   Quoth           app         Sources/QuothCore compiled with APPSTORE, plus AppStore/main.swift;
                               leaves out Updater
 ```
 
 The direct `Quoth.app` wraps the `quoth` executable (`scripts/build-app.sh`). Both editions are the menu-bar app only, with one entry point, `QuothApp.main()`; there is no command line (ADR-007). Started from a terminal, the app logs there, and `DeveloperOptions` reads a few `QUOTH_*` variables for debugging.
 
-Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. ADR-007 is splitting QuothCore into modules, a phase at a time; what has moved so far is `QuothDomain`, whose API is `public`. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
+Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. ADR-007 is splitting QuothCore into modules, a phase at a time; what has moved so far is `QuothDomain` and `QuothPlatform`, whose APIs are `public`. `FocusedElement` stays internal to QuothPlatform, so the App Store build links no Accessibility functions; `scripts/appstore.sh` fails if it does. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
 
 ## 3. Layout
 
@@ -87,6 +89,26 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
     ModelRegistry.swift, TranscriptionModel.swift, ModelSettings.swift, TranscriberTimings.swift
   Audio/
     SilenceTrimmer.swift
+  Support/
+    Log.swift                   stderr logging; never logs transcript text
+
+Sources/QuothPlatform/          macOS, behind small types; the only module besides Core compiled with APPSTORE
+  Input/
+    HotkeyMonitor.swift         the listen-only tap for modifier changes, the lock's time limit
+    HotkeyKey+Flag.swift        each key's CGEventFlags
+    TapRecovery.swift           re-enabling a disabled tap; the menu's hotkey status
+    FocusSnapshot.swift         what was focused, and whether it is secure; field details in the direct edition (internal: none in the App Store build)
+    Delivery.swift              insert, copy or discard (pure decision, tested)
+    TextInjector.swift          paste or typed Unicode; the borrowed clipboard
+  Audio/
+    AudioCapture.swift, CaptureBuffer.swift
+                                capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
+    CaptureInput.swift, HALInput.swift, EngineInput.swift
+                                ways of running the mic; the AUHAL unit is the default
+    HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
+  Support/
+    Edition.swift               what the direct and App Store editions do differently (ADR-006)
+    Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
 
 Sources/QuothCore/
   App/
@@ -95,7 +117,6 @@ Sources/QuothCore/
     LatencyLog.swift            one log line per dictation, as a DictationObserver
     LastDictation.swift         the last transcript, in memory only, for Copy and Fix Last Dictation
     Startup.swift               startup checks and StartupFailure (permanent vs transient)
-    Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
     Onboarding.swift            when the onboarding window shows and what Get Started saves (pure, tested)
     QuothApp.swift              the entry point of both editions: launch, run, startup failures
     Assembly.swift              builds the objects and connects them; startup, then the run loop
@@ -105,25 +126,10 @@ Sources/QuothCore/
     LoginItem.swift             launch at login (SMAppService)
     Updater.swift               direct edition only: Sparkle
   Support/
-    Edition.swift               what the direct and App Store editions do differently (ADR-006)
     Paths.swift                 every on-disk location Quoth uses
-    Log.swift                   stderr logging; never logs transcript text
     DeveloperOptions.swift      QUOTH_* environment variables for debugging, read once at launch
   Settings/
     SettingsStore.swift         load, atomic save, file watching, change publishing
-  Input/
-    HotkeyMonitor.swift         the listen-only tap for modifier changes, the lock's time limit
-    HotkeyKey+Flag.swift        each key's CGEventFlags
-    TapRecovery.swift           re-enabling a disabled tap; the menu's hotkey status
-    FocusSnapshot.swift         what was focused, and whether it is secure; field details in the direct edition
-    Delivery.swift              insert, copy or discard (pure decision, tested)
-    TextInjector.swift          paste or typed Unicode; the borrowed clipboard
-  Audio/
-    AudioCapture.swift, CaptureBuffer.swift
-                                capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
-    CaptureInput.swift, HALInput.swift, EngineInput.swift
-                                ways of running the mic; the AUHAL unit is the default
-    HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
   Transcription/
     WhisperKitTranscriber.swift loading, transcribing, the on-disk model cache and deleting a model
     WhisperTuning.swift         compute units and decoding options, measured with `quoth-bench`

@@ -18,7 +18,7 @@ public enum CaptureMode: String, CaseIterable, Sendable {
     public static let standard: CaptureMode = .hal
 
     /// The input that implements this mode.
-    func makeInput() -> CaptureInput {
+    public func makeInput() -> CaptureInput {
         switch self {
         case .engine: return EngineInput()
         case .hal: return HALInput(keepsPrepared: false)
@@ -29,15 +29,15 @@ public enum CaptureMode: String, CaseIterable, Sendable {
 
 /// Where an input delivers what it captures. Called on the input's own
 /// realtime thread.
-struct InputSink {
+public struct InputSink {
     /// One buffer at the input's own format, the host time its first frame
     /// was captured, and the host time of the callback (`HostClock`
     /// nanoseconds).
-    var deliver: (_ pcm: AVAudioPCMBuffer, _ firstFrame: UInt64, _ now: UInt64) -> Void
+    public var deliver: (_ pcm: AVAudioPCMBuffer, _ firstFrame: UInt64, _ now: UInt64) -> Void
     /// The input route changed; the recording must be discarded.
-    var routeChanged: () -> Void
+    public var routeChanged: () -> Void
     /// The input failed to produce a buffer it was due.
-    var inputFailed: () -> Void
+    public var inputFailed: () -> Void
 }
 
 /// One way of running the microphone for a single recording. `AudioCapture`
@@ -46,7 +46,7 @@ struct InputSink {
 /// `start` and `stop` are called in pairs on one thread. Between them the
 /// input delivers to the sink; after `stop` returns it delivers nothing and
 /// the device is no longer running for this process.
-protocol CaptureInput: AnyObject {
+public protocol CaptureInput: AnyObject {
     /// Starts the input on `device` (already validated). Throws
     /// `CaptureError`; on a throw nothing is left running. Returns the
     /// format the input delivers.
@@ -59,5 +59,5 @@ protocol CaptureInput: AnyObject {
 }
 
 extension CaptureInput {
-    func prepareIdle() {}
+    public func prepareIdle() {}
 }

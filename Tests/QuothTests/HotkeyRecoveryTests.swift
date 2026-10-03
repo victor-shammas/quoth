@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothPlatform
 
 final class HotkeyRecoveryTests: XCTestCase {
     private let t0 = Date(timeIntervalSinceReferenceDate: 0)

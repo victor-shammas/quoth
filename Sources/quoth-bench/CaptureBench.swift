@@ -1,6 +1,7 @@
 import CoreAudio
 import Foundation
 import QuothCore
+import QuothPlatform
 
 /// Flags for `quoth-bench capture`.
 struct CaptureBenchOptions {

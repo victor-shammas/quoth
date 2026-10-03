@@ -8,7 +8,7 @@ import Foundation
 /// time the real input format is known. Building the converter then, and
 /// reusing it for every later buffer in that format, keeps allocation out of
 /// the realtime callback after the first buffer.
-final class ConverterCache: @unchecked Sendable {
+public final class ConverterCache: @unchecked Sendable {
     private final class Entry {
         let format: AVAudioFormat
         let converter: AVAudioConverter
@@ -21,16 +21,16 @@ final class ConverterCache: @unchecked Sendable {
         }
     }
 
-    let targetFormat: AVAudioFormat
+    public let targetFormat: AVAudioFormat
     private let lock = NSLock()
     private var entries: [Entry] = []
 
-    init(targetFormat: AVAudioFormat) {
+    public init(targetFormat: AVAudioFormat) {
         self.targetFormat = targetFormat
     }
 
     /// Converters built so far, one per distinct input format.
-    var count: Int {
+    public var count: Int {
         lock.lock()
         defer { lock.unlock() }
         return entries.count
@@ -38,7 +38,7 @@ final class ConverterCache: @unchecked Sendable {
 
     /// Clears each converter's internal state (resampler history), so a new
     /// recording does not start with the tail of the previous one.
-    func resetAll() {
+    public func resetAll() {
         lock.lock()
         defer { lock.unlock() }
         entries.forEach { $0.converter.reset() }
@@ -48,7 +48,7 @@ final class ConverterCache: @unchecked Sendable {
     /// valid inside `body`. Returns false if no converter could be built for
     /// the input format or the conversion failed.
     @discardableResult
-    func convert(_ input: AVAudioPCMBuffer, _ body: (UnsafeBufferPointer<Float>) -> Void) -> Bool {
+    public func convert(_ input: AVAudioPCMBuffer, _ body: (UnsafeBufferPointer<Float>) -> Void) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         guard input.format.sampleRate > 0, let entry = entry(for: input.format) else { return false }
@@ -82,7 +82,7 @@ final class ConverterCache: @unchecked Sendable {
     /// passes it to `body`, possibly in several pieces. The resampler works
     /// in blocks, so without this the last ~85 ms of a recording (the end of
     /// the last word) never comes out. Call once the tap has stopped.
-    func drain(_ body: (UnsafeBufferPointer<Float>) -> Void) {
+    public func drain(_ body: (UnsafeBufferPointer<Float>) -> Void) {
         lock.lock()
         defer { lock.unlock() }
         guard let entry = entries.last else { return }

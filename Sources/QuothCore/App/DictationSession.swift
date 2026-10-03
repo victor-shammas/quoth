@@ -1,5 +1,6 @@
 import Foundation
 import QuothDomain
+import QuothPlatform
 
 /// Runs the dictation loop: gesture → capture → transcribe → process →
 /// deliver. `DictationMachine` makes every decision; this performs its

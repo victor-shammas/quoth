@@ -1,5 +1,6 @@
 import AppKit
 import QuothDomain
+import QuothPlatform
 import SwiftUI
 
 /// The dictionary as rows the Settings table edits. Saves the file a moment

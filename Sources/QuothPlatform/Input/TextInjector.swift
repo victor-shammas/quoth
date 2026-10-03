@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import QuothDomain
 
 /// How a transcript is inserted at the cursor. Paste is the default.
 ///
@@ -21,7 +22,7 @@ public enum InjectMode: String, CaseIterable, Sendable {
 /// explicitly. An event with a nil source inherits the modifiers the user is
 /// holding, so a held Control or Fn turned typed text into shortcuts.
 @MainActor
-final class TextInjector {
+public final class TextInjector {
     /// Where every synthesized event is posted. One constant, so the app
     /// matrix in can switch it in one line if a location fails there.
     ///
@@ -32,10 +33,10 @@ final class TextInjector {
     /// below the session, where the window server can merge in the physical
     /// modifier state; `.cgAnnotatedSessionEventTap` skips the session taps
     /// other tools install. Neither has a reason we can verify.
-    static let postLocation: CGEventTapLocation = .cgSessionEventTap
+    public static let postLocation: CGEventTapLocation = .cgSessionEventTap
 
     /// How long the target app gets to read the clipboard before it is restored.
-    static let settleDelay: TimeInterval = 0.25
+    public static let settleDelay: TimeInterval = 0.25
 
     /// Virtual keycode for V on ANSI layouts (kVK_ANSI_V).
     private static let keycodeV: CGKeyCode = 9
@@ -43,10 +44,10 @@ final class TextInjector {
     /// `CGEventKeyboardSetUnicodeString` takes about 20 UTF-16 units per event.
     private static let chunkSize = 20
 
-    let mode: InjectMode
+    public let mode: InjectMode
     private let clipboard: PasteboardSession
 
-    init(mode: InjectMode, pasteboard: NSPasteboard = .general) {
+    public init(mode: InjectMode, pasteboard: NSPasteboard = .general) {
         self.mode = mode
         self.clipboard = PasteboardSession(
             pasteboard: SystemPasteboard(pasteboard),
@@ -56,7 +57,7 @@ final class TextInjector {
     }
 
     /// Inserts `text` at the cursor.
-    func inject(_ text: String) {
+    public func inject(_ text: String) {
         guard !text.isEmpty else { return }
         switch mode {
         case .paste: clipboard.paste(text)
@@ -66,7 +67,7 @@ final class TextInjector {
 
     /// Deletes `count` characters before the cursor, for "scratch that":
     /// the Delete key, posted as `typeUnicode` posts its events.
-    func deleteBackward(_ count: Int) {
+    public func deleteBackward(_ count: Int) {
         guard count > 0 else { return }
         let source = CGEventSource(stateID: .privateState)
         for _ in 0..<count {
@@ -85,7 +86,7 @@ final class TextInjector {
     private static let keycodeDelete: CGKeyCode = 51
 
     /// Leaves `text` on the clipboard for the user to paste.
-    func copyToClipboard(_ text: String) {
+    public func copyToClipboard(_ text: String) {
         guard !text.isEmpty else { return }
         clipboard.copy(text)
     }
@@ -132,20 +133,20 @@ final class TextInjector {
 // MARK: - Clipboard
 
 /// One representation of one pasteboard item.
-struct PasteboardRepresentation: Equatable {
-    var type: String
-    var data: Data
+public struct PasteboardRepresentation: Equatable {
+    public var type: String
+    public var data: Data
 }
 
 /// Every representation of every item on a pasteboard, so text, images and
 /// copied Finder files all come back.
-struct PasteboardSnapshot: Equatable {
-    var items: [[PasteboardRepresentation]]
+public struct PasteboardSnapshot: Equatable {
+    public var items: [[PasteboardRepresentation]]
 }
 
 /// The pasteboard operations paste mode needs. `NSPasteboard` in the app,
 /// a fake in tests.
-protocol PasteboardAccess: AnyObject {
+public protocol PasteboardAccess: AnyObject {
     var changeCount: Int { get }
     func snapshot() -> PasteboardSnapshot
     func restore(_ snapshot: PasteboardSnapshot)
@@ -160,13 +161,13 @@ protocol PasteboardAccess: AnyObject {
 /// restore keeps the first snapshot, so the user's own clipboard comes back,
 /// not an earlier transcript. If anything else writes the clipboard during
 /// the window, that write wins and nothing is restored over it.
-final class PasteboardSession {
+public final class PasteboardSession {
     /// nspasteboard.org markers: clipboard managers skip these items.
-    static let transientMarkers = ["org.nspasteboard.TransientType", "org.nspasteboard.ConcealedType"]
+    public static let transientMarkers = ["org.nspasteboard.TransientType", "org.nspasteboard.ConcealedType"]
     /// A clipboard fallback is meant to stay, but is still kept out of history.
-    static let concealedMarkers = ["org.nspasteboard.ConcealedType"]
+    public static let concealedMarkers = ["org.nspasteboard.ConcealedType"]
 
-    typealias Schedule = (TimeInterval, @escaping () -> Void) -> Void
+    public typealias Schedule = (TimeInterval, @escaping () -> Void) -> Void
 
     private let pasteboard: PasteboardAccess
     private let settleDelay: TimeInterval
@@ -180,7 +181,7 @@ final class PasteboardSession {
     /// Bumped on every write; only the latest scheduled restore runs.
     private var generation = 0
 
-    init(
+    public init(
         pasteboard: PasteboardAccess,
         settleDelay: TimeInterval,
         postPaste: @escaping () -> Void,
@@ -194,9 +195,9 @@ final class PasteboardSession {
         self.schedule = schedule
     }
 
-    var isRestorePending: Bool { saved != nil }
+    public var isRestorePending: Bool { saved != nil }
 
-    func paste(_ text: String) {
+    public func paste(_ text: String) {
         if saved == nil {
             saved = pasteboard.snapshot()
         }
@@ -212,7 +213,7 @@ final class PasteboardSession {
 
     /// Puts `text` on the clipboard to stay. Drops any pending restore, which
     /// would otherwise overwrite it.
-    func copy(_ text: String) {
+    public func copy(_ text: String) {
         saved = nil
         generation += 1
         pasteboard.write(text, markers: Self.concealedMarkers)
@@ -231,16 +232,16 @@ final class PasteboardSession {
 }
 
 /// `PasteboardAccess` over an `NSPasteboard`.
-final class SystemPasteboard: PasteboardAccess {
+public final class SystemPasteboard: PasteboardAccess {
     private let pasteboard: NSPasteboard
 
-    init(_ pasteboard: NSPasteboard) {
+    public init(_ pasteboard: NSPasteboard) {
         self.pasteboard = pasteboard
     }
 
-    var changeCount: Int { pasteboard.changeCount }
+    public var changeCount: Int { pasteboard.changeCount }
 
-    func snapshot() -> PasteboardSnapshot {
+    public func snapshot() -> PasteboardSnapshot {
         let items = (pasteboard.pasteboardItems ?? []).map { item in
             item.types.compactMap { type in
                 item.data(forType: type).map { PasteboardRepresentation(type: type.rawValue, data: $0) }
@@ -249,7 +250,7 @@ final class SystemPasteboard: PasteboardAccess {
         return PasteboardSnapshot(items: items)
     }
 
-    func restore(_ snapshot: PasteboardSnapshot) {
+    public func restore(_ snapshot: PasteboardSnapshot) {
         pasteboard.clearContents()
         let items = snapshot.items.map { representations -> NSPasteboardItem in
             let item = NSPasteboardItem()
@@ -263,7 +264,7 @@ final class SystemPasteboard: PasteboardAccess {
         }
     }
 
-    func write(_ text: String, markers: [String]) {
+    public func write(_ text: String, markers: [String]) {
         pasteboard.clearContents()
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)

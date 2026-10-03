@@ -4,7 +4,7 @@ import QuothDomain
 /// Why a recording could not start or produced nothing usable. Each case has
 /// a one-line `userMessage` for the overlay; `description` adds the details
 /// for the log. Neither ever contains audio or transcript text.
-package enum CaptureError: Error, UserFacingError, CustomStringConvertible {
+public enum CaptureError: Error, UserFacingError, CustomStringConvertible {
     /// Microphone access is denied or restricted for this app.
     case microphoneDenied
     /// The system has not asked yet, or the prompt is still open.
@@ -19,7 +19,7 @@ package enum CaptureError: Error, UserFacingError, CustomStringConvertible {
     /// removed, or its format changed). The partial capture was discarded.
     case routeChanged
 
-    package var userMessage: String {
+    public var userMessage: String {
         switch self {
         case .microphoneDenied:
             return "microphone access denied: System Settings → Privacy & Security → Microphone"
@@ -34,7 +34,7 @@ package enum CaptureError: Error, UserFacingError, CustomStringConvertible {
         }
     }
 
-    package var description: String {
+    public var description: String {
         switch self {
         case .invalidInputFormat(let sampleRate, let channels):
             return "\(userMessage) (input reports \(sampleRate) Hz, \(channels) ch)"

@@ -1,4 +1,6 @@
 import AppKit
+import QuothDomain
+import QuothPlatform
 
 /// The last transcript, for Copy Last Dictation and Fix Last Dictation.
 ///

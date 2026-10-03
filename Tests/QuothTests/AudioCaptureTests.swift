@@ -2,6 +2,7 @@ import AVFoundation
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
 
 final class AudioCaptureTests: XCTestCase {
     private struct Boom: Error {}

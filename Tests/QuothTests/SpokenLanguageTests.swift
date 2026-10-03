@@ -1,7 +1,7 @@
+import WhisperKit
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
-import WhisperKit
 
 final class SpokenLanguageTests: XCTestCase {
     private var base: TranscriptionModel { ModelRegistry.find("whisper-base.en")! }

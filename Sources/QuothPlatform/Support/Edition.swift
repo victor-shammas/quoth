@@ -12,40 +12,40 @@ import CoreGraphics
 ///
 /// Everything that differs is decided here, so the rest of the code asks a
 /// question ("can it read the focused field?") rather than testing the flag.
-enum Edition {
+public enum Edition {
     #if APPSTORE
-    static let isAppStore = true
+    public static let isAppStore = true
     #else
-    static let isAppStore = false
+    public static let isAppStore = false
     #endif
 
     /// Whether this build may insert text at the cursor by posting ⌘V. The
     /// App Store build keeps it behind its own grant, and turning this off
     /// makes it copy-only, should App Review rule out auto-paste (2.4.5).
-    static let allowsAutoPaste = true
+    public static let allowsAutoPaste = true
 
     /// Whether the focused field can be read over Accessibility: for the
     /// password-field and focus checks, and for the text before the cursor.
     /// The sandbox forbids it, so the App Store build compares the frontmost
     /// app and asks macOS whether secure input is on instead.
-    static let readsFocusedField = !isAppStore
+    public static let readsFocusedField = !isAppStore
 
     /// Whether pasting is a grant of its own, offered in onboarding and
     /// Settings: in the App Store build, unless it is copy-only.
-    static let pasteNeedsOwnGrant = isAppStore && allowsAutoPaste
+    public static let pasteNeedsOwnGrant = isAppStore && allowsAutoPaste
 
     /// Whether Quoth offers to open its settings and dictionary files in a
     /// text editor. In the sandbox they sit inside the container, where
     /// another app can't reliably open them; the editors in Settings cover
     /// everything there.
-    static let opensConfigFiles = !isAppStore
+    public static let opensConfigFiles = !isAppStore
 }
 
 /// The grant the hotkey needs: Accessibility in the direct build (which also
 /// covers pasting and reading the focused field), Input Monitoring in the
 /// App Store build, whose tap only listens to modifier keys.
-enum HotkeyAccess {
-    static var isGranted: Bool {
+public enum HotkeyAccess {
+    public static var isGranted: Bool {
         #if APPSTORE
         CGPreflightListenEventAccess()
         #else
@@ -54,7 +54,7 @@ enum HotkeyAccess {
     }
 
     /// Shows the system prompt, which also lists Quoth in the pane.
-    static func request() {
+    public static func request() {
         #if APPSTORE
         _ = CGRequestListenEventAccess()
         #else
@@ -64,17 +64,17 @@ enum HotkeyAccess {
     }
 
     /// The grant's name in System Settings → Privacy & Security.
-    static var name: String { Edition.isAppStore ? "Input Monitoring" : "Accessibility" }
+    public static var name: String { Edition.isAppStore ? "Input Monitoring" : "Accessibility" }
 
     /// Its pane, for `Permissions.openSettings(pane:)`.
-    static var settingsPane: String { Edition.isAppStore ? "Privacy_ListenEvent" : "Privacy_Accessibility" }
+    public static var settingsPane: String { Edition.isAppStore ? "Privacy_ListenEvent" : "Privacy_Accessibility" }
 }
 
 /// The grant for pasting at the cursor. The direct build has it with
 /// Accessibility; the App Store build asks for it separately and, without
 /// it, leaves each transcript on the clipboard.
-enum PasteAccess {
-    static var isGranted: Bool {
+public enum PasteAccess {
+    public static var isGranted: Bool {
         guard Edition.allowsAutoPaste else { return false }
         #if APPSTORE
         return CGPreflightPostEventAccess()
@@ -83,7 +83,7 @@ enum PasteAccess {
         #endif
     }
 
-    static func request() {
+    public static func request() {
         #if APPSTORE
         _ = CGRequestPostEventAccess()
         #else

@@ -2,6 +2,8 @@ import AVFoundation
 import CoreAudio
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
+@testable import QuothPlatform
 
 final class HALInputTests: XCTestCase {
     private let mic = InputDevice(sampleRate: 48_000, channels: 1, id: 42)

@@ -1,5 +1,6 @@
 import AppKit
 import QuothDomain
+import QuothPlatform
 import SwiftUI
 
 /// The onboarding window: one page with the hotkey, the languages the

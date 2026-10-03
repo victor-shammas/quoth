@@ -4,11 +4,6 @@ import PackageDescription
 let package = Package(
     name: "quoth",
     platforms: [.macOS(.v14)],
-    products: [
-        // For the App Store project (project.yml), which links the modules
-        // as a local package.
-        .library(name: "QuothDomain", targets: ["QuothDomain"]),
-    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         // WhisperKit, renamed argmax-oss-swift. 1.1.0 is the first release with
@@ -23,11 +18,19 @@ let package = Package(
         // Pure logic, Foundation only (ADR-007): gesture rules, the
         // dictionary, voice commands, settings values, the model catalog.
         .target(name: "QuothDomain"),
+        // macOS behind small types (ADR-007): the microphone, the hotkey
+        // tap, text insertion, focus, permissions, and what the two
+        // editions do differently.
+        .target(
+            name: "QuothPlatform",
+            dependencies: ["QuothDomain"]
+        ),
         // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
         .target(
             name: "QuothCore",
             dependencies: [
                 "QuothDomain",
+                "QuothPlatform",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
@@ -45,6 +48,7 @@ let package = Package(
             dependencies: [
                 "QuothCore",
                 "QuothDomain",
+                "QuothPlatform",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
@@ -54,6 +58,7 @@ let package = Package(
             dependencies: [
                 "QuothCore",
                 "QuothDomain",
+                "QuothPlatform",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
             ]
         ),

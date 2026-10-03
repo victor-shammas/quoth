@@ -1,6 +1,7 @@
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
 
 final class OnboardingTests: XCTestCase {
     private let granted = PermissionState(hotkey: true, microphone: .granted)

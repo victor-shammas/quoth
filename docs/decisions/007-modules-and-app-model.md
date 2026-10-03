@@ -33,7 +33,8 @@ Dependencies point down the table and never back up. The compiler enforces it: a
 
 ### 1.4 — Editions
 
-- `Capabilities` is a value with the same questions `Edition` answers today (`readsFocusedField`, `pasteNeedsOwnGrant`, `hasUpdater`, `opensConfigFiles`). It is built once, by `Capabilities.current`, the only code that tests `APPSTORE`. Everything else receives it, so tests can run both editions' behaviour in one process.
+- `Edition` stays a set of compile-time constants in `QuothPlatform`, which the App Store project compiles with `APPSTORE`. (The first plan was a `Capabilities` value passed in at runtime, so tests could run both editions in one process. Constants are what let the compiler drop every Accessibility call from the App Store build, which ADR-006 relies on.)
+- The Accessibility types (`FocusedElement`) stay internal to `QuothPlatform`: public, they can't be dropped, and the App Store build links five AX functions. `scripts/appstore.sh` fails the build if any appear.
 
 ### 1.5 — No command line
 

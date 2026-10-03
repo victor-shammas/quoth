@@ -33,6 +33,20 @@ targets:
       base:
         SWIFT_VERSION: "5.0"
         PRODUCT_NAME: QuothDomain
+  QuothPlatform:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/QuothPlatform
+    dependencies:
+      - target: QuothDomain
+        link: false
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        PRODUCT_NAME: QuothPlatform
+        # Edition.swift decides what the App Store build does differently.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APPSTORE
   Quoth:
     type: application
     platform: macOS
@@ -47,6 +61,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: QuothDomain
+      - target: QuothPlatform
       - package: argmax-oss-swift
         product: WhisperKit
     settings:

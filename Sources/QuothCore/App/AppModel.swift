@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import QuothDomain
+import QuothPlatform
 
 /// What Quoth shows and what the user can ask of it (ADR-007).
 ///

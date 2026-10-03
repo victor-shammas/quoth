@@ -6,12 +6,12 @@ import Foundation
 /// A long-lived engine keeps the input graph it was built with, so after
 /// sleep, docking, or connecting AirPods it records the wrong format or
 /// nothing; releasing it also lets a Bluetooth mic close between recordings.
-final class EngineInput: CaptureInput {
+public final class EngineInput: CaptureInput {
     private var engine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
     private var configurationObserver: NSObjectProtocol?
 
-    func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
+    public func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let hardware = input.inputFormat(forBus: 0)
@@ -56,7 +56,7 @@ final class EngineInput: CaptureInput {
         return InputDevice(sampleRate: tapFormat.sampleRate, channels: tapFormat.channelCount)
     }
 
-    func stop() {
+    public func stop() {
         guard let engine else { return }
         engine.stop()
         inputNode?.removeTap(onBus: 0)

@@ -1,5 +1,6 @@
 import Foundation
 import QuothDomain
+import QuothPlatform
 
 /// What the onboarding window offers and what Get Started saves. Pure, so it
 /// is tested; `OnboardingWindow` is the view.

@@ -31,6 +31,19 @@ auth() {
     echo -allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 }
 
+# The App Store build reads no other app's fields (ADR-006): no Accessibility
+# function may be linked in. FocusedElement is internal to QuothPlatform so
+# the optimizer can drop it; making it public brings five of them back.
+no_accessibility() {
+    local found
+    found="$(nm -u "$1" | grep -E '^ *_AX[A-Z]' || true)"
+    if [ -n "$found" ]; then
+        echo "error: the App Store build links Accessibility functions:" >&2
+        echo "$found" >&2
+        exit 1
+    fi
+}
+
 case "${1:-}" in
 build)
     xcodebuild -project Quoth.xcodeproj -scheme Quoth -configuration Release -derivedDataPath "$OUT" \
@@ -39,12 +52,14 @@ build)
     # `open -a Quoth` and Spotlight find the installed app, not this build.
     /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister \
         -u "$OUT/Build/Products/Release/Quoth.app" || true
+    no_accessibility "$OUT/Build/Products/Release/Quoth.app/Contents/MacOS/Quoth"
     echo "$OUT/Build/Products/Release/Quoth.app"
     ;;
 archive)
     # shellcheck disable=SC2046
     xcodebuild archive -project Quoth.xcodeproj -scheme Quoth -configuration Release \
         -archivePath "$ARCHIVE" $(auth)
+    no_accessibility "$ARCHIVE/Products/Applications/Quoth.app/Contents/MacOS/Quoth"
     echo "$ARCHIVE"
     ;;
 upload)

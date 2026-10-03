@@ -9,20 +9,22 @@ import QuothDomain
 ///
 /// Taken at recording start and again right before delivery, over
 /// Accessibility, so delivery needs no watch on keystrokes or clicks.
-struct FocusSnapshot {
+public struct FocusSnapshot {
     /// The frontmost app, if any.
-    var pid: pid_t?
+    public var pid: pid_t?
     /// The focused element, if the app exposes one over Accessibility.
+    /// Internal, with `FocusedElement`, so the App Store build, where it is
+    /// always nil, compiles no Accessibility calls (ADR-006).
     var element: FocusedElement?
     /// The focused element is a secure text field or reports protected content.
-    var isSecure: Bool
+    public var isSecure: Bool
 
     /// Upper bound on each Accessibility call, so a hung app cannot stall
     /// the main thread (and with it the hotkey tap).
     private static let messagingTimeout: Float = 0.25
 
     @MainActor
-    static func capture() -> FocusSnapshot {
+    public static func capture() -> FocusSnapshot {
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         // The App Store build can't read other apps' elements: it compares
         // the frontmost app, and treats secure input (which macOS turns on
@@ -48,7 +50,7 @@ struct FocusSnapshot {
     /// manager can leave it on for every app, so the session's owner of it
     /// must be the frontmost app. With no owner recorded, it counts: never
     /// type into what may be a password field.
-    static func secureInputIsFrontmost(_ pid: pid_t?) -> Bool {
+    public static func secureInputIsFrontmost(_ pid: pid_t?) -> Bool {
         guard IsSecureEventInputEnabled() else { return false }
         guard let session = CGSessionCopyCurrentDictionary() as? [String: Any],
               let owner = (session["kCGSSessionSecureInputPID"] as? NSNumber)?.int32Value
@@ -60,7 +62,7 @@ struct FocusSnapshot {
     /// element must match when both snapshots saw one; an element seen only
     /// once is not a change, because Chromium and Electron apps build their
     /// Accessibility tree lazily and may expose nothing at recording start.
-    func hasChanged(to now: FocusSnapshot) -> Bool {
+    public func hasChanged(to now: FocusSnapshot) -> Bool {
         if pid != now.pid { return true }
         if let element, let other = now.element, element != other { return true }
         return false

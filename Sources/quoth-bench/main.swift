@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import QuothCore
+import QuothPlatform
 
 // Developer benchmarks for Quoth. Not part of Quoth.app.
 

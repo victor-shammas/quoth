@@ -1,5 +1,7 @@
 import AppKit
 import Foundation
+import QuothDomain
+import QuothPlatform
 import Sparkle
 
 /// In-app updates through Sparkle, in the app role only.

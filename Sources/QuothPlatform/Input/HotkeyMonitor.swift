@@ -22,8 +22,8 @@ import QuothDomain
 ///
 /// Everything here runs on the main thread: the tap's run loop source, the
 /// watchdog and the retries are all on the main run loop.
-final class HotkeyMonitor {
-    enum Event: Equatable {
+public final class HotkeyMonitor {
+    public enum Event: Equatable {
         /// Start recording.
         case pressed
         /// Stop recording and transcribe.
@@ -33,16 +33,16 @@ final class HotkeyMonitor {
         /// A double tap locked the recording on; it continues with the key up.
         case locked
     }
-    enum HotkeyError: Error { case tapCreateFailed }
+    public enum HotkeyError: Error { case tapCreateFailed }
 
     /// How often the watchdog checks that the tap is still enabled.
-    static let watchdogInterval: TimeInterval = 5
+    public static let watchdogInterval: TimeInterval = 5
     /// The longest a locked recording runs before it is transcribed on its
     /// own, so a forgotten lock does not record indefinitely.
-    static let lockLimit: TimeInterval = 10 * 60
+    public static let lockLimit: TimeInterval = 10 * 60
 
     /// The modifier held to dictate. Change it with `setKey(_:)`.
-    private(set) var key: HotkeyKey
+    public private(set) var key: HotkeyKey
     private let debug: Bool
     private var onEvent: ((Event) -> Void)?
     private var tap: CFMachPort?
@@ -55,14 +55,14 @@ final class HotkeyMonitor {
     private var watchdog: Timer?
 
     /// Called on the main thread when the tap's health changes.
-    var onHealthChange: ((HotkeyHealth) -> Void)?
-    private(set) var health: HotkeyHealth = .ok {
+    public var onHealthChange: ((HotkeyHealth) -> Void)?
+    public private(set) var health: HotkeyHealth = .ok {
         didSet {
             if health != oldValue { onHealthChange?(health) }
         }
     }
 
-    init(key: HotkeyKey = .fn, lockEnabled: Bool = true, debug: Bool = false) {
+    public init(key: HotkeyKey = .fn, lockEnabled: Bool = true, debug: Bool = false) {
         self.key = key
         self.debug = debug
         self.gesture = Gesture(lockEnabled: lockEnabled)
@@ -70,20 +70,20 @@ final class HotkeyMonitor {
 
     /// Turn the double-tap lock on or off. A recording already locked keeps
     /// running until the next press.
-    func setLockEnabled(_ enabled: Bool) {
+    public func setLockEnabled(_ enabled: Bool) {
         gesture.lockEnabled = enabled
     }
 
     /// Switch to another key without recreating the tap; the next press of
     /// `newKey` records. A recording in progress on the old key is cancelled.
-    func setKey(_ newKey: HotkeyKey) {
+    public func setKey(_ newKey: HotkeyKey) {
         guard newKey != key else { return }
         let action = gesture.reset()
         key = newKey
         if let action { emit(action) }
     }
 
-    func start(onEvent: @escaping (Event) -> Void) throws {
+    public func start(onEvent: @escaping (Event) -> Void) throws {
         self.onEvent = onEvent
 
         // The caller waits for the grant before starting (Assembly.startHotkey);
@@ -130,7 +130,7 @@ final class HotkeyMonitor {
         self.watchdog = watchdog
     }
 
-    func stop() {
+    public func stop() {
         watchdog?.invalidate()
         watchdog = nil
         lockTimer?.invalidate()
@@ -182,7 +182,7 @@ final class HotkeyMonitor {
 
     /// End a locked recording now and transcribe it, as if the hotkey were
     /// tapped: for the length cap and a microphone change.
-    func endLock(reason: String) {
+    public func endLock(reason: String) {
         guard let action = gesture.expireLock() else { return }
         Log.info("ending the lock: \(reason)")
         emit(action)
@@ -190,7 +190,7 @@ final class HotkeyMonitor {
 
     /// The press just reported started no recording: ignore the rest of its
     /// hold, so it can't lock a recording that isn't running.
-    func abandonPress() {
+    public func abandonPress() {
         gesture.abandonPress()
     }
 
@@ -207,9 +207,9 @@ final class HotkeyMonitor {
 
     /// The modifier keycodes that count as another key in a chord: both
     /// sides of ⌘ ⇧ ⌥ ⌃, and fn. Caps Lock and unknown keycodes do not.
-    static let modifierKeycodes: Set<Int64> = [54, 55, 56, 58, 59, 60, 61, 62, 63]
+    public static let modifierKeycodes: Set<Int64> = [54, 55, 56, 58, 59, 60, 61, 62, 63]
     /// Flags that mean another modifier is down at the press.
-    static let chordFlags: CGEventFlags = [.maskShift, .maskControl, .maskAlternate, .maskCommand]
+    public static let chordFlags: CGEventFlags = [.maskShift, .maskControl, .maskAlternate, .maskCommand]
 
     /// What one `flagsChanged` event means for `key`, given whether the key
     /// is already held. Pure, so the matching is tested without a tap.
@@ -219,7 +219,7 @@ final class HotkeyMonitor {
     /// - Release: the key's keycode arrives again, or its flag is clear on
     ///   any event while held, which also covers a missed release.
     /// - Another modifier's keycode while held is a chord.
-    static func input(keycode: Int64, flags: CGEventFlags, key: HotkeyKey, held: Bool) -> Gesture.Input? {
+    public static func input(keycode: Int64, flags: CGEventFlags, key: HotkeyKey, held: Bool) -> Gesture.Input? {
         let flagSet = flags.contains(key.flag)
         if held {
             if !flagSet { return .hotkeyUp }
@@ -296,7 +296,7 @@ final class HotkeyMonitor {
     /// and what the keyboard holds now. Only a missed release is emitted: a
     /// press missed while the tap was off does not start a recording halfway
     /// through, and its release is then ignored because no press was seen.
-    static func resyncEvent(wasPressed: Bool, heldNow: Bool) -> Event? {
+    public static func resyncEvent(wasPressed: Bool, heldNow: Bool) -> Event? {
         wasPressed && !heldNow ? .released : nil
     }
 }
