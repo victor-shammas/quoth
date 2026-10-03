@@ -54,9 +54,9 @@ public struct DictionaryReplacer {
     private static func compile(_ rules: [Rule]) -> NSRegularExpression? {
         guard !rules.isEmpty else { return nil }
         let wordCharacter = #"[\p{L}\p{M}\p{N}_]"#
-        let alternatives = rules.map { "(" + pattern(for: $0.from) + ")" }.joined(separator: "|")
-        let pattern = "(?<!\(wordCharacter))(?:\(alternatives))(?!\(wordCharacter))"
-        return try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+        let alternatives = rules.map { "(" + Self.pattern(for: $0.from) + ")" }.joined(separator: "|")
+        let whole = "(?<!\(wordCharacter))(?:\(alternatives))(?!\(wordCharacter))"
+        return try? NSRegularExpression(pattern: whole, options: [.caseInsensitive])
     }
 
     // MARK: Patterns
