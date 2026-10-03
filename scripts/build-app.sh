@@ -12,13 +12,15 @@
 # hardened runtime, as notarization requires.
 #
 # Signs with the first "Developer ID Application" identity in the keychain,
-# with the hardened runtime and packaging/Quoth.entitlements. The
-# designated requirement then names the bundle ID and the team, not a
+# or else the first "Apple Development" one (fine for this Mac, not for
+# distribution), with the hardened runtime and packaging/Quoth.entitlements.
+# The designated requirement then names the bundle ID and the team, not a
 # cdhash, so macOS keeps the Microphone and Accessibility grants across
-# builds. Without an identity the app is ad-hoc signed and every build is a
-# new identity; the script says so.
+# builds. Without either the app is ad-hoc signed, without the hardened
+# runtime (its library validation would refuse the ad-hoc Sparkle), and
+# every build is a new identity; the script says so.
 #
-#   QUOTH_SIGN_IDENTITY   signing identity (default: the keychain's Developer ID)
+#   QUOTH_SIGN_IDENTITY   signing identity (default: as above)
 #   QUOTH_TIMESTAMP=none  skip the secure timestamp (local builds, offline);
 #                          notarization needs it, so releases leave this unset
 #   QUOTH_BUILD_DIR       output directory (default: build)
@@ -31,8 +33,11 @@ VERSION="${VERSION#v}"
 OUT="${QUOTH_BUILD_DIR:-build}"
 APP="$OUT/Quoth.app"
 
-IDENTITY="${QUOTH_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
-    | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)}"
+identity() {
+    security find-identity -v -p codesigning | sed -n "s/.*\"\($1: [^\"]*\)\".*/\1/p" | head -1
+}
+IDENTITY="${QUOTH_SIGN_IDENTITY:-$(identity "Developer ID Application")}"
+IDENTITY="${IDENTITY:-$(identity "Apple Development")}"
 
 echo "→ building quoth $VERSION (release, arm64)"
 swift build -c release --arch arm64 --product quoth
@@ -64,14 +69,21 @@ cp packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 TIMESTAMP="--timestamp"
 [ "${QUOTH_TIMESTAMP:-}" = "none" ] && TIMESTAMP="--timestamp=none"
 
+RUNTIME="--options runtime"
 if [ -n "$IDENTITY" ]; then
     echo "→ signing as $IDENTITY"
     SIGN_AS="$IDENTITY"
+    case "$IDENTITY" in
+    "Apple Development"*)
+        echo "  (a development identity: fine on this Mac, not for distribution)"
+        TIMESTAMP="--timestamp=none" ;;
+    esac
 else
-    echo "! no Developer ID Application identity; ad-hoc signing."
+    echo "! no Developer ID Application or Apple Development identity; ad-hoc signing."
     echo "  Permissions will not survive the next build, and the app can't be notarized."
     SIGN_AS="-"
     TIMESTAMP="--timestamp=none"
+    RUNTIME=""
 fi
 
 # Inside-out: each nested bundle before the one that contains it, as in
@@ -83,10 +95,10 @@ for nested in \
     "$SPARKLE/Autoupdate" \
     "$SPARKLE/Updater.app" \
     "$APP/Contents/Frameworks/Sparkle.framework"; do
-    codesign --force --options runtime $TIMESTAMP --preserve-metadata=entitlements \
+    codesign --force $RUNTIME $TIMESTAMP --preserve-metadata=entitlements \
         --sign "$SIGN_AS" "$nested"
 done
-codesign --force --options runtime $TIMESTAMP \
+codesign --force $RUNTIME $TIMESTAMP \
     --entitlements packaging/Quoth.entitlements \
     --sign "$SIGN_AS" "$APP"
 
