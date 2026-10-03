@@ -14,7 +14,7 @@ final class TranscriberTimingsTests: XCTestCase {
         t.fullPipeline = 0.126
         t.totalEncodingRuns = 1
         t.totalDecodingLoops = 17
-        let out = WhisperKitTranscriber.timings(from: [t], audioSeconds: 5, preprocessing: 0.001, total: 0.130)
+        let out = TranscriberTimings(whisperKit: [t], audioSeconds: 5, preprocessing: 0.001, total: 0.130)
         XCTAssertEqual(out.preprocessing, 0.006, accuracy: 1e-9)
         XCTAssertEqual(out.encoder, 0.020, accuracy: 1e-9)
         XCTAssertEqual(out.decoder, 0.100, accuracy: 1e-9)
@@ -29,8 +29,7 @@ final class TranscriberTimingsTests: XCTestCase {
         var t = TranscriptionTimings()
         t.encoding = 0.020
         t.fullPipeline = 0.020
-        let out = WhisperKitTranscriber.timings(
-            from: [t], audioSeconds: 2, preprocessing: 0, languageDetection: 0.030, total: 0.060
+        let out = TranscriberTimings(whisperKit: [t], audioSeconds: 2, preprocessing: 0, languageDetection: 0.030, total: 0.060
         )
         XCTAssertEqual(out.languageDetection, 0.030, accuracy: 1e-9)
         XCTAssertEqual(out.postprocessing, 0.010, accuracy: 1e-9)
@@ -40,7 +39,7 @@ final class TranscriberTimingsTests: XCTestCase {
         var t = TranscriptionTimings()
         t.decodingFallback = 0.05
         t.totalDecodingFallbacks = 0
-        XCTAssertEqual(WhisperKitTranscriber.timings(from: [t], audioSeconds: 1, preprocessing: 0, total: 0.1).fallbacks, 1)
+        XCTAssertEqual(TranscriberTimings(whisperKit: [t], audioSeconds: 1, preprocessing: 0, total: 0.1).fallbacks, 1)
     }
 }
 

@@ -29,7 +29,7 @@ enum Startup {
         default: break
         }
         let model = model(for: modelID)
-        if !WhisperKitTranscriber.isCached(model) {
+        if !ModelFiles(model).isDownloaded {
             Log.info("\(model.id) not in \(Paths.appSupport.path), downloading")
         }
         return model

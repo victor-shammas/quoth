@@ -128,7 +128,9 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
     Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
 
 Sources/QuothSpeech/            speech recognition: WhisperKit and the models on disk
-  WhisperKitTranscriber.swift   loading, transcribing, the on-disk model cache and deleting a model
+  WhisperKitTranscriber.swift   loading a model and transcribing, in the planned language
+  ModelFiles.swift              one model's files on disk: downloaded, complete, size, delete
+  WhisperText.swift             the prompt and its tokens, cleaning Whisper's output, its timings
   WhisperTuning.swift           compute units and decoding options, measured with `quoth-bench`
   LanguageDetector.swift        Automatic: which language a dictation is in
 

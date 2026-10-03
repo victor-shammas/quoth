@@ -88,7 +88,7 @@ enum TranscriptionBench {
             print("unknown model: \(options.model ?? "")")
             throw SilentExit(1)
         }
-        guard WhisperKitTranscriber.isCached(model) else {
+        guard ModelFiles(model).isDownloaded else {
             print("\(model.id) is not downloaded; choose it in Quoth's Settings › Model to download it")
             throw SilentExit(1)
         }

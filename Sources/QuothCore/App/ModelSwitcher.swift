@@ -44,7 +44,7 @@ final class ModelSwitcher {
         }
         Log.info("model: loading \(next.id) behind \(model.id)")
         let generation = self.generation
-        report(WhisperKitTranscriber.isCached(next) ? .loading : .downloading(nil), for: next, generation)
+        report(ModelFiles(next).isDownloaded ? .loading : .downloading(nil), for: next, generation)
         load = Task { await self.load(next, generation) }
     }
 

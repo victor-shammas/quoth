@@ -4,6 +4,10 @@ import QuothDomain
 import QuothPlatform
 import WhisperKit
 
+/// Whisper through WhisperKit, on the Neural Engine. Loads its model once
+/// (downloading it first if needed) and transcribes in the language
+/// `SpokenLanguage` plans, splitting a recording whose language detection
+/// is unsure.
 public actor WhisperKitTranscriber: Transcriber {
     public let modelID: String
     private let model: TranscriptionModel
@@ -24,27 +28,27 @@ public actor WhisperKitTranscriber: Transcriber {
     /// when there is anything to download.
     public func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if pipeline != nil || retired { return }
-        let whisperKitID = model.variant
         Log.info("loading \(model.id)...")
         // Explicit downloadBase: the HubApi default is ~/Documents/huggingface,
         // which a login item can't always read and iCloud may evict. The
         // tokenizer folder follows downloadBase.
         let base = try Paths.prepareDirectory(Paths.appSupport)
+        let files = ModelFiles(model, base: base)
         let loaded: WhisperKit
         // A model already on disk loads from there, with no network: the
         // download step lists the repository's files on Hugging Face even
         // when nothing needs fetching, so offline it would fail. If the local
         // copy doesn't load (an interrupted download), download and retry.
-        if Self.isOnDisk(whisperKitID, base: base) {
+        if files.isComplete {
             do {
-                loaded = try await Self.load(whisperKitID, from: base.appendingPathComponent(Self.folders(for: whisperKitID)[0]), base: base, tuning: tuning)
+                loaded = try await Self.load(model.variant, from: files.weights, base: base, tuning: tuning)
             } catch {
                 try Task.checkCancellation()
                 Log.warning("\(model.id) on disk didn't load (\(error)); downloading it again")
-                loaded = try await Self.downloadAndLoad(whisperKitID, base: base, tuning: tuning, progress: progress)
+                loaded = try await Self.downloadAndLoad(model.variant, base: base, tuning: tuning, progress: progress)
             }
         } else {
-            loaded = try await Self.downloadAndLoad(whisperKitID, base: base, tuning: tuning, progress: progress)
+            loaded = try await Self.downloadAndLoad(model.variant, base: base, tuning: tuning, progress: progress)
         }
         // Replaced while loading (a model change during startup): drop it.
         if retired {
@@ -135,14 +139,14 @@ public actor WhisperKitTranscriber: Transcriber {
         let continuing = context.previousLanguage == nil || context.previousLanguage == language ? context.previousText : nil
         let options = tuning.decodingOptions(
             language: language,
-            promptTokens: Self.promptTokens(for: Self.prompt(prompt, continuing: continuing), tokenizer: pipeline.tokenizer),
+            promptTokens: WhisperText.tokens(for: WhisperText.prompt(prompt, continuing: continuing), tokenizer: pipeline.tokenizer),
             audioSeconds: Double(input.count) / Double(WhisperKit.sampleRate)
         )
         let results = try await pipeline.transcribe(audioArray: input, decodeOptions: options)
         let raw = results.map(\.text).joined(separator: " ")
-        let text = Self.sanitize(raw)
-        var timings = Self.timings(
-            from: results.map(\.timings),
+        let text = WhisperText.clean(raw)
+        var timings = TranscriberTimings(
+            whisperKit: results.map(\.timings),
             audioSeconds: Double(input.count) / Double(WhisperKit.sampleRate),
             preprocessing: trimTime,
             languageDetection: detectTime,
@@ -189,180 +193,23 @@ public actor WhisperKitTranscriber: Transcriber {
         case .fixed(let code):
             // An explicit Language setting fills the prompt already; a single
             // spoken language comes here with it still unset.
-            return (code, context.prompt ?? Self.example(in: context.examples, for: code), nil)
+            return (code, context.prompt ?? WhisperText.example(in: context.examples, for: code), nil)
         case .detect(let candidates):
             let among = candidates.isEmpty ? Array(model.supportedLanguages) : candidates
             let fallback = context.previousLanguage ?? candidates.first
-            guard !input.isEmpty else { return (fallback, Self.example(in: context.examples, for: fallback), nil) }
+            guard !input.isEmpty else { return (fallback, WhisperText.example(in: context.examples, for: fallback), nil) }
             do {
                 let ranked = try await LanguageDetector.detect(input, among: among, pipeline: pipeline)
                 let chosen = SpokenLanguage.choose(ranked, previous: context.previousLanguage) ?? ranked[0].code
                 Log.info("language: \(chosen) (" + ranked.prefix(3).map {
                     String(format: "%@ %.2f", $0.code, $0.probability)
                 }.joined(separator: " · ") + ")")
-                return (chosen, Self.example(in: context.examples, for: chosen), ranked[0].probability)
+                return (chosen, WhisperText.example(in: context.examples, for: chosen), ranked[0].probability)
             } catch {
                 Log.warning("language detection failed: \(error); using \(fallback ?? "the model's default")")
-                return (fallback, Self.example(in: context.examples, for: fallback), nil)
+                return (fallback, WhisperText.example(in: context.examples, for: fallback), nil)
             }
         }
-    }
-
-    /// The example sentence in `examples` for `language`, matched as the
-    /// dictionary matches it.
-    public static func example(in examples: [String: String], for language: String?) -> String? {
-        examples.isEmpty ? nil : UserDictionary(examples: examples).example(for: language)
-    }
-
-    /// WhisperKit's per-stage timings folded into Quoth's stages. The decoder
-    /// is what the pipeline spent outside preprocessing, the encoder and
-    /// windowing; post-processing is the rest of the call. `ownPreprocessing` is
-    /// time Quoth spent on the audio before handing it to WhisperKit.
-    public static func timings(
-        from results: [TranscriptionTimings],
-        audioSeconds: TimeInterval,
-        preprocessing ownPreprocessing: TimeInterval,
-        languageDetection: TimeInterval = 0,
-        total: TimeInterval
-    ) -> TranscriberTimings {
-        var out = TranscriberTimings(
-            audioSeconds: audioSeconds,
-            preprocessing: ownPreprocessing,
-            languageDetection: languageDetection,
-            total: total
-        )
-        for t in results {
-            let preprocessing = t.audioProcessing + t.logmels
-            out.preprocessing += preprocessing
-            out.encoder += t.encoding
-            out.decoder += max(0, t.fullPipeline - preprocessing - t.encoding - t.decodingWindowing)
-            out.windows += Int(t.totalEncodingRuns)
-            out.tokens += Int(t.totalDecodingLoops)
-            // WhisperKit records the index of the last failed attempt, so one
-            // fallback reads 0; any fallback time means at least one happened.
-            if t.decodingFallback > 0 { out.fallbacks += Int(t.totalDecodingFallbacks) + 1 }
-        }
-        out.postprocessing = max(0, total - out.preprocessing - out.languageDetection - out.encoder - out.decoder)
-        return out
-    }
-
-    /// `prompt` as Whisper prompt tokens, or nil for none. Whisper reads them as
-    /// the text spoken just before the audio. Special tokens are dropped: the
-    /// decoder builds its own control sequence around the prompt, and a stray
-    /// one there desynchronizes it.
-    /// The prompt for a segment of a live dictation: the dictionary's
-    /// sentence, then the end of the previous segment, which is what Whisper
-    /// conditions on to continue a sentence. Whisper reads at most 224
-    /// prompt tokens; about 200 characters of context is plenty.
-    public static func prompt(_ prompt: String?, continuing previous: String?) -> String? {
-        guard let previous = previous?.trimmingCharacters(in: .whitespacesAndNewlines), !previous.isEmpty else {
-            return prompt
-        }
-        let tail = String(previous.suffix(200))
-        guard let prompt, !prompt.isEmpty else { return tail }
-        return prompt + " " + tail
-    }
-
-    public static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
-        guard let tokenizer,
-              let text = prompt?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty
-        else { return nil }
-        // A leading space, as the text would appear mid-transcript.
-        let tokens = tokenizer.encode(text: " " + text)
-            .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
-        return tokens.isEmpty ? nil : tokens
-    }
-
-    /// Strip Whisper's non-speech bracket tokens ([BLANK_AUDIO], [MUSIC],
-    /// (silence), <|nospeech|>, etc.) and collapse whitespace. When the model
-    /// hears silence it emits these literally; we don't want to paste them.
-    public static func sanitize(_ text: String) -> String {
-        let patterns = [
-            #"\[[^\]]*\]"#,        // [BLANK_AUDIO], [MUSIC], [Applause]
-            #"\([^)]*\)"#,          // (silence), (music playing)
-            #"<\|[^|]*\|>"#,        // <|nospeech|>, <|endoftext|>
-            #"\*[^*]*\*"#,          // *background noise*
-        ]
-        var out = text
-        for p in patterns {
-            out = out.replacingOccurrences(of: p, with: " ", options: .regularExpression)
-        }
-        out = out.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-        return out.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-}
-
-// MARK: - On-disk cache
-
-extension WhisperKitTranscriber {
-    /// True if `model`'s weights are already under `Paths.appSupport`.
-    public static func isCached(_ model: TranscriptionModel) -> Bool {
-        let dir = Paths.appSupport.appendingPathComponent(folders(for: model.variant)[0])
-        return FileManager.default.fileExists(atPath: dir.path)
-    }
-
-    /// Bytes `model` takes on disk under `base`: its weights and download
-    /// metadata. Nil if it isn't downloaded.
-    public static func diskBytes(_ model: TranscriptionModel, base: URL = Paths.appSupport) -> Int64? {
-        let folders = folders(for: model.variant).prefix(2).map { base.appendingPathComponent($0) }
-        guard FileManager.default.fileExists(atPath: folders[0].path) else { return nil }
-        return folders.reduce(0) { $0 + allocatedBytes(under: $1) }
-    }
-
-    /// Deletes `model`'s weights and download metadata under `base`, so it
-    /// downloads again when chosen. The tokenizer stays: it is small and
-    /// the large-v3 builds share one.
-    public static func deleteDownload(_ model: TranscriptionModel, base: URL = Paths.appSupport) throws {
-        for folder in folders(for: model.variant).prefix(2) {
-            let url = base.appendingPathComponent(folder)
-            guard FileManager.default.fileExists(atPath: url.path) else { continue }
-            try FileManager.default.removeItem(at: url)
-        }
-        Log.info("deleted \(model.id)")
-    }
-
-    /// Space the files under `url` take, as Finder counts it.
-    private static func allocatedBytes(under url: URL) -> Int64 {
-        let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .isRegularFileKey]
-        guard let walker = FileManager.default.enumerator(at: url, includingPropertiesForKeys: keys) else { return 0 }
-        var total: Int64 = 0
-        for case let file as URL in walker {
-            guard let values = try? file.resourceValues(forKeys: Set(keys)), values.isRegularFile == true else { continue }
-            total += Int64(values.totalFileAllocatedSize ?? 0)
-        }
-        return total
-    }
-
-    /// Whether `variant`'s weights and tokenizer are both on disk under
-    /// `base`, so it can load with no network.
-    public static func isOnDisk(_ variant: String, base: URL) -> Bool {
-        let fm = FileManager.default
-        let paths = folders(for: variant)
-        let weights = base.appendingPathComponent(paths[0])
-        let tokenizer = base.appendingPathComponent(paths[2])
-        guard let contents = try? fm.contentsOfDirectory(atPath: weights.path) else { return false }
-        let hasModels = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc"].allSatisfy(contents.contains)
-        let hasTokenizer = fm.fileExists(atPath: tokenizer.appendingPathComponent("tokenizer.json").path)
-        return hasModels && hasTokenizer
-    }
-
-    /// Hub-relative folders WhisperKit writes for `variant`: the weights, their
-    /// download metadata, and the tokenizer. The weights folder comes first.
-    private static func folders(for variant: String) -> [String] {
-        let repo = "models/argmaxinc/whisperkit-coreml"
-        return [
-            "\(repo)/\(variant)",
-            "\(repo)/.cache/huggingface/download/\(variant)",
-            "models/openai/\(tokenizerName(for: variant))",
-        ]
-    }
-
-    /// Mirrors WhisperKit's tokenizer choice for the registry's variants:
-    /// "openai_whisper-base.en" → "whisper-base.en"; every large-v3 build,
-    /// including turbo, uses "whisper-large-v3".
-    private static func tokenizerName(for variant: String) -> String {
-        let name = variant.replacingOccurrences(of: "openai_", with: "")
-        return name.hasPrefix("whisper-large-v3") ? "whisper-large-v3" : name
     }
 }
 

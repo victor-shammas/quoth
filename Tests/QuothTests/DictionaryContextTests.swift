@@ -7,11 +7,11 @@ import XCTest
 
 final class LivePromptTests: XCTestCase {
     func testThePromptContinuesThePreviousSegment() {
-        XCTAssertEqual(WhisperKitTranscriber.prompt("Quoth and WhisperKit.", continuing: nil), "Quoth and WhisperKit.")
-        XCTAssertEqual(WhisperKitTranscriber.prompt(nil, continuing: "I went to the"), "I went to the")
-        XCTAssertEqual(WhisperKitTranscriber.prompt("Quoth.", continuing: "I went to the"), "Quoth. I went to the")
+        XCTAssertEqual(WhisperText.prompt("Quoth and WhisperKit.", continuing: nil), "Quoth and WhisperKit.")
+        XCTAssertEqual(WhisperText.prompt(nil, continuing: "I went to the"), "I went to the")
+        XCTAssertEqual(WhisperText.prompt("Quoth.", continuing: "I went to the"), "Quoth. I went to the")
         let long = String(repeating: "word ", count: 100)
-        XCTAssertEqual(WhisperKitTranscriber.prompt(nil, continuing: long)?.count, 200)
+        XCTAssertEqual(WhisperText.prompt(nil, continuing: long)?.count, 200)
     }
 }
 
@@ -70,11 +70,11 @@ final class DictionaryContextTests: XCTestCase {
     /// settled on, and never one in another language.
     func testDetectedLanguagePicksItsOwnExample() {
         let examples = ["en": "I opened PostHog.", "pt-BR": "Abri o PostHog."]
-        XCTAssertEqual(WhisperKitTranscriber.example(in: examples, for: "pt"), "Abri o PostHog.")
-        XCTAssertEqual(WhisperKitTranscriber.example(in: examples, for: "en"), "I opened PostHog.")
-        XCTAssertNil(WhisperKitTranscriber.example(in: examples, for: "es"))
-        XCTAssertNil(WhisperKitTranscriber.example(in: examples, for: nil))
-        XCTAssertNil(WhisperKitTranscriber.example(in: [:], for: "en"))
+        XCTAssertEqual(WhisperText.example(in: examples, for: "pt"), "Abri o PostHog.")
+        XCTAssertEqual(WhisperText.example(in: examples, for: "en"), "I opened PostHog.")
+        XCTAssertNil(WhisperText.example(in: examples, for: "es"))
+        XCTAssertNil(WhisperText.example(in: examples, for: nil))
+        XCTAssertNil(WhisperText.example(in: [:], for: "en"))
     }
 
     // MARK: Whisper prompt tokens
@@ -106,13 +106,13 @@ final class DictionaryContextTests: XCTestCase {
     }
 
     func testPromptTokensDropSpecialTokensAndLeadWithASpace() {
-        let tokens = WhisperKitTranscriber.promptTokens(for: " a<b ", tokenizer: FakeTokenizer())
+        let tokens = WhisperText.tokens(for: " a<b ", tokenizer: FakeTokenizer())
         XCTAssertEqual(tokens, [32, 97, 98])
     }
 
     func testNoPromptTokensWithoutAPrompt() {
-        XCTAssertNil(WhisperKitTranscriber.promptTokens(for: nil, tokenizer: FakeTokenizer()))
-        XCTAssertNil(WhisperKitTranscriber.promptTokens(for: "  \n", tokenizer: FakeTokenizer()))
-        XCTAssertNil(WhisperKitTranscriber.promptTokens(for: "text", tokenizer: nil))
+        XCTAssertNil(WhisperText.tokens(for: nil, tokenizer: FakeTokenizer()))
+        XCTAssertNil(WhisperText.tokens(for: "  \n", tokenizer: FakeTokenizer()))
+        XCTAssertNil(WhisperText.tokens(for: "text", tokenizer: nil))
     }
 }

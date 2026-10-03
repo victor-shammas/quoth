@@ -20,7 +20,7 @@ final class ModelStorage: ObservableObject {
     func refresh() {
         Task.detached(priority: .utility) {
             let entries = ModelRegistry.all.compactMap { model in
-                WhisperKitTranscriber.diskBytes(model).map { Entry(model: model, bytes: $0) }
+                ModelFiles(model).bytes.map { Entry(model: model, bytes: $0) }
             }
             await MainActor.run { self.entries = entries.sorted { $0.bytes > $1.bytes } }
         }
@@ -28,7 +28,7 @@ final class ModelStorage: ObservableObject {
 
     func delete(_ model: TranscriptionModel) {
         do {
-            try WhisperKitTranscriber.deleteDownload(model)
+            try ModelFiles(model).delete()
         } catch {
             Log.warning("couldn't delete \(model.id): \(error.localizedDescription)")
         }

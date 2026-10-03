@@ -63,7 +63,7 @@ struct ModelPane: View {
                 )) {
                     // A model not on the Mac yet downloads when chosen; the
                     // arrow says so without words.
-                    if WhisperKitTranscriber.isCached(model) {
+                    if ModelFiles(model).isDownloaded {
                         Text(Self.shortName(model))
                     } else {
                         Label(Self.shortName(model), systemImage: "arrow.down.circle")

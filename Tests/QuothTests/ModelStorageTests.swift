@@ -30,17 +30,17 @@ final class ModelStorageTests: XCTestCase {
     }
 
     func testSizeCountsWeightsAndMetadata() throws {
-        let bytes = try XCTUnwrap(WhisperKitTranscriber.diskBytes(model, base: base))
+        let bytes = try XCTUnwrap(ModelFiles(model, base: base).bytes)
         XCTAssertGreaterThanOrEqual(bytes, 102_000)
-        XCTAssertNil(WhisperKitTranscriber.diskBytes(ModelRegistry.find("whisper-small")!, base: base))
+        XCTAssertNil(ModelFiles(ModelRegistry.find("whisper-small")!, base: base).bytes)
     }
 
     func testDeleteRemovesTheModelButKeepsTheSharedTokenizer() throws {
-        try WhisperKitTranscriber.deleteDownload(model, base: base)
-        XCTAssertNil(WhisperKitTranscriber.diskBytes(model, base: base))
+        try ModelFiles(model, base: base).delete()
+        XCTAssertNil(ModelFiles(model, base: base).bytes)
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: base.appendingPathComponent("models/openai/whisper-large-v3/tokenizer.json").path))
         // Deleting what isn't there is fine.
-        XCTAssertNoThrow(try WhisperKitTranscriber.deleteDownload(model, base: base))
+        XCTAssertNoThrow(try ModelFiles(model, base: base).delete())
     }
 }
