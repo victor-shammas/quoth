@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The Mac App Store edition (ADR-006), built from project.yml.
 #
-#   scripts/appstore.sh build     a local, ad-hoc signed build in build/appstore, to run and test
+#   scripts/appstore.sh build     a local build in build/appstore, to run and test
 #   scripts/appstore.sh archive   a Release archive signed for the App Store
 #   scripts/appstore.sh upload    export the archive and upload it to App Store Connect
 #
@@ -46,14 +46,22 @@ no_accessibility() {
 
 case "${1:-}" in
 build)
+    APP="$OUT/Build/Products/Release/Quoth.app"
     xcodebuild -project Quoth.xcodeproj -scheme Quoth -configuration Release -derivedDataPath "$OUT" \
         CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= build
+    # Re-signed as Apple Development when that certificate is here. macOS
+    # keys Input Monitoring and Paste at cursor to the signature, and an
+    # ad-hoc one changes with every build: a grant made for the last build
+    # shows as on in System Settings but no longer applies.
+    if security find-identity -v -p codesigning | grep -q '"Apple Development:'; then
+        codesign --force --sign "Apple Development" --entitlements AppStore/Quoth.entitlements "$APP"
+    fi
     # Xcode registers what it builds with Launch Services; unregister it, so
     # `open -a Quoth` and Spotlight find the installed app, not this build.
     /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister \
-        -u "$OUT/Build/Products/Release/Quoth.app" || true
-    no_accessibility "$OUT/Build/Products/Release/Quoth.app/Contents/MacOS/Quoth"
-    echo "$OUT/Build/Products/Release/Quoth.app"
+        -u "$APP" || true
+    no_accessibility "$APP/Contents/MacOS/Quoth"
+    echo "$APP"
     ;;
 archive)
     # shellcheck disable=SC2046
