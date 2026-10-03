@@ -1,9 +1,9 @@
 import AVFoundation
 import Foundation
 
-/// Microphone authorization for the running daemon.
+/// Microphone authorization for the running app.
 ///
-/// `Startup` exits on denied access before the daemon runs. This covers the
+/// `Startup` exits on denied access before the dictation loop runs. This covers the
 /// rest: asking once when the system has never asked, and refusing to start
 /// the engine on a press when access is missing, so the user sees what to do
 /// instead of a bare Core Audio error.

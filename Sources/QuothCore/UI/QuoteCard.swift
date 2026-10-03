@@ -2,6 +2,21 @@ import AppKit
 import QuothDomain
 import SwiftUI
 
+/// What the Quote Card asks of the rest of Quoth (`AppModel`).
+@MainActor
+protocol QuoteCardHost: AnyObject {
+    /// Whether a dictation is still recording or transcribing.
+    var isDictating: Bool { get }
+    /// Inserts text where the user was.
+    func insertFromCard(_ text: String)
+    /// Copies text, kept out of clipboard histories.
+    func copyFromCard(_ text: String)
+    /// Keeps the card's text for Copy Last Dictation when it closes.
+    func rememberFromCard(_ text: String)
+    /// Ends a locked recording, for Insert and Copy while still dictating.
+    func endLockForCard()
+}
+
 /// Where a dictation goes instead of the cursor (`DictationSession.card`).
 @MainActor
 protocol DictationTarget: AnyObject {
@@ -26,16 +41,7 @@ protocol DictationTarget: AnyObject {
 /// was, and Insert lands back in it. Text lives in memory only.
 @MainActor
 final class QuoteCard: DictationTarget {
-    /// Inserts text where the user was; the daemon hands in TextDelivery.
-    var insert: ((String) -> Void)?
-    /// Copies text, kept out of clipboard histories.
-    var copy: ((String) -> Void)?
-    /// Keeps the card's text for Copy Last Dictation when it closes.
-    var remember: ((String) -> Void)?
-    /// Ends a locked recording, for Insert and Copy while still dictating.
-    var endLock: (() -> Void)?
-    /// Whether a dictation is still recording or transcribing.
-    var isDictating: (() -> Bool)?
+    weak var host: QuoteCardHost?
 
     private var panel: CardPanel?
     private let model = QuoteCardModel()
@@ -75,10 +81,10 @@ final class QuoteCard: DictationTarget {
     /// Runs `action` now, or, while a dictation is still running, ends the
     /// lock and runs it once the last words are in.
     private func whenDictationEnds(_ action: @escaping () -> Void) {
-        guard isDictating?() == true else { return action() }
+        guard host?.isDictating == true else { return action() }
         pending = action
         model.status = .finishing
-        endLock?()
+        host?.endLockForCard()
     }
 
     /// The dictation loop finished or failed: run what was waiting.
@@ -95,18 +101,18 @@ final class QuoteCard: DictationTarget {
         guard !text.isEmpty else { return }
         // Once the panel is gone the keyboard is back with the app the user
         // was in; give it a moment to take it.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [insert] in insert?(text) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak host] in host?.insertFromCard(text) }
     }
 
     private func copyAndClose() {
         let text = model.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !text.isEmpty { copy?(text) }
+        if !text.isEmpty { host?.copyFromCard(text) }
         close()
     }
 
     private func close() {
         let text = model.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !text.isEmpty { remember?(text) }
+        if !text.isEmpty { host?.rememberFromCard(text) }
         pending = nil
         panel?.orderOut(nil)
         model.clear()

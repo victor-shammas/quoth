@@ -9,7 +9,7 @@ public enum QuothApp {
         AppLaunch.prepare()
         Log.info("Quoth \(AppBundle.version) starting")
         do {
-            try Daemon.run()
+            try Assembly.run()
             exit(0)
         } catch let failure as StartupFailure {
             // A permanent failure exits 0, so launch at login doesn't

@@ -27,7 +27,8 @@ Dependencies point down the table and never back up. The compiler enforces it: a
 ### 1.3 — One app model
 
 - `AppModel` (`@Observable`, `@MainActor`) is the single source of truth for what the UI shows: the dictation phase, hotkey health, model status, grants, whether a last dictation is available, and the Quote Card's text.
-- The menu bar, the pill, the Quote Card and Settings read `AppModel` and send intents to it. `DictationObserver` and the closures wired in `Daemon.runLoop` go.
+- The menu bar reads `AppModel` and sends intents to it; the Quote Card asks for what it needs through `QuoteCardHost`, which `AppModel` implements. The closures wired in `Daemon.runLoop` go.
+- Moments stay `DictationObserver`s: the pill's messages and level meter, the card's status, the latency log. They are events with their own timing, not state, and forcing them through the model would only re-time their animations. `AppModel` is itself an observer, for the activity the menu shows.
 - The composition root builds the modules' concrete types once and hands them to `AppModel`. It holds no logic.
 
 ### 1.4 — Editions
@@ -81,7 +82,7 @@ Each phase is one pull request, with the app working and the tests passing at it
 | 1 | Create `QuothDomain`; move the pure types into it. `project.yml` builds the modules. |
 | 2 | `DictationMachine` with the section 3 tests; `DictationSession` replaces `DictationController` and the orchestration in `LiveTranscription`. |
 | 3a | The command line goes: one entry point, `QuothApp.main()`, for both editions. |
-| 3b | `AppModel` and the composition root; the menu bar, the pill and the card read the model; `Daemon` goes. |
+| 3b | `AppModel` and the composition root (`Assembly`); the menu bar reads the model; `Daemon` goes. |
 | 4 | `QuothPlatform`: capture, the hotkey tap, text insertion, focus and permissions behind protocols; `Capabilities` replaces `Edition`. |
 | 5 | `QuothSpeech`; the settings and dictionary stores; `quoth-bench` against the modules. |
 | 6 | `architecture.md` rewritten for the new structure; ADR-001 marked superseded. |

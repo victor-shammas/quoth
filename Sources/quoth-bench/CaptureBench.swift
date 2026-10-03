@@ -64,7 +64,7 @@ enum CaptureBench {
         ))
 
         // The first capture in a process pays for loading Core Audio's
-        // components; the daemon pays it once, on its first press.
+        // components; the app pays it once, on its first press.
         let first = try sample(capture, hold: options.hold)
         print("first capture in this process: \(first.summary)")
 

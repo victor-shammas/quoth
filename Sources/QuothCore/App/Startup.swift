@@ -59,7 +59,7 @@ enum Startup {
         let model = try resolveModel(modelID)
 
         // The hotkey's grant is not checked here. A missing grant is not a
-        // startup failure: Quoth waits for it (Daemon.startHotkey).
+        // startup failure: Quoth waits for it (Assembly.startHotkey).
 
         // .notDetermined is left to the onboarding window, and to the first
         // press if still undecided.

@@ -86,7 +86,7 @@ final class HotkeyMonitor {
     func start(onEvent: @escaping (Event) -> Void) throws {
         self.onEvent = onEvent
 
-        // The caller waits for the grant before starting (Daemon.startHotkey);
+        // The caller waits for the grant before starting (Assembly.startHotkey);
         // this is a guard, not the place that asks.
         if !HotkeyAccess.isGranted {
             throw HotkeyError.tapCreateFailed

@@ -161,9 +161,9 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     func testUnknownSavedModelFallsBack() {
-        XCTAssertNil(Daemon.knownModel("no-such-model"))
-        XCTAssertEqual(Daemon.knownModel("whisper-base.en"), "whisper-base.en")
-        XCTAssertNil(Daemon.knownModel(nil))
+        XCTAssertNil(Assembly.knownModel("no-such-model"))
+        XCTAssertEqual(Assembly.knownModel("whisper-base.en"), "whisper-base.en")
+        XCTAssertNil(Assembly.knownModel(nil))
     }
 }
 

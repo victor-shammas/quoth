@@ -11,22 +11,21 @@ import SwiftUI
 @MainActor
 enum OnboardingWindow {
     /// How often the grants are re-read. Accessibility has no change
-    /// notification, so this polls, like `Daemon.startHotkey`.
+    /// notification, so this polls, like `Assembly.startHotkey`.
     private static let pollInterval: TimeInterval = 1
 
     private static var store: SettingsStore?
-    private static var menuBar: MenuBarController?
+    private static var app: AppModel?
     private static var window: NSWindow?
     private static var model: OnboardingModel?
     private static var poll: Timer?
     private static let delegate = Delegate()
 
     /// Opens the window if `Onboarding.showsWindow` says so, and keeps
-    /// "Grant Permissions…" shown while a grant is missing.
-    static func startIfNeeded(store: SettingsStore, menuBar: MenuBarController) {
+    /// `AppModel.setupNeeded` up to date while a grant is missing.
+    static func startIfNeeded(store: SettingsStore, app: AppModel) {
         self.store = store
-        self.menuBar = menuBar
-        menuBar.onGrantPermissions = { show() }
+        self.app = app
         refresh()
         guard Onboarding.showsWindow(
             completed: store.current.onboarding.completed,
@@ -93,7 +92,7 @@ enum OnboardingWindow {
     private static func refresh() {
         let state = PermissionState.current
         model?.update(state)
-        menuBar?.grantPermissionsItem.isHidden = state.allGranted
+        app?.setupNeeded = !state.allGranted
         if state.allGranted && window == nil {
             poll?.invalidate()
             poll = nil

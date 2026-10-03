@@ -98,7 +98,8 @@ Sources/QuothCore/
     Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
     Onboarding.swift            when the onboarding window shows and what Get Started saves (pure, tested)
     QuothApp.swift              the entry point of both editions: launch, run, startup failures
-    Daemon.swift                startup, wiring, run loop
+    Assembly.swift              builds the objects and connects them; startup, then the run loop
+    AppModel.swift              what the menu and windows show, and every user intent (observable)
     ModelSwitcher.swift         a model change while running: loads behind the menu bar, swaps between dictations
     AppLaunch.swift             the app role: bundle detection, single instance, startup dialogs
     LoginItem.swift             launch at login (SMAppService)
@@ -135,7 +136,7 @@ Sources/QuothCore/
     DictionaryContext.swift     the example sentence for the active language, as the prompt
   UI/
     MenuBarController.swift, QuoteGlyph.swift
-                                the menu and its state glyph
+                                the menu and its state glyph: a view of AppModel
     RecordingOverlay.swift      the pill: recording, locked, transcribing, messages
     OnboardingWindow.swift      hotkey, languages and the grants on one page
     SettingsWindow.swift        toolbar tabs, each pane sizing the window
@@ -175,11 +176,13 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ Dictat
                                         allowed; clipboard otherwise; discard in a password field
                                                          │
                                                          ▼
-                              DictationObservers: overlay, menu bar, latency log
-                              LastDictation (memory only): Copy and Fix Last Dictation
+                              DictationObservers: the pill, AppModel, latency log, the Quote Card
+                              AppModel ──▶ menu bar; LastDictation (memory only) for Copy and Fix
 ```
 
 `DictationMachine` decides: it holds the recording, its lock and where its live text goes, and counts the transcriptions in flight, so its state (`idle`, `recording`, `transcribing`) is derived rather than set. Each event returns a list of effects. `DictationSession` performs them and reports back how they went (the capture, the transcript, the delivery), and makes no decisions of its own. The machine is pure and unit tested (`DictationMachineTests`); the session is `@MainActor`, and transcription runs off the main actor.
+
+`AppModel` is the app's lasting state (what the loop is doing, the hotkey and whether it works, a model loading, missing grants, the last dictation) and its intents (Copy Last Dictation, New Quote Card, Settings…). The menu bar renders it with Observation and sends every click to an intent; the Quote Card asks for what it needs through `QuoteCardHost`. Moments stay `DictationObserver`s: the pill's messages and level, the card's status, the latency log. `Assembly` builds all of this once and holds no behaviour.
 
 ### 4.2 — Extension points
 
@@ -188,7 +191,8 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ Dictat
 | `TranscriptionContext` | language, prompt, previous text | dictionary prompting, language, live text |
 | `TranscriptProcessor` | `func process(_ transcript: Transcript) -> Transcript` | voice commands, dictionary replacements |
 | Delivery decision | injector or fallback, from `FocusSnapshot` and `PasteAccess` | secure fields, focus drift, copy-only |
-| `DictationObserver` | started, locked, notice, transcribing, finished, failed; empty defaults | overlay, menu bar, latency |
+| `DictationObserver` | started, locked, notice, transcribing, finished, failed; empty defaults | the pill, AppModel, latency, the Quote Card |
+| `AppModel` | an observable property, or an intent method | the menu bar, onboarding, the model switcher |
 | Settings pane | a field in `Settings` plus a view in `UI/Settings/` | hotkey, model, dictionary |
 
 ## 5. Settings
@@ -217,7 +221,7 @@ Everything after the checks happens behind the menu-bar icon: the model loads (d
 1. Never write transcript text to logs, disk, or anywhere outside the cursor and the clipboard. The dictionary is the only user-authored text Quoth stores.
 2. Every on-disk location comes from `Paths`.
 3. Every persistent preference lives in `Settings` and changes through `SettingsStore`. No `UserDefaults`, apart from what Sparkle keeps in the direct edition.
-4. New behaviour after transcription is a `TranscriptProcessor` or a `DictationObserver`.
+4. New behaviour after transcription is a `TranscriptProcessor` or a `DictationObserver`. New state the menu or a window shows is an `AppModel` property; a new command is an `AppModel` intent.
 5. Pure logic has unit tests in `QuothTests`.
 6. The event tap listens to `flagsChanged` only.
 7. Only `Edition`, `HotkeyAccess` and `PasteAccess` test `APPSTORE`, apart from leaving out the direct edition's call sites.

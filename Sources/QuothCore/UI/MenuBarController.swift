@@ -1,233 +1,94 @@
 import AppKit
+import Observation
 import QuothDomain
 
-/// Status bar item in the top-right of the menu bar. Shows recording state at
-/// a glance and provides the only persistent control surface for the daemon
-/// (since we run as `.accessory` — no dock icon, no main window).
+/// The menu bar item: Quoth's only lasting control surface, since it runs
+/// as `.accessory`, with no Dock icon and no main window.
 ///
-/// The menu has named slots, top to bottom: `statusLine`, `modelLine`,
-/// `grantPermissionsItem`, `copyLastItem`, `fixLastItem`, `settingsItem`,
-/// `checkForUpdatesItem`, `quitItem`. Features update a slot
-/// rather than rebuilding the menu.
+/// A view of `AppModel`: it shows the model's state and sends every click
+/// to one of its intents. `render` re-runs whenever a property it read
+/// changes.
 @MainActor
-final class MenuBarController {
-    private static func readyStatus(_ key: HotkeyKey) -> String { "Ready — hold \(key.shortName) to dictate" }
-
+final class MenuBarController: NSObject {
+    private let model: AppModel
     private let statusItem: NSStatusItem
-    /// Slot: what the dictation loop is doing. Driven as a `DictationObserver`.
-    let statusLine: NSMenuItem
-    /// Slot: a model downloading or loading; hidden otherwise.
-    let modelLine: NSMenuItem
-    /// Slot: reopens the onboarding window. Shown in Quoth.app while
-    /// a permission is missing.
-    let grantPermissionsItem: NSMenuItem
-    /// What `grantPermissionsItem` does; set by `OnboardingWindow`.
-    var onGrantPermissions: (() -> Void)?
-    /// Slot: opens the Settings window through `onOpenSettings`.
-    let settingsItem: NSMenuItem
-    /// Called by Settings…; set by the daemon, which owns the window.
-    var onOpenSettings: (() -> Void)?
-    /// Slot: asks Sparkle to check now. Hidden unless the updater is running,
-    /// which it is only in Quoth.app's release builds.
-    let checkForUpdatesItem: NSMenuItem
-    /// Slot: quits quoth.
-    let quitItem: NSMenuItem
-    /// Copies the last dictation (`LastDictation`); disabled without one.
-    let copyLastItem: NSMenuItem
-    /// Opens Fix Last Dictation.
-    let fixLastItem: NSMenuItem
-    var onCopyLast: (() -> Void)?
-    var onFixLast: (() -> Void)?
-    /// Opens an empty Quote Card.
-    let newCardItem: NSMenuItem
-    var onNewCard: (() -> Void)?
+
+    /// What the dictation loop is doing, or why the hotkey isn't working.
+    private let statusLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    /// A model downloading or loading; hidden otherwise.
+    private let modelLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    /// Reopens the onboarding window while a grant is missing.
+    private let finishSetupItem = NSMenuItem(title: "Finish Setup…", action: #selector(finishSetup), keyEquivalent: "")
     /// Ends a locked recording, for when the hotkey can't (secure input).
-    let stopLockItem: NSMenuItem
-    var onStopLock: (() -> Void)?
+    private let stopLockItem = NSMenuItem(title: "Stop Dictation", action: #selector(stopDictation), keyEquivalent: "")
+    private let copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastDictation), keyEquivalent: "")
 
-    /// A degraded hotkey tap replaces the idle line, so the menu bar does not
-    /// claim fn works when it does not.
-    private var hotkeyHealth: HotkeyHealth = .ok
-    /// The key the idle line tells the user to hold.
-    private var hotkey: HotkeyKey = .fn
-    private var isIdle = true
-    private var idleStatus: String { hotkeyHealth.statusText ?? Self.readyStatus(hotkey) }
-
-    init(modelID: String) {
+    init(model: AppModel) {
+        self.model = model
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        super.init()
 
         let menu = NSMenu()
         menu.autoenablesItems = false
-
-        statusLine = NSMenuItem(title: Self.readyStatus(.fn), action: nil, keyEquivalent: "")
         statusLine.isEnabled = false
-        menu.addItem(statusLine)
-
-        modelLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         modelLine.isEnabled = false
-        modelLine.isHidden = true
+        menu.addItem(statusLine)
         menu.addItem(modelLine)
-
-        grantPermissionsItem = NSMenuItem(
-            title: "Finish Setup…",
-            action: #selector(grantPermissionsClicked),
-            keyEquivalent: ""
-        )
-        grantPermissionsItem.isHidden = true
-        menu.addItem(grantPermissionsItem)
-
-        stopLockItem = NSMenuItem(title: "Stop Dictation", action: #selector(stopLockClicked), keyEquivalent: "")
-        stopLockItem.isHidden = true
+        menu.addItem(finishSetupItem)
         menu.addItem(stopLockItem)
-
         menu.addItem(.separator())
-
-        newCardItem = NSMenuItem(title: "New Quote Card", action: #selector(newCardClicked), keyEquivalent: "")
-        menu.addItem(newCardItem)
-
-        copyLastItem = NSMenuItem(title: "Copy Last Dictation", action: #selector(copyLastClicked), keyEquivalent: "")
-        copyLastItem.isEnabled = false
+        menu.addItem(item("New Quote Card", #selector(newQuoteCard)))
         menu.addItem(copyLastItem)
-        fixLastItem = NSMenuItem(title: "Fix Last Dictation…", action: #selector(fixLastClicked), keyEquivalent: "")
-        menu.addItem(fixLastItem)
-
+        menu.addItem(item("Fix Last Dictation…", #selector(fixLastDictation)))
         menu.addItem(.separator())
-
-        settingsItem = NSMenuItem(title: "Settings…", action: #selector(settingsClicked), keyEquivalent: ",")
-        menu.addItem(settingsItem)
-
-
-        checkForUpdatesItem = NSMenuItem(
-            title: "Check for Updates…",
-            action: #selector(checkForUpdatesClicked),
-            keyEquivalent: ""
-        )
+        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         // The App Store build updates through the App Store only (2.4.5).
         #if !APPSTORE
-        checkForUpdatesItem.isHidden = !Updater.isRunning
-        menu.addItem(checkForUpdatesItem)
+        if Updater.isRunning {
+            menu.addItem(item("Check for Updates…", #selector(checkForUpdates)))
+        }
         #endif
-
         menu.addItem(.separator())
-
-        quitItem = NSMenuItem(
-            title: "Quit Quoth",
-            action: #selector(quitClicked),
-            keyEquivalent: "q"
-        )
-        menu.addItem(quitItem)
-
+        menu.addItem(item("Quit Quoth", #selector(quit), key: "q"))
+        for item in menu.items { item.target = self }
         statusItem.menu = menu
-        quitItem.target = self
-        settingsItem.target = self
-        copyLastItem.target = self
-        newCardItem.target = self
-        stopLockItem.target = self
-        fixLastItem.target = self
-        checkForUpdatesItem.target = self
-        grantPermissionsItem.target = self
-        configureButton()
+
+        render()
     }
 
-    func setStatus(_ text: String) {
-        statusLine.title = text
+    private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
+        NSMenuItem(title: title, action: action, keyEquivalent: key)
     }
 
-    func setHotkeyHealth(_ health: HotkeyHealth) {
-        hotkeyHealth = health
-        if isIdle { setStatus(idleStatus) }
+    /// Shows the model's state, and runs again when any of it changes.
+    private func render() {
+        withObservationTracking {
+            statusLine.title = model.statusText
+            modelLine.title = model.modelStatus ?? ""
+            modelLine.isHidden = model.modelStatus == nil
+            finishSetupItem.isHidden = !model.setupNeeded
+            stopLockItem.isHidden = model.activity != .locked
+            copyLastItem.isEnabled = model.hasLastDictation
+            statusItem.button?.image = QuoteGlyph.image(model.glyph)
+        } onChange: { [weak self] in
+            // Called before the change lands; render once it has.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.render() }
+            }
+        }
     }
 
-    func setHotkey(_ key: HotkeyKey) {
-        hotkey = key
-        if isIdle { setStatus(idleStatus) }
-    }
+    @objc private func finishSetup() { model.finishSetup() }
+    @objc private func stopDictation() { model.stopDictation() }
+    @objc private func newQuoteCard() { model.newQuoteCard() }
+    @objc private func copyLastDictation() { model.copyLastDictation() }
+    @objc private func fixLastDictation() { model.fixLastDictation() }
+    @objc private func openSettings() { model.openSettings() }
+    @objc private func quit() { model.quit() }
 
-    /// A model downloading or loading, or nil to hide the line.
-    func setModelStatus(_ text: String?) {
-        modelLine.title = text ?? ""
-        modelLine.isHidden = text == nil
-    }
-
-    private func configureButton() {
-        setGlyph(.idle)
-    }
-
-    private func setGlyph(_ style: QuoteGlyph.Style) {
-        statusItem.button?.image = QuoteGlyph.image(style)
-    }
-
-    /// Whether there is a last dictation to copy.
-    func setLastDictationAvailable(_ available: Bool) {
-        copyLastItem.isEnabled = available
-    }
-
-    @objc private func newCardClicked() {
-        onNewCard?()
-    }
-
-    @objc private func stopLockClicked() {
-        onStopLock?()
-    }
-
-    @objc private func copyLastClicked() {
-        onCopyLast?()
-    }
-
-    @objc private func fixLastClicked() {
-        onFixLast?()
-    }
-
-    @objc private func settingsClicked() {
-        onOpenSettings?()
-    }
-
-    @objc private func grantPermissionsClicked() {
-        onGrantPermissions?()
-    }
-
-    @objc private func checkForUpdatesClicked() {
+    @objc private func checkForUpdates() {
         #if !APPSTORE
         Updater.checkForUpdates()
         #endif
-    }
-
-    @objc private func quitClicked() {
-        NSApp.terminate(nil)
-    }
-}
-
-extension MenuBarController: DictationObserver {
-    func dictationStarted() {
-        isIdle = false
-        setGlyph(.recording)
-        setStatus("Recording…")
-    }
-
-    func dictationLocked() {
-        isIdle = false
-        stopLockItem.isHidden = false
-        setGlyph(.locked)
-        setStatus("Locked — tap \(hotkey.shortName) to stop")
-    }
-
-    func dictationTranscribing() {
-        isIdle = false
-        stopLockItem.isHidden = true
-        setGlyph(.transcribing)
-        setStatus("Transcribing…")
-    }
-
-    func dictationFinished(_ result: DictationResult) {
-        isIdle = true
-        setGlyph(.idle)
-        setStatus(idleStatus)
-    }
-
-    func dictationFailed(_ error: Error) {
-        isIdle = true
-        stopLockItem.isHidden = true
-        setGlyph(.idle)
-        setStatus(idleStatus)
     }
 }

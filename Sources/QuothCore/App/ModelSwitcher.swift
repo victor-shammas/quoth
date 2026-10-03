@@ -15,10 +15,11 @@ final class ModelSwitcher {
     /// The model the session transcribes with.
     private(set) var model: TranscriptionModel
     private var transcriber: WhisperKitTranscriber
-    /// Set by the daemon once the session exists.
+    /// Set by `Assembly` once the session exists.
     weak var session: DictationSession?
+    /// Where the menu reads the status line; set by `Assembly`.
+    weak var app: AppModel?
 
-    private let menuBar: MenuBarController
     private let status: ModelLoadStatus
     private var load: Task<Void, Never>?
     /// Bumped on every change, so a superseded load cannot swap or report.
@@ -27,10 +28,9 @@ final class ModelSwitcher {
     /// Called on the main actor each time a model is swapped in and ready.
     var onReady: (() -> Void)?
 
-    init(model: TranscriptionModel, transcriber: WhisperKitTranscriber, menuBar: MenuBarController, status: ModelLoadStatus? = nil) {
+    init(model: TranscriptionModel, transcriber: WhisperKitTranscriber, status: ModelLoadStatus? = nil) {
         self.model = model
         self.transcriber = transcriber
-        self.menuBar = menuBar
         self.status = status ?? .shared
         self.status.activeModelID = model.id
     }
@@ -38,14 +38,14 @@ final class ModelSwitcher {
     /// Loads and swaps in `id`, a `ModelRegistry` id or nil for the
     /// recommended model.
     func select(_ id: String?) {
-        guard let next = Daemon.knownModel(id).flatMap(ModelRegistry.find) ?? ModelRegistry.recommended() else { return }
+        guard let next = Assembly.knownModel(id).flatMap(ModelRegistry.find) ?? ModelRegistry.recommended() else { return }
         generation += 1
         load?.cancel()
         load = nil
         guard next.id != model.id else {
             // Back to the model already in use: nothing to load.
             status.show(nil)
-            menuBar.setModelStatus(nil)
+            app?.modelStatus = nil
             return
         }
 
@@ -54,7 +54,7 @@ final class ModelSwitcher {
         report(WhisperKitTranscriber.isCached(next) ? .loading : .downloading(nil), next, generation)
         Log.info("model: loading \(next.id) behind \(model.id)")
 
-        // The switcher lives as long as the daemon, so the task holds it
+        // The switcher lives as long as the app, so the task holds it
         // strongly. It runs on the main actor except inside the awaits.
         load = Task {
             do {
@@ -92,7 +92,7 @@ final class ModelSwitcher {
         load = nil
         status.activeModelID = next.id
         status.show(nil)
-        menuBar.setModelStatus(nil)
+        app?.modelStatus = nil
         Log.info("model: \(next.id)")
         // Free the old model's memory. Nothing is transcribing with it: the
         // swap waited for the session to go idle.
@@ -109,12 +109,12 @@ final class ModelSwitcher {
         let state = ModelLoadStatus.State(modelID: next.id, phase: phase)
         guard state != status.current else { return }
         status.show(state)
-        menuBar.setModelStatus(state.text)
+        app?.modelStatus = state.text
     }
 }
 
 /// A model loading behind the one in use, for the Settings window and the
-/// menu. One daemon, one status: `shared` is the only instance the app uses.
+/// menu. One app, one status: `shared` is the only instance the app uses.
 @MainActor
 final class ModelLoadStatus: ObservableObject {
     static let shared = ModelLoadStatus()

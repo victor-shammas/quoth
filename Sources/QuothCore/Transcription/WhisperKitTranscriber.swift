@@ -28,7 +28,7 @@ package actor WhisperKitTranscriber: Transcriber {
         }
         Log.info("loading \(model.id)...")
         // Explicit downloadBase: the HubApi default is ~/Documents/huggingface,
-        // which the launchd daemon can't read and iCloud may evict. The
+        // which a login item can't always read and iCloud may evict. The
         // tokenizer folder follows downloadBase.
         let base = try Paths.prepareDirectory(Paths.appSupport)
         let loaded: WhisperKit

@@ -74,7 +74,7 @@ struct BenchOptions {
 /// `quoth-bench transcription <folder>`: runs the model over local recordings and prints
 /// the median and p90 of each transcription stage, per file. Capture stop and
 /// delivery need the microphone and a focused app, so they are only in the
-/// daemon's per-dictation log line.
+/// app's per-dictation log line.
 ///
 /// Prints timings, counts and word error rates, never transcript text.
 enum TranscriptionBench {
