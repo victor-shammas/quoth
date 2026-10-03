@@ -52,7 +52,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
             guard let self, let model else { return }
             store.write(Onboarding.apply(hotkey: model.hotkey, languages: model.languages, preferred: model.preferred, to: store.current))
             Log.info("onboarding done: hold \(model.hotkey.shortName); languages \(model.languages.joined(separator: ", "))")
-            window?.close()
+            self.window?.close()
         }
         self.model = model
         let hosting = NSHostingView(rootView: OnboardingView(model: model))
