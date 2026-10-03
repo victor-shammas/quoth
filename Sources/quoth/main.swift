@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import QuothCore
+import QuothDomain
 
 // The entry point parses flags and calls QuothCore. Behaviour lives there.
 

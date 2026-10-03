@@ -18,7 +18,9 @@ import Foundation
 /// The punctuation Whisper puts around a command is absorbed, so the mark
 /// replaces it cleanly ("…the words. New paragraph. Next…" → "…the
 /// words.\n\nNext…").
-struct VoiceCommands: TranscriptProcessor {
+public struct VoiceCommands: TranscriptProcessor {
+    public init() {}
+
     /// Marks where a command inserted something, so the clean-up after it
     /// spaces and capitalizes only there. A private-use character no
     /// transcript contains.
@@ -70,7 +72,7 @@ struct VoiceCommands: TranscriptProcessor {
         pattern: #"\bscratch\s+that\b[,.!]?"#, options: [.caseInsensitive]
     )
 
-    func process(_ transcript: Transcript) -> Transcript {
+    public func process(_ transcript: Transcript) -> Transcript {
         if let language = transcript.timings?.language, !language.lowercased().hasPrefix("en") {
             return transcript
         }

@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: `2026.10.02`
+Last updated: `2026.10.03`
 
 > This document is the target structure. Contributors and agents read it first: it says where each kind of change belongs, so parallel work composes instead of colliding.
 
@@ -41,23 +41,49 @@ Quoth is a macOS menu-bar dictation app. Hold a key, speak, release, and the tra
 
 ```
 Package.swift (the direct edition)
-  QuothCore       library     all behaviour: capture, hotkey, transcription, pipeline, settings, UI
+  QuothDomain     library     pure logic, Foundation only: gesture, dictionary, voice commands, settings values, models
+  QuothCore       library     everything else: capture, hotkey, transcription, the loop, stores, UI
   quoth           executable  thin entry point: ArgumentParser commands that call into QuothCore
   quoth-bench     executable  developer benchmarks, never shipped
   QuothTests, QuothBenchTests
 
 project.yml (the App Store edition, generated with xcodegen)
+  QuothDomain     static lib  Sources/QuothDomain
   Quoth           app         Sources/QuothCore compiled with APPSTORE, plus AppStore/main.swift;
                               leaves out Updater, CommandLineLink, Setup, Doctor, ModelCommands
 ```
 
 The direct `Quoth.app` wraps the `quoth` executable (`scripts/build-app.sh`). The same binary runs as the app (launched by `SMAppService` or from Finder) and as the CLI (through a symlink); with no subcommand it runs the dictation loop. The App Store app is always the menu-bar app.
 
-Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
+Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. ADR-007 is splitting QuothCore into modules, a phase at a time; what has moved so far is `QuothDomain`, whose API is `public`. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
 
 ## 3. Layout
 
 ```
+Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or WhisperKit
+  Input/
+    Gesture.swift               press/release rules: short taps, chords, the double-tap lock
+    HotkeySettings.swift        the key, the lock and live text
+    Spacing.swift               the spaces around a transcript
+  Pipeline/
+    Transcript.swift, TranscriptProcessor.swift
+    VoiceCommands.swift         "new paragraph", "new line"
+    PauseSplitter.swift         where a locked recording is cut into segments
+  Dictionary/
+    Dictionary.swift            terms, replacements, example sentences; the plain-text table's parser and writer
+    DictionaryReplacer.swift    the replacement pass, with loose matching
+    DictionarySettings.swift
+  Settings/
+    Settings.swift              Codable settings value with defaults, and reset()
+    OnboardingSettings.swift
+  Transcription/
+    Transcriber.swift           protocol and TranscriptionContext (language, prompt, previous text)
+    SpokenLanguage.swift, WhisperLanguages.swift, LanguageSettings.swift
+                                the language each dictation decodes in; Whisper's language table
+    ModelRegistry.swift, TranscriptionModel.swift, ModelSettings.swift, TranscriberTimings.swift
+  Audio/
+    SilenceTrimmer.swift
+
 Sources/QuothCore/
   App/
     DictationController.swift   the dictation loop: press → capture → transcribe → process → deliver; locks and live text
@@ -79,41 +105,30 @@ Sources/QuothCore/
     Log.swift                   stderr logging; never logs transcript text
     SilentExit.swift            "message printed, exit with this code", so QuothCore needs no ArgumentParser
   Settings/
-    Settings.swift              Codable settings value with defaults, and reset()
     SettingsStore.swift         load, atomic save, file watching, change publishing
   Input/
     HotkeyMonitor.swift         the listen-only tap for modifier changes, the lock's time limit
-    Gesture.swift               press/release rules: short taps, chords, the double-tap lock (pure, tested)
-    HotkeySettings.swift        the key, the lock and live text
+    HotkeyKey+Flag.swift        each key's CGEventFlags
     TapRecovery.swift           re-enabling a disabled tap; the menu's hotkey status
     FocusSnapshot.swift         what was focused, and whether it is secure; field details in the direct edition
     Delivery.swift              insert, copy or discard (pure decision, tested)
-    Spacing.swift               the spaces around a transcript (pure, tested)
     TextInjector.swift          paste or typed Unicode; the borrowed clipboard
   Audio/
     AudioCapture.swift, CaptureBuffer.swift
                                 capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
     CaptureInput.swift, HALInput.swift, EngineInput.swift
                                 ways of running the mic; the AUHAL unit is the default
-    HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift, SilenceTrimmer.swift
+    HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
   Transcription/
-    Transcriber.swift           protocol and TranscriptionContext (language, prompt, previous text)
     WhisperKitTranscriber.swift loading, transcribing, the on-disk model cache and deleting a model
     WhisperTuning.swift         compute units and decoding options, measured with `quoth-bench`
-    SpokenLanguage.swift, LanguageDetector.swift, LanguageSettings.swift
-                                the language each dictation decodes in
-    ModelRegistry.swift, TranscriptionModel.swift, ModelSettings.swift
+    LanguageDetector.swift      Automatic: which language a dictation is in
   Pipeline/
-    Transcript.swift, TranscriptProcessor.swift
-    VoiceCommands.swift         "new paragraph", "new line"
-    PauseSplitter.swift         where a locked recording is cut into segments (pure, tested)
     LiveTranscription.swift     a locked recording's segments, transcribed and typed in order
   Dictionary/
-    Dictionary.swift            terms, replacements, example sentences; the plain-text table's parser and writer
     DictionaryStore.swift       loads, reloads on change, saves without overwriting a change made elsewhere
-    DictionaryProcessor.swift   the replacement pass, with loose matching
-    DictionaryContext.swift, DictionarySettings.swift
-                                the example sentence for the active language, as the prompt
+    DictionaryProcessor.swift   the replacement pass as a TranscriptProcessor, reading the store
+    DictionaryContext.swift     the example sentence for the active language, as the prompt
   UI/
     MenuBarController.swift, QuoteGlyph.swift
                                 the menu and its state glyph

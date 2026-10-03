@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class DictionaryReplacerTests: XCTestCase {
     private func apply(

@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Behind `quoth models list`, `quoth models download <id>` and
 /// `quoth models remove <id>`.

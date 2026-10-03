@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class StartupTests: XCTestCase {
     private struct Boom: Error {}

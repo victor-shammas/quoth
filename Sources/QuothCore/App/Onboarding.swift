@@ -1,22 +1,5 @@
 import Foundation
-
-/// Whether the onboarding window has been through.
-///
-/// The `settings.json` field for this feature; see `Settings`. Give each new
-/// field a default and decode it in `init(from:)` with
-/// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
-struct OnboardingSettings: Codable, Equatable {
-    /// Set by Get Started or by closing the window. Missing in files from
-    /// before v0.2.0, so upgraders see the window once too.
-    var completed = false
-
-    init() {}
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        completed = try c.decodeIfPresent(Bool.self, forKey: .completed) ?? false
-    }
-}
+import QuothDomain
 
 /// What the onboarding window offers and what Get Started saves. Pure, so it
 /// is tested; `OnboardingWindow` is the view.

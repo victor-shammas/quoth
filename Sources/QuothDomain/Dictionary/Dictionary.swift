@@ -19,33 +19,33 @@ import Foundation
 ///
 /// This is the only user-authored text Quoth stores. It never holds
 /// transcript text.
-struct UserDictionary: Codable, Equatable, Sendable {
-    struct Replacement: Codable, Equatable, Sendable {
+public struct UserDictionary: Codable, Equatable, Sendable {
+    public struct Replacement: Codable, Equatable, Sendable {
         /// What the model writes. Matched as whole words, ignoring case.
-        var from: [String]
+        public var from: [String]
         /// What to write instead, inserted exactly as given.
-        var to: String
+        public var to: String
     }
 
-    var terms: [String]
-    var replacements: [Replacement]
+    public var terms: [String]
+    public var replacements: [Replacement]
     /// One sentence per language code (`en`, `pt-BR`).
-    var examples: [String: String]
+    public var examples: [String: String]
 
-    init(terms: [String] = [], replacements: [Replacement] = [], examples: [String: String] = [:]) {
+    public init(terms: [String] = [], replacements: [Replacement] = [], examples: [String: String] = [:]) {
         self.terms = terms
         self.replacements = replacements
         self.examples = examples
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         terms = try c.decodeIfPresent([String].self, forKey: .terms) ?? []
         replacements = try c.decodeIfPresent([Replacement].self, forKey: .replacements) ?? []
         examples = try c.decodeIfPresent([String: String].self, forKey: .examples) ?? [:]
     }
 
-    static let empty = UserDictionary()
+    public static let empty = UserDictionary()
 
     /// The example sentence for `language`, or nil when there is none.
     ///
@@ -53,7 +53,7 @@ struct UserDictionary: Codable, Equatable, Sendable {
     /// `pt-BR` and `pt` share a section. There is no fallback to another
     /// language: a prompt in the wrong language pulls the decoder into that
     /// language, which is worse than no prompt.
-    func example(for language: String?) -> String? {
+    public func example(for language: String?) -> String? {
         guard let language, !language.isEmpty else { return nil }
         // Sorted so the choice among several matching sections is stable.
         let sections = examples
@@ -70,7 +70,7 @@ struct UserDictionary: Codable, Equatable, Sendable {
 
     /// Canonical spellings for engines that accept a vocabulary list, such as
     /// contextual strings: every term and every replacement target.
-    var vocabulary: [String] {
+    public var vocabulary: [String] {
         var seen = Set<String>()
         return (terms + replacements.map(\.to))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -102,7 +102,7 @@ extension UserDictionary {
     ///   first separator is Replaces, a comma-separated list.
     /// - A comma in the word column means a missing separator, so the file is
     ///   refused rather than guessed at.
-    static func parse(_ data: Data) throws -> UserDictionary {
+    public static func parse(_ data: Data) throws -> UserDictionary {
         guard var text = String(data: data, encoding: .utf8) else { throw DictionaryParseError.notText }
         if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
 
@@ -145,7 +145,7 @@ extension UserDictionary {
     }
 
     /// The comment lines at the top of every file Quoth writes.
-    static let preamble = """
+    public static let preamble = """
         # Words Quoth should spell your way. Replaces lists what it writes instead.
         # Separate the columns with two spaces or a tab.
 
@@ -154,9 +154,14 @@ extension UserDictionary {
 
     /// One row of the table: a word and what the model writes instead of
     /// it. The Settings editor and the text file both show these.
-    struct Row: Equatable, Sendable {
-        var word: String
-        var heardAs: [String]
+    public struct Row: Equatable, Sendable {
+        public var word: String
+        public var heardAs: [String]
+
+        public init(word: String, heardAs: [String]) {
+            self.word = word
+            self.heardAs = heardAs
+        }
     }
 
     /// The table's rows: every term is a row; a replacement's target that is
@@ -165,7 +170,7 @@ extension UserDictionary {
     /// `skipped`: a word with a comma or starting with `#`, and a Replaces
     /// item with a comma. Runs of whitespace become one space, which the
     /// replacement pass treats the same.
-    func rows() -> (rows: [Row], skipped: Int) {
+    public func rows() -> (rows: [Row], skipped: Int) {
         func clean(_ s: String) -> String { s.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
 
         var order: [String] = []
@@ -196,7 +201,7 @@ extension UserDictionary {
 
     /// The dictionary a table of rows describes: each word a term, and its
     /// Heard as list a replacement to it. Blank words are dropped.
-    init(rows: [Row], examples: [String: String] = [:]) {
+    public init(rows: [Row], examples: [String: String] = [:]) {
         self.init(examples: examples)
         for row in rows {
             let word = row.word.trimmingCharacters(in: .whitespaces)
@@ -209,7 +214,7 @@ extension UserDictionary {
 
     /// This dictionary as the text file: the preamble, the header and one
     /// aligned row per word (`rows()`). `examples` are not part of the file.
-    func text() -> (text: String, rows: Int, skipped: Int) {
+    public func text() -> (text: String, rows: Int, skipped: Int) {
         let (table, skipped) = rows()
         let order = table.map(\.word)
         let from = Dictionary(uniqueKeysWithValues: table.map { ($0.word, $0.heardAs) })
@@ -225,11 +230,11 @@ extension UserDictionary {
 
 /// Why the dictionary file did not load. Descriptions give a line number and
 /// never quote the file.
-enum DictionaryParseError: Error, Equatable, CustomStringConvertible {
+public enum DictionaryParseError: Error, Equatable, CustomStringConvertible {
     case notText
     case missingSeparator(line: Int)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .notText:
             return "not UTF-8 text"
@@ -246,7 +251,7 @@ extension UserDictionary {
     /// Quoth's own dependency name, so it changes nothing a new user is
     /// likely to say. It has no example sentence: those live in settings and
     /// add decoding time to every dictation, so they should be the user's own.
-    static let template = UserDictionary(
+    public static let template = UserDictionary(
         terms: ["WhisperKit"],
         replacements: [Replacement(from: ["whisper kit"], to: "WhisperKit")]
     ).text().text

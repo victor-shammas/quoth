@@ -2,7 +2,7 @@ import Foundation
 
 /// What comes right before the insertion point in the focused field, read
 /// over Accessibility at delivery.
-enum TextBeforeCursor: Equatable {
+public enum TextBeforeCursor: Equatable {
     /// The app did not say: no element, no selected range, or no text.
     case unknown
     /// The cursor is at the start of the field.
@@ -12,7 +12,7 @@ enum TextBeforeCursor: Equatable {
     case character(Character)
 
     /// For the log, which never carries text: "letter", not the letter.
-    var kind: String {
+    public var kind: String {
         switch self {
         case .unknown: return "unknown"
         case .start: return "start"
@@ -27,7 +27,7 @@ enum TextBeforeCursor: Equatable {
 /// Spaces around a transcript, so consecutive dictations don't run
 /// together ("works well.The only thing"). Whisper never starts or ends a
 /// transcript with one. Pure, so it is tested.
-enum Spacing {
+public enum Spacing {
     /// Characters after which a word follows with no space: brackets and
     /// quotes that open, and the marks that start a handle or a path.
     private static let openers: Set<Character> = [
@@ -45,7 +45,7 @@ enum Spacing {
     /// A leading space only when the app says the text before the cursor
     /// needs one, as after a word typed by hand. Unknown adds none: after
     /// a dictation, its trailing space is already there.
-    static func spaced(_ text: String, before: TextBeforeCursor) -> String {
+    public static func spaced(_ text: String, before: TextBeforeCursor) -> String {
         var spaced = text
         if case .character(let preceding) = before, needsSpace(after: preceding, text: text) {
             spaced = " " + spaced
@@ -57,7 +57,7 @@ enum Spacing {
     }
 
     /// Whether `text` needs a space to follow `preceding`.
-    static func needsSpace(after preceding: Character, text: String) -> Bool {
+    public static func needsSpace(after preceding: Character, text: String) -> Bool {
         guard let first = text.first else { return false }
         if preceding.isWhitespace || first.isWhitespace { return false }
         if openers.contains(preceding) || attaching.contains(first) { return false }

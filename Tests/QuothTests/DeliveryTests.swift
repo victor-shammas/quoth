@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 final class DeliveryTests: XCTestCase {
     private func element(_ pid: pid_t) -> FocusedElement {

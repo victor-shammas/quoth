@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import QuothDomain
 
 /// Flags for one foreground run of the dictation loop. Never persisted.
 public struct DaemonOptions {

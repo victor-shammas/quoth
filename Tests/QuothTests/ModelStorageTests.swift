@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
 
 /// Measuring and deleting a downloaded model, in a temporary folder that
 /// stands in for Application Support.

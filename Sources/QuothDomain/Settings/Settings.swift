@@ -8,16 +8,16 @@ import Foundation
 ///
 /// Feature structs follow the same rule: give every field a default and
 /// decode it with `decodeIfPresent(…) ?? default` in `init(from:)`.
-struct Settings: Codable, Equatable {
-    var hotkey = HotkeySettings()
-    var dictionary = DictionarySettings()
-    var language = LanguageSettings()
-    var model = ModelSettings()
-    var onboarding = OnboardingSettings()
+public struct Settings: Codable, Equatable {
+    public var hotkey = HotkeySettings()
+    public var dictionary = DictionarySettings()
+    public var language = LanguageSettings()
+    public var model = ModelSettings()
+    public var onboarding = OnboardingSettings()
 
-    init() {}
+    public init() {}
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         hotkey = try c.decodeIfPresent(HotkeySettings.self, forKey: .hotkey) ?? HotkeySettings()
         dictionary = try c.decodeIfPresent(DictionarySettings.self, forKey: .dictionary) ?? DictionarySettings()
@@ -31,7 +31,7 @@ extension Settings {
     /// Defaults for every preference, keeping what is the user's own rather
     /// than a preference: the dictionary's example sentences, the languages
     /// they speak, and that onboarding is done (Reset to Defaults…).
-    func reset() -> Settings {
+    public func reset() -> Settings {
         var fresh = Settings()
         fresh.dictionary = dictionary
         fresh.language.spoken = language.spoken

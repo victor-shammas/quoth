@@ -4,6 +4,11 @@ import PackageDescription
 let package = Package(
     name: "quoth",
     platforms: [.macOS(.v14)],
+    products: [
+        // For the App Store project (project.yml), which links the modules
+        // as a local package.
+        .library(name: "QuothDomain", targets: ["QuothDomain"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         // WhisperKit, renamed argmax-oss-swift. 1.1.0 is the first release with
@@ -15,10 +20,14 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
     ],
     targets: [
+        // Pure logic, Foundation only (ADR-007): gesture rules, the
+        // dictionary, voice commands, settings values, the model catalog.
+        .target(name: "QuothDomain"),
         // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
         .target(
             name: "QuothCore",
             dependencies: [
+                "QuothDomain",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
@@ -28,6 +37,7 @@ let package = Package(
             name: "quoth",
             dependencies: [
                 "QuothCore",
+                "QuothDomain",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
@@ -37,13 +47,18 @@ let package = Package(
             name: "quoth-bench",
             dependencies: [
                 "QuothCore",
+                "QuothDomain",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
         // Unit tests against QuothCore.
         .testTarget(
             name: "QuothTests",
-            dependencies: ["QuothCore"]
+            dependencies: [
+                "QuothCore",
+                "QuothDomain",
+                .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ]
         ),
         // Unit tests for the benchmarks' pure parts.
         .testTarget(

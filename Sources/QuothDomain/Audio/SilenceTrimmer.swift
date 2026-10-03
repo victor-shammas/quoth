@@ -11,28 +11,28 @@ import Foundation
 ///
 /// It errs toward keeping audio: a margin stays on each side, and a capture
 /// whose loudest frame never clears the threshold comes back unchanged.
-enum SilenceTrimmer {
-    static let sampleRate = 16_000
+public enum SilenceTrimmer {
+    public static let sampleRate = 16_000
     /// 10 ms frames.
-    static let frameLength = 160
+    public static let frameLength = 160
     /// Frames quieter than this RMS are silence whatever the rest of the capture.
-    static let minimumLevel: Float = 0.003
+    public static let minimumLevel: Float = 0.003
     /// Frames quieter than this fraction of the loudest frame's RMS (−26 dB) are silence.
-    static let relativeLevel: Float = 0.05
+    public static let relativeLevel: Float = 0.05
     /// Audio kept before the first voiced frame, for soft onsets.
-    static let leadMargin = 0.25
+    public static let leadMargin = 0.25
     /// Audio kept after the last voiced frame, for trailing consonants.
-    static let trailMargin = 0.35
+    public static let trailMargin = 0.35
 
     /// `audio` without its leading and trailing silence, margins kept.
-    static func trim(_ audio: [Float]) -> [Float] {
+    public static func trim(_ audio: [Float]) -> [Float] {
         guard let range = voicedRange(audio) else { return audio }
         if range.count == audio.count { return audio }
         return Array(audio[range])
     }
 
     /// The sample range to keep, or nil if nothing clears the threshold.
-    static func voicedRange(_ audio: [Float]) -> Range<Int>? {
+    public static func voicedRange(_ audio: [Float]) -> Range<Int>? {
         let frames = audio.count / frameLength
         guard frames > 0 else { return nil }
         var levels = [Float](repeating: 0, count: frames)

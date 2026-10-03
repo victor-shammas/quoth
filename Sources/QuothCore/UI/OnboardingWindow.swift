@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 /// The onboarding window: one page with the hotkey, the languages the
@@ -145,7 +146,7 @@ final class OnboardingModel: ObservableObject {
     let preferred: [String]
     var onGetStarted: (() -> Void)?
 
-    init(settings: Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
+    init(settings: QuothDomain.Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
         hotkey = settings.hotkey.key
         hotkeyChoices = Onboarding.hotkeyChoices(current: settings.hotkey.key)
         self.preferred = preferred

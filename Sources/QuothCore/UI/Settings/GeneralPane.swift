@@ -1,4 +1,5 @@
 import AppKit
+import QuothDomain
 import SwiftUI
 
 /// General: how dictation starts (the hotkey, the lock, live text), opening

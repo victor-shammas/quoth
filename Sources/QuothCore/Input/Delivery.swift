@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// A transcript that was not inserted at the cursor, with the line the
 /// overlay shows.
