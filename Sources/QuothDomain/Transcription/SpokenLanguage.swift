@@ -31,13 +31,11 @@ public enum SpokenLanguage {
     public static func plan(setting: String?, spoken: [String], model: TranscriptionModel) -> Plan {
         guard model.isMultilingual else { return .none }
         let supported = model.supportedLanguages
-        if let code = setting.map(whisperCode), supported.contains(code) {
+        if let code = setting.map(WhisperLanguages.code), supported.contains(code) {
             return .fixed(code)
         }
-        var seen = Set<String>()
-        let candidates = spoken.map(whisperCode).filter { supported.contains($0) && seen.insert($0).inserted }
-        if candidates.count == 1 { return .fixed(candidates[0]) }
-        return .detect(among: candidates)
+        let candidates = spoken.map(WhisperLanguages.code).filter(supported.contains).uniqued()
+        return candidates.count == 1 ? .fixed(candidates[0]) : .detect(among: candidates)
     }
 
     /// How sure detection must be to switch away from the language the
@@ -69,30 +67,13 @@ public enum SpokenLanguage {
     /// `identifiers` (as in `Locale.preferredLanguages`: "en-US", "pt-BR",
     /// "zh-Hans-CN") reduced to ISO 639-1 codes, in order, without repeats.
     public static func preferredCodes(_ identifiers: [String] = Locale.preferredLanguages) -> [String] {
-        var seen = Set<String>()
-        return identifiers.compactMap { id -> String? in
+        identifiers.compactMap { id -> String? in
             let language = Locale.Language(identifier: id)
             let code = language.languageCode?.identifier(.alpha2) ?? language.languageCode?.identifier
-            return code.map(whisperCode)
+            return code.map(WhisperLanguages.code)
         }
-        .filter { seen.insert($0).inserted }
+        .uniqued()
     }
-
-    /// Where Apple's language codes and Whisper's differ for the same
-    /// language: Norwegian Bokmål is `nb` to macOS and `no` to Whisper,
-    /// Filipino `fil` and `tl`, Javanese `jv` and `jw`, and the old Hebrew
-    /// and Indonesian codes. Without this, a Mac's language would be
-    /// silently dropped from the ones Automatic chooses among.
-    public static let appleToWhisper = ["nb": "no", "fil": "tl", "jv": "jw", "iw": "he", "in": "id"]
-
-    /// `code` as Whisper knows it, lowercased.
-    public static func whisperCode(_ code: String) -> String {
-        let code = code.lowercased()
-        return appleToWhisper[code] ?? code
-    }
-
-    /// Every language Whisper's multilingual models know, as codes.
-    public static let whisperLanguages: Set<String> = WhisperLanguages.codes
 
     /// `code`'s name in the user's language, for the Language picker:
     /// "Portuguese", "Português". Falls back to Whisper's English name.

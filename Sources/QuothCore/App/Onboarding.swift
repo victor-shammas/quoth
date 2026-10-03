@@ -30,7 +30,7 @@ enum Onboarding {
         preferred: [String],
         name: (String) -> String = { SpokenLanguage.displayName($0) }
     ) -> (mac: [String], common: [String], more: [String]) {
-        let known = SpokenLanguage.whisperLanguages
+        let known = WhisperLanguages.codes
         let mac = preferred.filter(known.contains)
         let common = commonLanguages.filter { known.contains($0) && !mac.contains($0) }
         let listed = Set(mac + common)
@@ -44,7 +44,7 @@ enum Onboarding {
     /// the Mac's languages, which is what Quoth follows until the user
     /// picks.
     static func initialLanguages(saved: [String]?, preferred: [String]) -> [String] {
-        (saved ?? preferred).filter(SpokenLanguage.whisperLanguages.contains)
+        (saved ?? preferred).filter(WhisperLanguages.codes.contains)
     }
 
     /// The pill's title for `names`: "English", "English, Spanish", "English +2".
@@ -71,7 +71,7 @@ enum Onboarding {
     ) -> Settings {
         var next = settings
         next.hotkey.key = hotkey
-        let mac = preferred.filter(SpokenLanguage.whisperLanguages.contains)
+        let mac = preferred.filter(WhisperLanguages.codes.contains)
         next.language.spoken = Set(languages) == Set(mac) ? nil : languages
         let current = settings.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended
         if languages.contains(where: { $0 != "en" }), !current.isMultilingual {

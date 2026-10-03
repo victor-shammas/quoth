@@ -121,4 +121,24 @@ public enum WhisperLanguages {
     ]
 
     public static let codes: Set<String> = Set(names.values)
+
+    /// `code` as Whisper knows it, lowercased. Apple and Whisper differ for
+    /// a few languages: Norwegian Bokmål is `nb` to macOS and `no` to
+    /// Whisper, Filipino `fil` and `tl`, Javanese `jv` and `jw`, and the old
+    /// Hebrew and Indonesian codes. Without this, a Mac's language would drop
+    /// silently out of the ones Automatic chooses among.
+    public static func code(_ code: String) -> String {
+        let code = code.lowercased()
+        return fromApple[code] ?? code
+    }
+
+    static let fromApple = ["nb": "no", "fil": "tl", "jv": "jw", "iw": "he", "in": "id"]
+}
+
+extension Array where Element: Hashable {
+    /// The elements in order, each once.
+    func uniqued() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
+    }
 }

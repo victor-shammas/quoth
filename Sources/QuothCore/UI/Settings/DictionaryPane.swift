@@ -297,7 +297,7 @@ private struct ExampleSentence: View {
     private var languages: [String] {
         let model = settings.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended
         guard model.isMultilingual else { return ["en"] }
-        let spoken = settings.current.language.spokenOrPreferred.filter(SpokenLanguage.whisperLanguages.contains)
+        let spoken = settings.current.language.spokenOrPreferred.filter(WhisperLanguages.codes.contains)
         return spoken.isEmpty ? ["en"] : spoken
     }
 

@@ -1,45 +1,37 @@
 import Foundation
 
-/// Turns hotkey edges into dictation actions (ADR-003). Pure, so the rules
-/// are tested without an event tap.
+/// Turns the hotkey's edges into dictation actions (ADR-003).
 ///
-/// The tap sees modifier changes only, so it cannot see the C in ⌘C. Two
+/// The tap sees modifier changes only, so it can't see the C in ⌘C. Two
 /// rules keep a shortcut typed on the hotkey from producing text:
-/// - A hold shorter than `minimumHold` is discarded without transcribing.
-/// - A recording is cancelled if another modifier changes while the hotkey
-///   is held, and a press while another modifier is already held does not
-///   record. Either way the rest of that hold is ignored.
+/// - A hold shorter than `minimumHold` is a tap, and is discarded.
+/// - Another modifier pressed during the hold, or held at its start, makes
+///   it a chord: the recording is discarded and the rest of the hold ignored.
 ///
-/// Recording still starts on key-down, so press latency is unchanged; a
+/// Recording starts on key-down regardless, so pressing costs no latency; a
 /// discarded hold just throws its audio away.
 ///
-/// Hands-free lock: a tap followed within `doubleTapWindow` by a second tap
-/// locks the recording on, so a long dictation needs no held key. The next
-/// press of the hotkey stops it and transcribes, with or without another
-/// modifier held, so a shortcut typed on the hotkey mid-dictation never
-/// throws minutes of audio away. A lock ended within `minimumLock` was a
-/// triple tap, not a dictation, and is discarded. The first tap is
-/// discarded as any short tap is, and the second press records from
-/// key-down, so a second press held past `minimumHold` is ordinary
-/// push-to-talk and never locks.
+/// The hands-free lock: a tap, then a second press within
+/// `doubleTapWindow`, released before `minimumHold`, locks the recording
+/// on. The next press stops it and transcribes, with or without another
+/// modifier, so a shortcut typed mid-dictation never throws minutes away.
+/// A lock shorter than `minimumLock` was a triple tap and is discarded. A
+/// second press held past `minimumHold` is ordinary push-to-talk.
 public struct Gesture {
     /// Holds shorter than this are taps or shortcuts, not dictation.
     public static let minimumHold: TimeInterval = 0.3
-    /// The longest gap between a tap's release and the next press for the
-    /// pair to count as a double tap.
+    /// The longest gap from a tap's release to the next press for the pair
+    /// to count as a double tap.
     public static let doubleTapWindow: TimeInterval = 0.4
     /// A lock shorter than this is an accidental triple tap.
     public static let minimumLock: TimeInterval = 1.0
 
-    /// Whether a double tap locks the recording on. When false the gesture
-    /// is push-to-talk only, as upstream.
+    /// Whether a double tap locks. Off, the gesture is push-to-talk only.
     public var lockEnabled: Bool
 
     public enum Input: Equatable {
-        /// The hotkey went down. `othersHeld`: another modifier was already
-        /// down, so this is a chord.
+        /// The hotkey went down; `othersHeld` if another modifier already was.
         case hotkeyDown(othersHeld: Bool)
-        /// The hotkey went up.
         case hotkeyUp
         /// Another modifier changed while the hotkey was down.
         case otherModifier
@@ -48,29 +40,29 @@ public struct Gesture {
     public enum Action: Equatable {
         /// Start recording.
         case start
-        /// Stop recording and transcribe.
+        /// Stop and transcribe.
         case transcribe
-        /// Stop recording and discard it.
+        /// Stop and discard.
         case cancel
-        /// The recording started by the last `.start` is now locked on: the
-        /// hotkey is up and recording continues until the next press.
+        /// The recording just started is locked on: it continues with the
+        /// hotkey up until the next press.
         case lock
     }
 
     private enum Phase: Equatable {
         case idle
-        /// Recording since this time.
-        case recording(since: TimeInterval)
-        /// The hotkey is down but this hold is a chord: ignore it until release.
-        case ignoring
-        /// A short tap was released at this time; a press soon after locks.
-        case tapped(at: TimeInterval)
-        /// Recording since this time, on the second press of a double tap.
-        /// A quick release locks; a long one transcribes as usual.
-        case latching(since: TimeInterval)
-        /// Locked on since this time (the second press): recording with the
-        /// hotkey up.
+        /// Held and recording since this time.
+        case holding(since: TimeInterval)
+        /// Held and recording since this time, as the second press of a
+        /// possible double tap: a quick release locks.
+        case secondPress(since: TimeInterval)
+        /// Locked on since this time, with the hotkey up.
         case locked(since: TimeInterval)
+        /// A tap ended at this time; a press soon after may lock.
+        case tapped(at: TimeInterval)
+        /// Held, but not dictating (a chord, or a lock's ending press):
+        /// wait for the release.
+        case ignoring
     }
 
     private var phase: Phase = .idle
@@ -79,80 +71,100 @@ public struct Gesture {
         self.lockEnabled = lockEnabled
     }
 
-    /// Whether the hotkey is down, as far as the edges seen so far say.
+    /// Whether the hotkey is down, as far as the edges so far say.
     public var isHeld: Bool {
         switch phase {
+        case .holding, .secondPress, .ignoring: return true
         case .idle, .tapped, .locked: return false
-        case .recording, .latching, .ignoring: return true
         }
     }
 
-    /// Whether a recording is locked on.
     public var isLocked: Bool {
         if case .locked = phase { return true }
         return false
     }
 
-    /// Feed one edge at `time` (seconds on a monotonic clock).
+    /// Feeds one edge, at `time` on a monotonic clock in seconds.
     public mutating func handle(_ input: Input, at time: TimeInterval) -> Action? {
-        switch (phase, input) {
-        case (.idle, .hotkeyDown(let othersHeld)), (.tapped, .hotkeyDown(let othersHeld)):
+        switch input {
+        case .hotkeyDown(let othersHeld): return pressed(at: time, othersHeld: othersHeld)
+        case .hotkeyUp: return released(at: time)
+        case .otherModifier: return chorded()
+        }
+    }
+
+    private mutating func pressed(at time: TimeInterval, othersHeld: Bool) -> Action? {
+        switch phase {
+        case .idle, .tapped:
             if othersHeld {
                 phase = .ignoring
                 return nil
             }
             if case .tapped(let at) = phase, lockEnabled, time - at <= Self.doubleTapWindow {
-                phase = .latching(since: time)
+                phase = .secondPress(since: time)
             } else {
-                phase = .recording(since: time)
+                phase = .holding(since: time)
             }
             return .start
-        case (.recording(let since), .hotkeyUp):
+        case .locked(let since):
+            // This press ends the lock and records nothing itself.
+            phase = .ignoring
+            return time - since < Self.minimumLock ? .cancel : .transcribe
+        case .holding, .secondPress, .ignoring:
+            // A repeated down edge.
+            return nil
+        }
+    }
+
+    private mutating func released(at time: TimeInterval) -> Action? {
+        switch phase {
+        case .holding(let since):
             if time - since < Self.minimumHold {
                 phase = .tapped(at: time)
                 return .cancel
             }
             phase = .idle
             return .transcribe
-        case (.latching(let since), .hotkeyUp):
+        case .secondPress(let since):
             if time - since < Self.minimumHold {
                 phase = .locked(since: since)
                 return .lock
             }
             phase = .idle
             return .transcribe
-        case (.recording, .otherModifier), (.latching, .otherModifier):
-            phase = .ignoring
-            return .cancel
-        case (.locked(let since), .hotkeyDown):
-            // The press that ends a lock records nothing itself; the rest of
-            // its hold is ignored.
-            phase = .ignoring
-            return time - since < Self.minimumLock ? .cancel : .transcribe
-        case (.ignoring, .hotkeyUp):
+        case .ignoring:
             phase = .idle
             return nil
-        default:
-            // A repeated down, an up with no down seen, or a modifier change
-            // outside a recording.
+        case .idle, .tapped, .locked:
+            // An up edge with no down seen.
             return nil
         }
     }
 
-    /// Forget the current hold, for a switch to another key. A held
-    /// recording is cancelled, as its key is no longer the hotkey; a locked
-    /// one is transcribed, so a settings change never loses a dictation.
+    private mutating func chorded() -> Action? {
+        switch phase {
+        case .holding, .secondPress:
+            phase = .ignoring
+            return .cancel
+        default:
+            return nil
+        }
+    }
+
+    /// Forgets the current hold, for a switch to another key. A held
+    /// recording is discarded, since its key is no longer the hotkey; a
+    /// locked one is transcribed, so a settings change never loses one.
     public mutating func reset() -> Action? {
         defer { phase = .idle }
         switch phase {
-        case .recording, .latching: return .cancel
+        case .holding, .secondPress: return .cancel
         case .locked: return .transcribe
         case .idle, .tapped, .ignoring: return nil
         }
     }
 
-    /// End a lock early (it ran too long, or the microphone changed):
-    /// transcribe what was recorded.
+    /// Ends a lock early (it ran too long, or the microphone changed),
+    /// transcribing what was recorded.
     public mutating func expireLock() -> Action? {
         guard isLocked else { return nil }
         phase = .idle
@@ -160,11 +172,9 @@ public struct Gesture {
     }
 
     /// The press just seen started no recording (the microphone failed):
-    /// ignore the rest of this hold, so it cannot lock or transcribe.
+    /// ignore the rest of the hold, so it can't lock or transcribe.
     public mutating func abandonPress() {
-        switch phase {
-        case .recording, .latching: phase = .ignoring
-        default: break
-        }
+        if case .holding = phase { phase = .ignoring }
+        if case .secondPress = phase { phase = .ignoring }
     }
 }

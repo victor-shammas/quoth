@@ -11,7 +11,7 @@ struct ModelPane: View {
     @ObservedObject private var loading = ModelLoadStatus.shared
 
     /// Every language Whisper knows, by name in the user's language.
-    private static let languages: [(code: String, name: String)] = SpokenLanguage.whisperLanguages
+    private static let languages: [(code: String, name: String)] = WhisperLanguages.codes
         .map { (code: $0, name: SpokenLanguage.displayName($0)) }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
@@ -118,7 +118,7 @@ struct ModelPane: View {
     @ViewBuilder private var languagePicker: some View {
         let multilingual = selectedModel.isMultilingual
         let code = store.current.language.code?.lowercased()
-        let selected = code.flatMap { SpokenLanguage.whisperLanguages.contains($0) ? $0 : nil }
+        let selected = code.flatMap { WhisperLanguages.codes.contains($0) ? $0 : nil }
         SettingRow("Language", caption: multilingual ? nil : "This model hears \(SpokenLanguage.displayName(selectedModel.onlyLanguage ?? "en")) only. For other languages, choose a multilingual model.") {
             SettingMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatic") {
                 languageToggle("Automatic", nil, selected: selected)
@@ -158,7 +158,7 @@ private struct SpokenLanguagesButton: View {
     @State private var isOpen = false
 
     private var spoken: [String] {
-        store.current.language.spokenOrPreferred.filter(SpokenLanguage.whisperLanguages.contains)
+        store.current.language.spokenOrPreferred.filter(WhisperLanguages.codes.contains)
     }
 
     var body: some View {
@@ -174,7 +174,7 @@ private struct SpokenLanguagesList: View {
     @ObservedObject var store: SettingsStore
 
     var body: some View {
-        let spoken = store.current.language.spokenOrPreferred.filter(SpokenLanguage.whisperLanguages.contains)
+        let spoken = store.current.language.spokenOrPreferred.filter(WhisperLanguages.codes.contains)
         LanguageChecklist(ticked: spoken, toggle: { code in
             var next = spoken.filter { $0 != code }
             if !spoken.contains(code) { next.append(code) }

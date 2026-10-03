@@ -31,7 +31,7 @@ final class OnboardingTests: XCTestCase {
         XCTAssertFalse(menu.common.contains("es"))
         XCTAssertTrue(menu.common.contains("fr"))
         XCTAssertFalse(menu.more.contains("fr"))
-        XCTAssertEqual(Set(menu.mac + menu.common + menu.more), SpokenLanguage.whisperLanguages)
+        XCTAssertEqual(Set(menu.mac + menu.common + menu.more), WhisperLanguages.codes)
     }
 
     func testSummary() {
