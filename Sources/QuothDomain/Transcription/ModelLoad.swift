@@ -20,7 +20,7 @@ public struct ModelLoad: Equatable, Sendable {
 
     /// For example "Downloading Large v3 Turbo… 42%".
     public var text: String {
-        let name = ModelRegistry.find(modelID)?.displayName.replacingOccurrences(of: "Whisper ", with: "") ?? modelID
+        let name = ModelRegistry.find(modelID)?.name ?? modelID
         switch phase {
         case .downloading(let fraction?): return "Downloading \(name)… \(Int((fraction * 100).rounded(.down)))%"
         case .downloading(nil): return "Downloading \(name)…"

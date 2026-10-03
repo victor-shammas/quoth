@@ -61,7 +61,7 @@ struct DownloadedModels: View {
             }
             ForEach(Array(storage.entries.enumerated()), id: \.element.id) { index, entry in
                 if index > 0 { RowDivider() }
-                SettingRow(entry.model.displayName.replacingOccurrences(of: "Whisper ", with: "")) {
+                SettingRow(entry.model.name) {
                     HStack(spacing: 12) {
                         Text(ModelStorage.format(entry.bytes))
                             .foregroundStyle(Latte.secondary)

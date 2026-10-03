@@ -22,8 +22,8 @@ struct ModelPane: View {
     var body: some View {
         Pane {
             SettingsSection("Transcription") {
-                SettingRow("Model", caption: app?.modelLoad == nil ? summary(selectedModel) : nil) {
-                    SettingMenu(title: Self.menuTitle(selectedModel)) {
+                SettingRow("Model", caption: app?.modelLoad == nil ? selectedModel.summary : nil) {
+                    SettingMenu(title: selectedModel.name) {
                         modelGroup("English only", ModelRegistry.all.filter { !$0.isMultilingual })
                         modelGroup("Multilingual, including English", ModelRegistry.all.filter(\.isMultilingual))
                     }
@@ -38,7 +38,7 @@ struct ModelPane: View {
                         case .failed:
                             EmptyView()
                         }
-                        caption(Self.capitalized(state.text))
+                        Caption(state.text)
                     }
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
@@ -64,53 +64,13 @@ struct ModelPane: View {
                     // A model not on the Mac yet downloads when chosen; the
                     // arrow says so without words.
                     if ModelFiles(model).isDownloaded {
-                        Text(Self.shortName(model))
+                        Text(model.shortName)
                     } else {
-                        Label(Self.shortName(model), systemImage: "arrow.down.circle")
+                        Label(model.shortName, systemImage: "arrow.down.circle")
                     }
                 }
             }
         }
-    }
-
-    /// "Small" for "Whisper Small (English)": the menu's groups say the rest.
-    private static func shortName(_ model: TranscriptionModel) -> String {
-        model.displayName
-            .replacingOccurrences(of: "Whisper ", with: "")
-            .replacingOccurrences(of: " (English)", with: "")
-    }
-
-    /// The closed menu, where the groups don't show: "Base (English)".
-    private static func menuTitle(_ model: TranscriptionModel) -> String {
-        model.isMultilingual ? shortName(model) : "\(shortName(model)) (English)"
-    }
-
-    /// How each model trades speed for accuracy, measured with
-    /// `quoth-bench transcription` on an M4 Pro.
-    private static let tradeOff: [String: String] = [
-        "whisper-base.en": "Fastest",
-        "whisper-small.en": "More accurate, slower",
-        "whisper-small": "Fast",
-        "whisper-large-v3-turbo": "Most accurate, slowest",
-        // Not benchmarked on the M4 Pro; compressed weights load and run
-        // like the full model.
-        "whisper-large-v3-turbo-compressed": "Nearly as accurate, smaller",
-    ]
-
-    /// "Fastest · English only · 145 MB", or "Fast · Multilingual · 490 MB". Not shown while the model loads:
-    /// the progress line under the menu says that instead.
-    private func summary(_ model: TranscriptionModel) -> String {
-        let languages = model.isMultilingual ? "Multilingual" : "English only"
-        let size = model.sizeMB >= 1000
-            ? String(format: "%.1f GB", Double(model.sizeMB) / 1000)
-            : "\(model.sizeMB) MB"
-        return [Self.tradeOff[model.id], languages, size]
-            .compactMap { $0 }
-            .joined(separator: " · ")
-    }
-
-    private static func capitalized(_ text: String) -> String {
-        text.prefix(1).uppercased() + text.dropFirst()
     }
 
     /// Automatic, then every language by name. A saved code Whisper does not
@@ -145,9 +105,6 @@ struct ModelPane: View {
         ))
     }
 
-    private func caption(_ text: String) -> some View {
-        Caption(text)
-    }
 }
 
 /// The languages Automatic chooses among, as a pill that opens checkboxes.

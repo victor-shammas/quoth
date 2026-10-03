@@ -33,4 +33,14 @@ final class HotkeyKeyTests: XCTestCase {
         XCTAssertEqual(ModelRegistry.recommended.onlyLanguage, "en")
         XCTAssertTrue(ModelRegistry.find("whisper-large-v3-turbo")!.isMultilingual)
     }
+
+    func testModelNamesAndSummary() {
+        let base = ModelRegistry.find("whisper-base.en")!
+        XCTAssertEqual(base.name, "Base (English)")
+        XCTAssertEqual(base.shortName, "Base")
+        XCTAssertEqual(base.summary, "Fastest · English only · 145 MB")
+        let turbo = ModelRegistry.find("whisper-large-v3-turbo")!
+        XCTAssertEqual(turbo.name, "Large v3 Turbo")
+        XCTAssertEqual(turbo.summary, "Most accurate, slowest · Multilingual · 1.6 GB")
+    }
 }
