@@ -7,14 +7,10 @@ final class OnboardingTests: XCTestCase {
     private let missing = PermissionState(hotkey: false, microphone: .notDetermined)
 
     func testShowsOnceToEveryoneThenOnlyWhileAGrantIsMissing() {
-        XCTAssertTrue(Onboarding.showsWindow(isApp: true, completed: false, state: granted))
-        XCTAssertTrue(Onboarding.showsWindow(isApp: true, completed: false, state: missing))
-        XCTAssertTrue(Onboarding.showsWindow(isApp: true, completed: true, state: missing))
-        XCTAssertFalse(Onboarding.showsWindow(isApp: true, completed: true, state: granted))
-    }
-
-    func testForegroundRunShowsNoWindow() {
-        XCTAssertFalse(Onboarding.showsWindow(isApp: false, completed: false, state: missing))
+        XCTAssertTrue(Onboarding.showsWindow(completed: false, state: granted))
+        XCTAssertTrue(Onboarding.showsWindow(completed: false, state: missing))
+        XCTAssertTrue(Onboarding.showsWindow(completed: true, state: missing))
+        XCTAssertFalse(Onboarding.showsWindow(completed: true, state: granted))
     }
 
     func testOlderSettingsFilesHaveNotOnboarded() throws {

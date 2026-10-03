@@ -34,10 +34,6 @@ enum Edition {
     /// Settings: in the App Store build, unless it is copy-only.
     static let pasteNeedsOwnGrant = isAppStore && allowsAutoPaste
 
-    /// Whether the build has Sparkle updates, the `quoth` command and its
-    /// setup and doctor tools.
-    static let hasDeveloperTools = !isAppStore
-
     /// Whether Quoth offers to open its settings and dictionary files in a
     /// text editor. In the sandbox they sit inside the container, where
     /// another app can't reliably open them; the editors in Settings cover

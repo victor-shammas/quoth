@@ -39,13 +39,8 @@ targets:
     sources:
       - path: Sources/QuothCore
         excludes:
-          # Direct build only: Sparkle updates, the quoth command and its
-          # setup and doctor tools.
+          # Direct build only: Sparkle updates.
           - App/Updater.swift
-          - App/CommandLineLink.swift
-          - App/Setup.swift
-          - App/Doctor.swift
-          - App/ModelCommands.swift
       - path: AppStore/main.swift
       - path: AppStore/Assets.xcassets
       - path: AppStore/PrivacyInfo.xcprivacy

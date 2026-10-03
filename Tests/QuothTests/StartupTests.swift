@@ -12,7 +12,6 @@ final class StartupTests: XCTestCase {
     }
 
     func testRetryableFailuresAreNotPermanent() {
-        XCTAssertFalse(StartupFailure.checksFailed.isPermanent)
         XCTAssertFalse(StartupFailure.warmupFailed(Boom()).isPermanent)
         XCTAssertFalse(StartupFailure.hotkeyUnavailable(Boom()).isPermanent)
     }

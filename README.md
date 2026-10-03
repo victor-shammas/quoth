@@ -17,7 +17,7 @@ Website: [victorshammas.com/quoth](https://victorshammas.com/quoth/).
 Quoth comes in two editions from this one codebase ([ADR-006](docs/decisions/006-two-editions.md)):
 
 - **Mac App Store**, $1.99, sandboxed. Pastes at the cursor once you allow it; otherwise each dictation is copied for ⌘V.
-- **Free and open source**, this repository. It also reads the text field it types into, for exact spacing and to keep out of password fields, and has the `quoth` command. Build it from source (section 6) until there is a release.
+- **Free and open source**, this repository. It also reads the text field it types into, for exact spacing and to keep out of password fields, and updates itself. Build it from source (section 6) until there is a release.
 
 Requires macOS 14+ on Apple silicon. Open Quoth and allow it when macOS asks for the microphone and Accessibility (Input Monitoring in the App Store edition). The first start downloads the speech model (about 150 MB).
 
@@ -35,7 +35,7 @@ If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shor
 
 **Voice commands** (English): "new paragraph", "new line", "bullet point", "comma", "question mark", "quote … unquote", and "scratch that" to remove what was just typed. Settings › General lists them all. If Quoth misspells a word, **Fix Last Dictation…** in the menu teaches it; **Settings › Dictionary** lists your words.
 
-Choose **Open at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `quoth doctor` shows how to fix it.
+Choose **Open at login** in **Settings…** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` changes the input source or shows emoji, set **System Settings → Keyboard → Press 🌐 key to** to **Do Nothing**.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.
 
@@ -43,23 +43,22 @@ To dictate in another language, choose a multilingual model in Settings (⌘, fr
 
 Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text table of each word and what the model writes instead, and Quoth spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
 
-## 4. CLI
+## 4. Settings and developer options
 
-| Command | What it does |
+Everything is in **Settings…**: the hotkey, models (download, switch and delete them under **Model**), languages, the dictionary, and launch at login. Quoth has no command line ([ADR-007](docs/decisions/007-modules-and-app-model.md)).
+
+For working on Quoth, start the app from a terminal with any of these, and its log prints there:
+
+| Variable | What it does |
 |---|---|
-| `quoth` | Run in the foreground (^C to quit) |
-| `quoth setup` | One-time setup: permissions and model download |
-| `quoth doctor` | Check permissions, and the `fn` key setting when the hotkey is `fn` |
-| `quoth install --launch-at-login` | Start Quoth at login |
-| `quoth install --cli` | Link `/usr/local/bin/quoth` to Quoth.app |
-| `quoth install --uninstall` | Stop launching at login and remove logs |
-| `quoth models list` | List available models, and which are on this Mac |
-| `quoth models download <id>` | Download a model |
-| `quoth models remove <id>` | Delete a downloaded model |
-| `quoth --model whisper-large-v3-turbo` | Larger, multilingual model |
-| `quoth --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
-| `quoth --no-overlay` | Hide the recording pill |
-| `quoth --inject-mode type-unicode` | Type instead of paste (leaves the clipboard alone) |
+| `QUOTH_DEBUG_HOTKEY=1` | Log each modifier change the hotkey tap sees |
+| `QUOTH_DUMP_WAV=1` | Write each capture to `~/Library/Caches/quoth/last-capture.wav` |
+| `QUOTH_INJECT_MODE=type-unicode` | Type instead of paste (leaves the clipboard alone) |
+| `QUOTH_CAPTURE=<mode>` | Run the microphone another way (`CaptureMode`) |
+
+```sh
+QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth
+```
 
 ## 5. How it works
 
@@ -69,7 +68,7 @@ WhisperKit runs Whisper on the Apple Neural Engine via CoreML, a Core Audio inpu
 
 ```sh
 swift build -c release && swift test
-scripts/dev-install.sh      # build, sign, install Quoth.app, link the CLI
+scripts/dev-install.sh      # build, sign and install Quoth.app
 ```
 
 ### App Store edition

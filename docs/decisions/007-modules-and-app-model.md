@@ -37,7 +37,8 @@ Dependencies point down the table and never back up. The compiler enforces it: a
 ### 1.5 — No command line
 
 - Both editions are the menu-bar app only. `quoth run`, `setup`, `doctor`, `models` and `install`, `DaemonOptions`, the `quoth` symlink, SIGINT handling and the `AppLaunch.isApp` branches go.
-- What the commands did moves into the app: model download and removal are already in Settings › Model; the `fn` key check from `doctor` moves into onboarding; launch at login is already in Settings.
+- What the commands did is already in the app: model download and removal in Settings › Model, launch at login in Settings › General. `doctor`'s checks go: the app always skipped them, and the `fn` key advice is in the README.
+- The flags for debugging become `QUOTH_*` environment variables (`DeveloperOptions`), read when the app starts from a terminal.
 - `quoth-bench` stays, as a developer tool built against the modules.
 
 ## 2. Rationale
@@ -79,7 +80,8 @@ Each phase is one pull request, with the app working and the tests passing at it
 | 0 | This ADR. |
 | 1 | Create `QuothDomain`; move the pure types into it. `project.yml` builds the modules. |
 | 2 | `DictationMachine` with the section 3 tests; `DictationSession` replaces `DictationController` and the orchestration in `LiveTranscription`. |
-| 3 | `AppModel` and the composition root; the menu bar, the pill and the card read the model; `Daemon` goes. The command line goes. |
+| 3a | The command line goes: one entry point, `QuothApp.main()`, for both editions. |
+| 3b | `AppModel` and the composition root; the menu bar, the pill and the card read the model; `Daemon` goes. |
 | 4 | `QuothPlatform`: capture, the hotkey tap, text insertion, focus and permissions behind protocols; `Capabilities` replaces `Edition`. |
 | 5 | `QuothSpeech`; the settings and dictionary stores; `quoth-bench` against the modules. |
 | 6 | `architecture.md` rewritten for the new structure; ADR-001 marked superseded. |

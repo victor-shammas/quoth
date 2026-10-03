@@ -4,11 +4,10 @@ import QuothDomain
 /// What the onboarding window offers and what Get Started saves. Pure, so it
 /// is tested; `OnboardingWindow` is the view.
 enum Onboarding {
-    /// Whether Quoth.app opens the window at launch: until the user has been
-    /// through it once, and after that only while a grant is missing. A
-    /// foreground CLI run asks the old way and shows no window.
-    static func showsWindow(isApp: Bool, completed: Bool, state: PermissionState) -> Bool {
-        isApp && (!completed || !state.allGranted)
+    /// Whether Quoth opens the window at launch: until the user has been
+    /// through it once, and after that only while a grant is missing.
+    static func showsWindow(completed: Bool, state: PermissionState) -> Bool {
+        !completed || !state.allGranted
     }
 
     /// The keys offered for a first pick. The left-hand keys and Shift are
