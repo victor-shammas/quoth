@@ -40,7 +40,16 @@ final class OnboardingModel: ObservableObject {
 
     /// Runs `kind`'s steps, waiting for the microphone prompt's answer before
     /// re-reading the grants.
+    /// The grants whose Allow was clicked in this window.
+    @Published private(set) var asked = Set<Permissions.Kind>()
+
+    /// Allow was clicked, but this launch can't see the grant: only a new one can.
+    func needsReopen(_ kind: Permissions.Kind) -> Bool {
+        asked.contains(kind) && Permissions.showsAfterRelaunch(kind)
+    }
+
     func allow(_ kind: Permissions.Kind) {
+        asked.insert(kind)
         let steps = Permissions.allowSteps(for: kind, in: state)
         if steps == [.requestMicrophone] {
             MicrophoneAccess.requestIfUndetermined { [weak self] in
@@ -144,6 +153,11 @@ struct OnboardingView: View {
     private func permission(_ kind: Permissions.Kind, granted: Bool, action: String) -> some View {
         if granted {
             AllowedLabel()
+        } else if model.needsReopen(kind) {
+            // macOS shows this grant to a new launch only.
+            Button("Reopen Quoth") { AppLaunch.relaunch() }
+                .buttonStyle(.borderedProminent)
+                .help("Once it's on in System Settings, Quoth sees it after reopening.")
         } else {
             Button(action) { model.allow(kind) }
                 // Prominent, so the missing grants read as what to do next.

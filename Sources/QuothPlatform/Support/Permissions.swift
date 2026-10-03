@@ -63,7 +63,7 @@ public enum Permissions {
 
     /// The two grants, each with its own Allow button in the onboarding
     /// window, so macOS never shows both prompts at once.
-    public enum Kind: Equatable {
+    public enum Kind: Hashable {
         case microphone
         case hotkey
         case paste
@@ -73,6 +73,15 @@ public enum Permissions {
     /// the system has never asked, its System Settings pane once denied;
     /// the Accessibility prompt and its pane, so the user ends up where the
     /// switch is. Nothing once granted.
+    /// Whether a grant made while Quoth runs shows only to a new launch. In
+    /// the App Store edition, Input Monitoring and pasting are read with
+    /// CGPreflightListenEventAccess and CGPreflightPostEventAccess, which
+    /// keep their first answer for the life of the process. The microphone,
+    /// and Accessibility in the direct edition, are read live.
+    public static func showsAfterRelaunch(_ kind: Kind) -> Bool {
+        Edition.isAppStore && kind != .microphone
+    }
+
     public static func allowSteps(for kind: Kind, in state: PermissionState) -> [Step] {
         switch kind {
         case .microphone:

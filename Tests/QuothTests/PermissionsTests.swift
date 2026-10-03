@@ -36,4 +36,11 @@ final class PermissionsTests: XCTestCase {
         )
         XCTAssertEqual(Permissions.allowSteps(for: .hotkey, in: state(true, .notDetermined)), [])
     }
+
+    func testOnlyAppStoreEventGrantsNeedARelaunch() {
+        // The direct edition reads its grants live; this is it.
+        XCTAssertFalse(Permissions.showsAfterRelaunch(.microphone))
+        XCTAssertEqual(Permissions.showsAfterRelaunch(.hotkey), Edition.isAppStore)
+        XCTAssertEqual(Permissions.showsAfterRelaunch(.paste), Edition.isAppStore)
+    }
 }

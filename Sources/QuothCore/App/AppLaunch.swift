@@ -62,6 +62,26 @@ enum AppLaunch {
     /// Held for the life of the process.
     @MainActor private static var instanceLock: InstanceLock?
 
+    /// Opens a new Quoth and quits this one, for a grant macOS shows only to
+    /// a new launch (`Permissions.showsAfterRelaunch`). The new one starts
+    /// once this one has let go of the instance lock.
+    @MainActor
+    static func relaunch() {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        instanceLock = nil
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
+            Task { @MainActor in
+                if let error {
+                    Log.error("relaunch failed: \(error)")
+                    if case .held(let lock) = InstanceLock.claim(Paths.instanceLock) { instanceLock = lock }
+                    return
+                }
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
     // MARK: - Startup failures
 
     /// Explains why Quoth can't start, in a dialog, since nobody reads the
