@@ -49,8 +49,9 @@ final class ModelStorage: ObservableObject {
 struct DownloadedModels: View {
     /// The model chosen in Settings.
     let selected: TranscriptionModel?
+    /// For the model loading and the one in use; nil in tests.
+    var app: AppModel?
     @StateObject private var storage = ModelStorage()
-    @ObservedObject private var loading = ModelLoadStatus.shared
     @State private var confirming: ModelStorage.Entry?
 
     var body: some View {
@@ -78,7 +79,7 @@ struct DownloadedModels: View {
             }
         }
         .onAppear { storage.refresh() }
-        .onChange(of: loading.current) { _, state in
+        .onChange(of: app?.modelLoad) { _, state in
             // A download just finished: it is on the Mac now.
             if state == nil { storage.refresh() }
         }
@@ -96,6 +97,6 @@ struct DownloadedModels: View {
     }
 
     private func isInUse(_ model: TranscriptionModel) -> Bool {
-        model.id == selected?.id || model.id == loading.current?.modelID || model.id == loading.activeModelID
+        model.id == selected?.id || model.id == app?.modelLoad?.modelID || model.id == app?.activeModelID
     }
 }

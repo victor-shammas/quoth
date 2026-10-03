@@ -63,8 +63,8 @@ final class MenuBarController: NSObject {
     private func render() {
         withObservationTracking {
             statusLine.title = model.statusText
-            modelLine.title = model.modelStatus ?? ""
-            modelLine.isHidden = model.modelStatus == nil
+            modelLine.title = model.modelLoad?.text ?? ""
+            modelLine.isHidden = model.modelLoad == nil
             finishSetupItem.isHidden = !model.setupNeeded
             stopLockItem.isHidden = model.activity != .locked
             copyLastItem.isEnabled = model.hasLastDictation

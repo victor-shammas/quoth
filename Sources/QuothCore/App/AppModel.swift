@@ -27,7 +27,10 @@ final class AppModel {
     /// Whether the hotkey works, and if not, why.
     var hotkeyHealth: HotkeyHealth = .modelLoading
     /// A model downloading or loading behind the one in use, or nil.
-    var modelStatus: String?
+    var modelLoad: ModelLoad?
+    /// The model transcribing now, which differs from the one chosen in
+    /// Settings while that one loads. Neither may be deleted.
+    var activeModelID: String
     /// A grant the onboarding window asks for is missing.
     var setupNeeded = false
     /// Whether Copy and Fix Last Dictation have something to work on.
@@ -65,6 +68,7 @@ final class AppModel {
         self.card = card
         self.switcher = switcher
         self.hotkey = monitor.key
+        self.activeModelID = switcher.model.id
         self.fixWindow = FixDictationWindow(dictionary: dictionary)
         lastDictation.onChange = { [weak self] available in
             guard let self else { return }

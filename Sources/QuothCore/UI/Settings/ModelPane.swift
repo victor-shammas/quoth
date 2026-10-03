@@ -7,8 +7,8 @@ import SwiftUI
 /// the models downloaded to this Mac.
 struct ModelPane: View {
     @ObservedObject var store: SettingsStore
-    /// A model loading behind the one in use, after a change here.
-    @ObservedObject private var loading = ModelLoadStatus.shared
+    /// For a model loading behind the one in use; nil in tests.
+    var app: AppModel?
 
     /// Every language Whisper knows, by name in the user's language.
     private static let languages: [(code: String, name: String)] = WhisperLanguages.codes
@@ -22,13 +22,13 @@ struct ModelPane: View {
     var body: some View {
         Pane {
             SettingsSection("Transcription") {
-                SettingRow("Model", caption: loading.current == nil ? summary(selectedModel) : nil) {
+                SettingRow("Model", caption: app?.modelLoad == nil ? summary(selectedModel) : nil) {
                     SettingMenu(title: Self.menuTitle(selectedModel)) {
                         modelGroup("English only", ModelRegistry.all.filter { !$0.isMultilingual })
                         modelGroup("Multilingual, including English", ModelRegistry.all.filter(\.isMultilingual))
                     }
                 }
-                if let state = loading.current {
+                if let state = app?.modelLoad {
                     HStack(spacing: 8) {
                         switch state.phase {
                         case .downloading(let fraction?):
@@ -47,7 +47,7 @@ struct ModelPane: View {
                 languagePicker
             }
 
-            DownloadedModels(selected: selectedModel)
+            DownloadedModels(selected: selectedModel, app: app)
         }
     }
 

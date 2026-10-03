@@ -3,86 +3,72 @@ import QuothDomain
 import QuothPlatform
 import QuothSpeech
 
-/// Applies a model change while Quoth runs: loads the new model behind
-/// the menu bar, downloading it first if needed, while the current one keeps
-/// serving presses, then swaps it into the `DictationSession` between
-/// dictations.
+/// Changes the model while Quoth runs. The new one downloads if needed and
+/// loads in the background while the current one keeps transcribing, then
+/// swaps in between dictations, never under one.
 ///
-/// A second change while a load runs supersedes it: the first load's result
-/// is dropped. A failed load logs, shows a short status, and keeps the current
-/// model; the setting stays as chosen, so the next change or the next launch
-/// tries again.
+/// Choosing again while a load runs drops that load. A load that fails is
+/// reported, the current model stays, and the setting stays as chosen, so
+/// the next change or launch tries again. Progress goes to
+/// `AppModel.modelLoad`, which the menu and Settings show.
 @MainActor
 final class ModelSwitcher {
-    /// The model the session transcribes with.
+    /// The model transcribing now.
     private(set) var model: TranscriptionModel
     private var transcriber: WhisperKitTranscriber
-    /// Set by `Assembly` once the session exists.
+    /// Set once by `Assembly`.
     weak var session: DictationSession?
-    /// Where the menu reads the status line; set by `Assembly`.
     weak var app: AppModel?
-
-    private let status: ModelLoadStatus
-    private var load: Task<Void, Never>?
-    /// Bumped on every change, so a superseded load cannot swap or report.
-    private var generation = 0
-
-    /// Called on the main actor each time a model is swapped in and ready.
+    /// Called each time a model swaps in, ready.
     var onReady: (() -> Void)?
 
-    init(model: TranscriptionModel, transcriber: WhisperKitTranscriber, status: ModelLoadStatus? = nil) {
+    private var load: Task<Void, Never>?
+    /// Bumped on every choice, so a superseded load can neither swap nor report.
+    private var generation = 0
+
+    init(model: TranscriptionModel, transcriber: WhisperKitTranscriber) {
         self.model = model
         self.transcriber = transcriber
-        self.status = status ?? .shared
-        self.status.activeModelID = model.id
     }
 
-    /// Loads and swaps in `id`, a `ModelRegistry` id or nil for the
-    /// recommended model.
+    /// Loads and swaps in the model `id` names (`Startup.model(for:)`).
     func select(_ id: String?) {
         let next = Startup.model(for: id)
         generation += 1
         load?.cancel()
         load = nil
         guard next.id != model.id else {
-            // Back to the model already in use: nothing to load.
-            status.show(nil)
-            app?.modelStatus = nil
+            // Back to the model in use: nothing to load.
+            app?.modelLoad = nil
             return
         }
-
-        let generation = self.generation
-        let incoming = WhisperKitTranscriber(model: next)
-        report(WhisperKitTranscriber.isCached(next) ? .loading : .downloading(nil), next, generation)
         Log.info("model: loading \(next.id) behind \(model.id)")
+        let generation = self.generation
+        report(WhisperKitTranscriber.isCached(next) ? .loading : .downloading(nil), for: next, generation)
+        load = Task { await self.load(next, generation) }
+    }
 
-        // The switcher lives as long as the app, so the task holds it
-        // strongly. It runs on the main actor except inside the awaits.
-        load = Task {
-            do {
-                try await incoming.warmUp { fraction in
-                    Task { @MainActor in
-                        self.report(fraction < 1 ? .downloading(fraction) : .loading, next, generation)
-                    }
+    private func load(_ next: TranscriptionModel, _ generation: Int) async {
+        let incoming = WhisperKitTranscriber(model: next)
+        do {
+            try await incoming.warmUp { fraction in
+                Task { @MainActor in
+                    self.report(fraction < 1 ? .downloading(fraction) : .loading, for: next, generation)
                 }
-                report(.loading, next, generation)
-                // Swap between dictations: never under one that is recording
-                // or transcribing.
-                while (session?.state ?? .idle) != .idle {
-                    try await Task.sleep(nanoseconds: 100_000_000)
-                }
-                try Task.checkCancellation()
-                guard self.generation == generation else {
-                    await incoming.unload()
-                    return
-                }
-                swap(to: next, incoming)
-            } catch {
-                await incoming.unload()
-                guard self.generation == generation, !Task.isCancelled else { return }
-                Log.error("couldn't load \(next.id): \(error); keeping \(model.id)")
-                report(.failed, next, generation)
             }
+            report(.loading, for: next, generation)
+            // Between dictations: never under one recording or transcribing.
+            while (session?.state ?? .idle) != .idle {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            }
+            try Task.checkCancellation()
+            guard generation == self.generation else { return await incoming.unload() }
+            swap(to: next, incoming)
+        } catch {
+            await incoming.unload()
+            guard generation == self.generation, !Task.isCancelled else { return }
+            Log.error("couldn't load \(next.id): \(error); keeping \(model.id)")
+            report(.failed, for: next, generation)
         }
     }
 
@@ -92,72 +78,19 @@ final class ModelSwitcher {
         transcriber = incoming
         model = next
         load = nil
-        status.activeModelID = next.id
-        status.show(nil)
-        app?.modelStatus = nil
+        app?.activeModelID = next.id
+        app?.modelLoad = nil
         Log.info("model: \(next.id)")
-        // Free the old model's memory. Nothing is transcribing with it: the
-        // swap waited for the session to go idle.
+        // Free the old model's memory. Nothing transcribes with it any more:
+        // the swap waited for the session to go idle.
         Task { await outgoing.unload() }
         onReady?()
     }
 
-    private func report(_ phase: ModelLoadStatus.Phase, _ next: TranscriptionModel, _ generation: Int) {
-        // A progress callback can land after the swap it belonged to.
-        guard generation == self.generation, next.id != model.id else { return }
-        // Downloading → loading only moves forward; a late progress callback
-        // must not put "downloading" back.
-        if case .downloading = phase, status.current?.modelID == next.id, status.current?.phase == .loading { return }
-        let state = ModelLoadStatus.State(modelID: next.id, phase: phase)
-        guard state != status.current else { return }
-        status.show(state)
-        app?.modelStatus = state.text
-    }
-}
-
-/// A model loading behind the one in use, for the Settings window and the
-/// menu. One app, one status: `shared` is the only instance the app uses.
-@MainActor
-final class ModelLoadStatus: ObservableObject {
-    static let shared = ModelLoadStatus()
-
-    /// The model transcribing now, which may differ from the one chosen in
-    /// Settings while that one loads. Neither may be deleted.
-    @Published var activeModelID: String?
-
-    enum Phase: Equatable {
-        /// Fraction done, 0 to 1, once the download reports one.
-        case downloading(Double?)
-        case loading
-        case failed
-    }
-
-    struct State: Equatable {
-        var modelID: String
-        var phase: Phase
-
-        /// For example "Downloading Large v3 Turbo… 42%".
-        var text: String {
-            let name = ModelRegistry.find(modelID)?.displayName.replacingOccurrences(of: "Whisper ", with: "") ?? modelID
-            switch phase {
-            case .downloading(let fraction?):
-                return "Downloading \(name)… \(Int((fraction * 100).rounded(.down)))%"
-            case .downloading(nil):
-                return "Downloading \(name)…"
-            case .loading:
-                return "Getting \(name) ready…"
-            case .failed:
-                return "Couldn't load \(name). Check your connection and choose it again."
-            }
-        }
-    }
-
-    /// Nil when no load is running or has just failed.
-    @Published private(set) var current: State?
-
-    func show(_ state: State?) {
-        // Whole percents only: the menu and the window need no finer steps.
-        if let state, let current, state.text == current.text { return }
-        current = state
+    private func report(_ phase: ModelLoad.Phase, for next: TranscriptionModel, _ generation: Int) {
+        // A progress report can land after its load was superseded or done.
+        guard generation == self.generation, next.id != model.id, let app else { return }
+        let state = ModelLoad(modelID: next.id, phase: phase)
+        if ModelLoad.replaces(app.modelLoad, with: state) { app.modelLoad = state }
     }
 }

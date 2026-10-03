@@ -91,7 +91,7 @@ final class SettingsWindow {
     private func view(for pane: SettingsPane) -> AnyView {
         switch pane {
         case .general: return AnyView(GeneralPane(store: store))
-        case .model: return AnyView(ModelPane(store: store))
+        case .model: return AnyView(ModelPane(store: store, app: app))
         case .dictionary: return AnyView(DictionaryPane(settings: store, dictionary: dictionary, app: app))
         case .help: return AnyView(HelpPane(store: store))
         case .about: return AnyView(AboutPane(store: store))
