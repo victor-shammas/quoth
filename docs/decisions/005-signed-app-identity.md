@@ -1,16 +1,16 @@
 # ADR-005 :: Signed app identity
 
-Last updated: `2026.10.02`
+Last updated: `2026.10.03`
 
 > Each edition has one bundle ID and one signing identity, for good: macOS keys the Microphone, Accessibility and Input Monitoring grants to the code identity, so a stable one is what makes grants survive updates.
 
 ## 1. Decision
 
 - **App Store edition: `com.victorshammas.quoth`,** team `JPP8RN6BJB`, signed by Xcode's automatic signing and distributed through the Mac App Store (ADR-006).
-- **Direct edition: its own bundle ID,** so its grants, login item and Sparkle defaults never collide with the App Store app on the same Mac. Local builds use `local.quoth` until the first public release, which chooses the permanent one (for example `com.victorshammas.quoth.direct`).
+- **Direct edition: `com.victorshammas.quoth.direct`,** its own bundle ID, so its grants, login item and Sparkle defaults never collide with the App Store app on the same Mac. Chosen before the first public release and never changed after it. (Local builds used `local.quoth` until then.)
 - **Developer ID signing and notarization for direct releases,** with the team's Developer ID Application certificate and a Quoth-only notarization key. Until that certificate exists, local builds are signed with the Apple Development certificate through `QUOTH_SIGN_IDENTITY`, which keeps grants across rebuilds; an ad-hoc signature would not.
 - **`SMAppService` for launch at login** in both editions.
-- **One binary, two roles** in the direct edition: the executable inside the bundle runs the dictation loop when launched with no subcommand, and serves the CLI through a symlink.
+- **Updates for the direct edition through Sparkle,** from `releases/latest/download/appcast.xml` in this repository. Each release's zip and the appcast itself are signed with Quoth's EdDSA key; its public half is `SUPublicEDKey` in `packaging/Info.plist`, and the private half lives only in the release keychain, with a backup kept offline. `scripts/release.sh <version>` builds, notarizes, signs and publishes. A development build (a `git describe` version) never updates itself.
 
 ## 2. Rationale
 

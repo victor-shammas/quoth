@@ -11,7 +11,7 @@
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.quoth</string>
+	<string>com.victorshammas.quoth.direct</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -29,13 +29,18 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Based on Parrot, copyright © Humanitas Labs. MIT License.</string>
+	<string>© 2026 Victor Shammas. Began as a fork of Parrot by Humanitas Labs. MIT License.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Quoth records while you hold the dictation key, or after a double tap locks it on, and turns your speech into text on this Mac. Audio never leaves it.</string>
 	<key>SUEnableAutomaticChecks</key>
-	<false/>
-	<!-- Local fork: no SUFeedURL or SUPublicEDKey, so Updater.start() turns
-	     updates off and this app never replaces itself with an official release. -->
+	<true/>
+	<!-- Releases are on GitHub; scripts/release.sh publishes the feed. A
+	     development build (a git describe version) never updates itself. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/victor-shammas/quoth/releases/latest/download/appcast.xml</string>
+	<!-- The private half is in the release keychain only (ADR-005). -->
+	<key>SUPublicEDKey</key>
+	<string>U/5ARXAsQ+kGd8G7PMsgA1bACXlS1w/7PMil1enBJpA=</string>
 	<key>SURequireSignedFeed</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

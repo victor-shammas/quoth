@@ -35,18 +35,18 @@ final class UpdaterTests: XCTestCase {
         XCTAssertNotNil(Updater.configurationProblem(info: info(version: "0.1.0", feed: "not a url")))
     }
 
-    func testThePackagedInfoPlistNeverUpdatesTheFork() throws {
+    func testThePackagedInfoPlistUpdatesReleasesFromThisRepository() throws {
         // packaging/Info.plist, found from this file: Tests/QuothTests/ → repo root.
-        // The local fork has no feed, so it can't replace itself with an
-        // official release and lose the double-tap lock.
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let data = try Data(contentsOf: root.appendingPathComponent("packaging/Info.plist"))
         let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
-        XCTAssertNil(plist["SUFeedURL"])
-        XCTAssertNil(plist["SUPublicEDKey"])
-        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, false)
-        XCTAssertNotNil(Updater.configurationProblem(info: plist.merging(["CFBundleVersion": "0.2.3"]) { $1 }))
-        XCTAssertEqual(plist["CFBundleIdentifier"] as? String, "local.quoth")
-        XCTAssertTrue(AppBundle.identifiers.contains("local.quoth"))
+        XCTAssertEqual(plist["SUFeedURL"] as? String, "https://github.com/victor-shammas/quoth/releases/latest/download/appcast.xml")
+        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, true)
+        // A release updates; a development build (git describe) never does.
+        XCTAssertNil(Updater.configurationProblem(info: plist.merging(["CFBundleVersion": "1.0.0"]) { $1 }))
+        XCTAssertNotNil(Updater.configurationProblem(info: plist.merging(["CFBundleVersion": "1.0.0-3-gabc1234"]) { $1 }))
+        // Its own ID, apart from the App Store edition's (ADR-005).
+        XCTAssertEqual(plist["CFBundleIdentifier"] as? String, "com.victorshammas.quoth.direct")
+        XCTAssertTrue(AppBundle.identifiers.contains("com.victorshammas.quoth.direct"))
     }
 }

@@ -5,7 +5,7 @@
 # macOS keys the Accessibility and Microphone grants to the app's code
 # identity. An ad-hoc signature changes on every build, so each rebuild
 # silently loses the grants. Signing with the Developer ID certificate and
-# the fixed bundle ID local.quoth (packaging/Info.plist) keeps one
+# the fixed bundle ID com.victorshammas.quoth.direct (packaging/Info.plist) keeps one
 # identity across rebuilds and releases.
 #
 # Installs to /Applications, or ~/Applications when /Applications is not

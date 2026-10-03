@@ -7,9 +7,9 @@ import QuothPlatform
 /// Quoth.app, when this process runs from it.
 public enum AppBundle {
     /// Quoth's bundle identifier. TCC grants and the login item key to it,
-    /// so it never changes (ADR-005): `local.quoth` for local direct builds,
+    /// so it never changes (ADR-005): `com.victorshammas.quoth.direct` for the direct edition,
     /// `com.victorshammas.quoth` for the App Store build.
-    static let identifiers: Set<String> = ["local.quoth", "com.victorshammas.quoth"]
+    static let identifiers: Set<String> = ["com.victorshammas.quoth.direct", "com.victorshammas.quoth"]
 
     /// The bundle's URL when the main bundle is Quoth.app, else nil (a bare
     /// `swift build` binary).

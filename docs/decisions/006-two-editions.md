@@ -12,7 +12,7 @@ Last updated: `2026.10.02`
   - Pasting needs its own optional grant (`CGRequestPostEventAccess`). Without it, each transcript is copied and the pill says "press ⌘V"; a locked dictation is copied once at the end instead of typed live. `Edition.allowsAutoPaste = false` makes the build copy-only, should App Review rule out auto-paste (guideline 2.4.5).
   - The focused field can't be read: focus checks compare the frontmost app, and secure input (which macOS turns on for password fields) stands in for the password-field check.
   - No Sparkle, no command line, no doctor checks (`project.yml` leaves their files out).
-- **Identity.** Direct development builds are `local.quoth`; the App Store build is `com.victorshammas.quoth`, team `JPP8RN6BJB`.
+- **Identity.** The direct edition is `com.victorshammas.quoth.direct`; the App Store build is `com.victorshammas.quoth`, team `JPP8RN6BJB`.
 
 ## 2. Rationale
 
