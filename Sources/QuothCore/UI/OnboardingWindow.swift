@@ -20,7 +20,6 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var model: OnboardingModel?
     private var poll: Timer?
-    private var activationObserver: NSObjectProtocol?
     /// Allow was clicked, and the window hasn't come back since.
     private var awaitingReturn = false
 
@@ -42,7 +41,6 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         let window = self.window ?? makeWindow()
         self.window = window
         startPolling()
-        watchActivations()
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
         // Activation can be refused (a login-item launch while the user
@@ -73,6 +71,8 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         window.backgroundColor = Latte.windowBackground
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
+        // Comes forward on the Space the user is on, not the one it opened on.
+        window.collectionBehavior = .moveToActiveSpace
         window.delegate = self
         window.center()
         return window
@@ -80,26 +80,18 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
 
     /// Brings the window back after an Allow. Quoth has no Dock icon, so
     /// when macOS's prompt closes, or the user leaves System Settings, focus
-    /// goes to the app before, over this window. That app's activation is
-    /// the moment to come forward: the grant itself lands earlier, while the
-    /// prompt is still closing, and in the App Store edition a switch
-    /// flipped in System Settings changes nothing this launch can read.
-    private func watchActivations() {
-        guard activationObserver == nil else { return }
-        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { [weak self] note in
-            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            MainActor.assumeIsolated {
-                guard let self, self.awaitingReturn, let app else { return }
-                if app.processIdentifier == ProcessInfo.processInfo.processIdentifier {
-                    // Back by the user's own click.
-                    self.awaitingReturn = false
-                } else if app.activationPolicy == .regular, app.bundleIdentifier != "com.apple.systempreferences" {
-                    self.awaitingReturn = false
-                    self.show()
-                }
-            }
+    /// goes to the app before, over this window. Checked on each poll rather
+    /// than on the grant, which lands while the prompt is still closing, and
+    /// which in the App Store edition this launch can't see at all.
+    private func returnIfLeft() {
+        guard awaitingReturn, let front = NSWorkspace.shared.frontmostApplication else { return }
+        if front.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+            // Back already, by the user's own click.
+            awaitingReturn = false
+        } else if front.activationPolicy == .regular, front.bundleIdentifier != "com.apple.systempreferences" {
+            awaitingReturn = false
+            Log.info("onboarding: back in front of \(front.localizedName ?? "another app")")
+            show()
         }
     }
 
@@ -115,6 +107,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     }
 
     private func refresh() {
+        returnIfLeft()
         let state = PermissionState.current
         model?.update(state)
         app?.setupNeeded = !state.allGranted
@@ -142,8 +135,6 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         MainActor.assumeIsolated {
             window = nil
             model = nil
-            if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
-            activationObserver = nil
             awaitingReturn = false
             refresh()
         }
