@@ -4,15 +4,14 @@ import QuothDomain
 import QuothPlatform
 import Sparkle
 
-/// In-app updates through Sparkle, in the app role only.
+/// In-app updates through Sparkle, in the direct edition only.
 ///
 /// Sparkle reads its configuration from Info.plist: `SUFeedURL` (the
 /// appcast published with each release), `SUPublicEDKey` (updates must be
 /// signed with the matching private key), and a daily automatic check. An
 /// update replaces Quoth.app in place and relaunches it; the Developer ID
 /// identity does not change, so the Microphone and Accessibility grants
-/// carry over (ADR-005). The `quoth` CLI is a symlink into the bundle, so
-/// it updates with the app.
+/// carry over (ADR-005).
 @MainActor
 public enum Updater {
     private static var controller: SPUStandardUpdaterController?

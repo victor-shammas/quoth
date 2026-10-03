@@ -39,18 +39,11 @@ struct BenchCapture: ParsableCommand {
 
     @Option(name: .long, help: "Seconds to hold each capture after its first buffer.") var hold: Double = 0.5
 
-    @Option(
-        name: .long,
-        help: "Capture mode: \(CaptureMode.allCases.map(\.rawValue).joined(separator: ", ")).",
-        transform: parseCaptureMode
-    )
-    var mode: CaptureMode = .standard
-
     @Flag(name: .long, help: "Write the last capture to ~/Library/Caches/quoth/last-capture.wav.") var dumpWav: Bool = false
 
     func run() throws {
         try exiting {
-            try CaptureBench.run(CaptureBenchOptions(runs: runs, idle: idle, gap: gap, hold: hold, mode: mode, dumpWav: dumpWav))
+            try CaptureBench.run(CaptureBenchOptions(runs: runs, idle: idle, gap: gap, hold: hold, dumpWav: dumpWav))
         }
     }
 }
@@ -130,13 +123,6 @@ struct BenchTranscription: ParsableCommand {
     }
 }
 
-/// `--mode`: a `CaptureMode` by name.
-private func parseCaptureMode(_ raw: String) throws -> CaptureMode {
-    guard let mode = CaptureMode(rawValue: raw) else {
-        throw ValidationError("expected one of: \(CaptureMode.allCases.map(\.rawValue).joined(separator: ", "))")
-    }
-    return mode
-}
 
 /// Maps `SilentExit` to an exit code. Any other error reaches
 /// ArgumentParser, which prints it and exits nonzero.

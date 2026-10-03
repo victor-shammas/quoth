@@ -114,8 +114,8 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
   Audio/
     AudioCapture.swift, CaptureBuffer.swift
                                 capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
-    CaptureInput.swift, HALInput.swift, EngineInput.swift
-                                ways of running the mic; the AUHAL unit is the default
+    HALInput.swift, InputSink.swift
+                                the microphone through a Core Audio AUHAL unit, built per press
     HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
   Support/
     DictationServices.swift     Microphone, TextSink, FocusProbe: what DictationSession needs from the Mac

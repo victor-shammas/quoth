@@ -22,7 +22,7 @@ enum Assembly {
         #endif
 
         let transcriber = WhisperKitTranscriber(model: model)
-        let capture = AudioCapture(mode: options.captureMode)
+        let capture = AudioCapture()
         let overlay = RecordingOverlay()
         capture.onLevel = { level in overlay.pushLevel(level) }
         // The dictionary: created on first run, reloaded when it changes.

@@ -14,28 +14,25 @@ struct CaptureBenchOptions {
     var gap: Double
     /// Seconds each capture is held after its first buffer arrives.
     var hold: Double
-    var mode: CaptureMode
     /// Write the last capture to `Paths.dumpWav`, to listen to it.
     var dumpWav: Bool
 
     init(
         runs: Int = 5, idle: Double = 300, gap: Double = 2, hold: Double = 0.5,
-        mode: CaptureMode = .standard, dumpWav: Bool = false
+        dumpWav: Bool = false
     ) {
         self.runs = runs
         self.idle = idle
         self.gap = gap
         self.hold = hold
-        self.mode = mode
         self.dumpWav = dumpWav
     }
 }
 
 /// `quoth-bench capture`: opens and closes the default input the way a
 /// dictation does and reports press-to-first-sample, cold (after an idle
-/// gap) and warm (seconds after the last capture), for one capture mode
-///. It also checks, between presses, that neither this process nor any
-/// other runs the device, which is the promise every mode keeps.
+/// gap) and warm (seconds after the last capture). It also checks, between
+/// presses, that neither this process nor any other runs the device.
 ///
 /// Prints timings and counts, never audio.
 enum CaptureBench {
@@ -58,10 +55,10 @@ enum CaptureBench {
         }
         let name = InputDevice.name(of: device.id) ?? "unnamed device"
 
-        let capture = AudioCapture(mode: options.mode)
+        let capture = AudioCapture()
         print(String(
-            format: "%@ · %.0f Hz × %u · mode %@ · %d rounds · %.0f s idle before cold, %.0f s before warm · ms, median/p90",
-            name, device.sampleRate, device.channels, options.mode.rawValue, options.runs, options.idle, options.gap
+            format: "%@ · %.0f Hz × %u · %d rounds · %.0f s idle before cold, %.0f s before warm · ms, median/p90",
+            name, device.sampleRate, device.channels, options.runs, options.idle, options.gap
         ))
 
         // The first capture in a process pays for loading Core Audio's

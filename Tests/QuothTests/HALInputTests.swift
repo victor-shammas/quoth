@@ -70,7 +70,7 @@ final class HALInputTests: XCTestCase {
         }
     }
 
-    func testAPreparedUnitIsReusedOnlyForTheSameInput() {
+    func testAUnitIsReusedOnlyForTheSameInput() {
         XCTAssertTrue(HALInput.sameInput(mic, mic))
         XCTAssertFalse(HALInput.sameInput(mic, InputDevice(sampleRate: 48_000, channels: 1, id: 7)))
         XCTAssertFalse(HALInput.sameInput(mic, InputDevice(sampleRate: 44_100, channels: 1, id: 42)))
@@ -81,26 +81,16 @@ final class HALInputTests: XCTestCase {
 
     func testStartingOnADeviceThatDoesNotExistThrowsInsteadOfCrashing() {
         let sink = InputSink(deliver: { _, _, _ in XCTFail("no audio expected") }, routeChanged: {}, inputFailed: {})
-        for keepsPrepared in [false, true] {
-            let input = HALInput(keepsPrepared: keepsPrepared)
-            let missing = InputDevice(sampleRate: 48_000, channels: 1, id: 0xDEAD)
-            XCTAssertThrowsError(try input.start(device: missing, sink: sink)) { error in
-                guard error is CaptureError else { return XCTFail("expected a CaptureError, got \(error)") }
-            }
-            input.stop()
+        let input = HALInput()
+        let missing = InputDevice(sampleRate: 48_000, channels: 1, id: 0xDEAD)
+        XCTAssertThrowsError(try input.start(device: missing, sink: sink)) { error in
+            guard error is CaptureError else { return XCTFail("expected a CaptureError, got \(error)") }
         }
+        input.stop()
     }
 
-    func testOnlyThePreparedModeKeepsTheUnitBetweenPresses() {
-        XCTAssertTrue(CaptureMode.engine.makeInput() is EngineInput)
-        XCTAssertEqual((CaptureMode.hal.makeInput() as? HALInput)?.keepsPrepared, false)
-        XCTAssertEqual((CaptureMode.prepared.makeInput() as? HALInput)?.keepsPrepared, true)
-        XCTAssertEqual(CaptureMode(rawValue: "prepared"), .prepared)
-        XCTAssertEqual(CaptureMode.standard, .hal)
-    }
 
     func testStopWithoutStartIsSafe() {
-        HALInput(keepsPrepared: false).stop()
-        HALInput(keepsPrepared: true).stop()
+        HALInput().stop()
     }
 }

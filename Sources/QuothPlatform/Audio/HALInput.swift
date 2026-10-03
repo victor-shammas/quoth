@@ -9,12 +9,8 @@ import QuothDomain
 ///
 /// Per press the unit is bound to the default input, set to deliver Float32
 /// at the device's own rate, and started; `AudioCapture` converts to 16 kHz.
-/// On release it is stopped and, unless `keepsPrepared`, disposed.
-///
-/// With `keepsPrepared` the unit stays built and initialized between presses
-/// but never started: the device is not running, no callback fires, and the
-/// microphone indicator is off. A press only starts it. The unit is rebuilt
-/// on the next press if the default input or its format changed meanwhile.
+/// On release it is stopped and disposed, so the device runs only while the
+/// hotkey is held.
 ///
 /// The guarantees hold without an Objective-C exception to guard
 /// against: every Core Audio call returns a status, and 0 Hz, 0 channel and
@@ -28,7 +24,7 @@ import QuothDomain
 ///
 /// `start`, `stop` and every reaction to a device change run on one private
 /// queue, so a change arriving during a release cannot race it.
-public final class HALInput: CaptureInput {
+public final class HALInput {
     /// What a device notification means for a unit built for one input.
     public enum Change: Equatable {
         /// Nothing the unit depends on changed.
@@ -39,8 +35,6 @@ public final class HALInput: CaptureInput {
         /// now reports a format that cannot be recorded.
         case route
     }
-
-    public let keepsPrepared: Bool
 
     private let control = DispatchQueue(label: "quoth.capture.hal")
     // Everything below is touched only on `control`.
@@ -54,33 +48,12 @@ public final class HALInput: CaptureInput {
     /// The input changed while idle; rebuild before the next start.
     private var stale = false
 
-    public init(keepsPrepared: Bool) {
-        self.keepsPrepared = keepsPrepared
-    }
+    public init() {}
 
     deinit {
         // Nothing else holds this now, so nothing runs on `control` for it;
         // and deinit may itself run there, where a sync would deadlock.
         teardown()
-    }
-
-    /// Builds and initializes the unit for the current default input without
-    /// starting it. Does nothing if it is already built for that device.
-    public func prepare() throws {
-        let device = try InputDevice.current()
-        try control.sync { try prepare(device: device) }
-    }
-
-    /// With `keepsPrepared`, builds the unit ahead of the first press so a
-    /// press only has to start it. Never starts the device. Skipped until
-    /// microphone access is granted.
-    public func prepareIdle() {
-        guard keepsPrepared, MicrophoneAccess.status == .authorized else { return }
-        do {
-            try prepare()
-        } catch {
-            Log.info("capture: input not prepared ahead of the press: \(error)")
-        }
     }
 
     public func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
@@ -107,7 +80,7 @@ public final class HALInput: CaptureInput {
                 AudioOutputUnitStop(unit)
                 context.end()
             }
-            if !keepsPrepared { teardown() }
+            teardown()
         }
     }
 

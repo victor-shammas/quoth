@@ -6,10 +6,9 @@ import QuothDomain
 /// mono Float32 buffer when stopped. Format-converts on the fly so callers
 /// don't have to worry about the input device's native rate.
 ///
-/// The microphone runs only between `start()` and `stop()`. How it runs is
-/// the `CaptureMode`'s `CaptureInput`; the checks before it (permission, a
-/// usable device) and the conversion and bookkeeping after it are here and
-/// shared by every mode.
+/// The microphone runs only between `start()` and `stop()`, through a
+/// `HALInput`; the checks before it (permission, a usable device) and the
+/// conversion and bookkeeping after it are here.
 public final class AudioCapture {
     public static let targetSampleRate: Double = 16_000
 
@@ -27,8 +26,6 @@ public final class AudioCapture {
     /// Called when the input route changes mid-recording (a headset
     /// connects, the default input changes). Invoked on an arbitrary thread.
     public var onRouteChange: (() -> Void)?
-
-    public let mode: CaptureMode
 
     /// Counts and timings of the last finished capture, including press to
     /// first sample. Nil until one finishes.
@@ -48,7 +45,7 @@ public final class AudioCapture {
     /// Whether the input route changed during this recording.
     public var hasRouteChanged: Bool { buffer.hasRouteChanged }
 
-    private let input: CaptureInput
+    private let input = HALInput()
     private var recording = false
     private var device = InputDevice(sampleRate: 0, channels: 0)
     private var delivered = InputDevice(sampleRate: 0, channels: 0)
@@ -56,11 +53,7 @@ public final class AudioCapture {
     private let converters = ConverterCache(targetFormat: AudioCapture.targetFormat)
     private let buffer = CaptureBuffer()
 
-    public init(mode: CaptureMode = .standard) {
-        self.mode = mode
-        self.input = mode.makeInput()
-        input.prepareIdle()
-    }
+    public init() {}
 
     /// Begin recording. Idempotent — calling while already recording is a no-op.
     /// Throws `CaptureError`; on a throw nothing is left running.
@@ -180,9 +173,9 @@ public final class AudioCapture {
     private func logStats(_ stats: CaptureBuffer.Stats) {
         func ms(_ delay: TimeInterval?) -> String { delay.map { String(format: "%.0f ms", $0 * 1000) } ?? "none" }
         var line = String(
-            format: "  input %.0f Hz × %u · delivered %.0f Hz × %u · %@ start %.0f ms",
+            format: "  input %.0f Hz × %u · delivered %.0f Hz × %u · hal start %.0f ms",
             device.sampleRate, device.channels, delivered.sampleRate, delivered.channels,
-            mode.rawValue, startDelay * 1000
+            startDelay * 1000
         )
         line += " · press→first sample \(ms(stats.firstSampleDelay)) · first sound \(ms(stats.firstSoundDelay))"
         line += " · first buffer \(ms(stats.firstBufferDelay)) · \(stats.buffers) buffers · \(stats.inputFrames) frames"

@@ -54,7 +54,6 @@ For working on Quoth, start the app from a terminal with any of these, and its l
 | `QUOTH_DEBUG_HOTKEY=1` | Log each modifier change the hotkey tap sees |
 | `QUOTH_DUMP_WAV=1` | Write each capture to `~/Library/Caches/quoth/last-capture.wav` |
 | `QUOTH_INJECT_MODE=type-unicode` | Type instead of paste (leaves the clipboard alone) |
-| `QUOTH_CAPTURE=<mode>` | Run the microphone another way (`CaptureMode`) |
 
 ```sh
 QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth

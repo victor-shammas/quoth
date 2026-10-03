@@ -19,7 +19,6 @@ final class PackagingTests: XCTestCase {
         XCTAssertFalse(options.debugHotkey)
         XCTAssertFalse(options.dumpWav)
         XCTAssertEqual(options.injectMode, .paste)
-        XCTAssertEqual(options.captureMode, .standard)
     }
 
     func testDeveloperOptionsFromTheEnvironment() {
@@ -34,9 +33,8 @@ final class PackagingTests: XCTestCase {
     }
 
     func testAnUnknownDeveloperOptionKeepsTheDefault() {
-        let options = DeveloperOptions.from(["QUOTH_INJECT_MODE": "telepathy", "QUOTH_CAPTURE": "?"])
+        let options = DeveloperOptions.from(["QUOTH_INJECT_MODE": "telepathy"])
         XCTAssertEqual(options.injectMode, .paste)
-        XCTAssertEqual(options.captureMode, .standard)
     }
 
     // MARK: - Paths
