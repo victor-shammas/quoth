@@ -46,6 +46,7 @@ final class UpdaterTests: XCTestCase {
         XCTAssertNil(plist["SUPublicEDKey"])
         XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, false)
         XCTAssertNotNil(Updater.configurationProblem(info: plist.merging(["CFBundleVersion": "0.2.3"]) { $1 }))
-        XCTAssertEqual(plist["CFBundleIdentifier"] as? String, AppBundle.identifier)
+        XCTAssertEqual(plist["CFBundleIdentifier"] as? String, "local.quoth")
+        XCTAssertTrue(AppBundle.identifiers.contains("local.quoth"))
     }
 }
