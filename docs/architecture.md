@@ -162,7 +162,8 @@ Sources/QuothCore/
                                 the menu and its state glyph: a view of AppModel
     RecordingOverlay.swift      the pill's panel: when it shows, hides and says something
     OverlayPill.swift           the pill itself: quotes around a waveform that settles into dots
-    OnboardingWindow.swift      hotkey, languages and the grants on one page
+    OnboardingWindow.swift      the welcome window: when it opens, the grants it polls (owned by AppModel)
+    OnboardingView.swift        its page: hotkey, languages and the grants, each with its Allow
     SettingsWindow.swift        toolbar tabs, each pane sizing the window
     Settings/                   GeneralPane, ModelPane, DownloadedModels, DictionaryPane, HelpPane, AboutPane, Latte
     FixDictationWindow.swift    Fix Last Dictation, opened from Settings › Dictionary

@@ -74,7 +74,7 @@ enum Assembly {
 
         let menuBar = MenuBarController(model: app)
         // Explains each grant before macOS asks for it.
-        OnboardingWindow.startIfNeeded(store: settings, app: app)
+        app.onboarding.startIfNeeded()
 
         // A headset connecting mid-lock ends the lock and keeps what was
         // said before it; push-to-talk still discards a changed route.

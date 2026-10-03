@@ -3,64 +3,56 @@ import QuothDomain
 import QuothPlatform
 import SwiftUI
 
-/// The onboarding window: one page with the hotkey, the languages the
-/// user speaks, and both permissions, each with its own Allow button, so
-/// macOS never asks before the window has said why. Quoth.app opens it at
-/// launch until the user has been through it once (Get Started or closing
-/// it), and afterwards while a grant is missing. "Grant Permissions…" in the
-/// menu bar reopens it while one is. One instance, reused.
+/// The welcome window: the hotkey, the languages, and each permission with
+/// its own Allow button, so macOS never asks before Quoth has said why.
+///
+/// It opens at launch until the user has been through it once (Get Started,
+/// or closing it), and after that only while a grant is missing; Finish
+/// Setup in the menu reopens it. While a grant is missing it also keeps
+/// `AppModel.setupNeeded` current, polling, since Accessibility has no
+/// change notification.
 @MainActor
-enum OnboardingWindow {
-    /// How often the grants are re-read. Accessibility has no change
-    /// notification, so this polls, like `Assembly.startHotkey`.
+final class OnboardingWindow: NSObject, NSWindowDelegate {
     private static let pollInterval: TimeInterval = 1
 
-    private static var store: SettingsStore?
-    private static var app: AppModel?
-    private static var window: NSWindow?
-    private static var model: OnboardingModel?
-    private static var poll: Timer?
-    private static let delegate = Delegate()
+    private let store: SettingsStore
+    private weak var app: AppModel?
+    private var window: NSWindow?
+    private var model: OnboardingModel?
+    private var poll: Timer?
 
-    /// Opens the window if `Onboarding.showsWindow` says so, and keeps
-    /// `AppModel.setupNeeded` up to date while a grant is missing.
-    static func startIfNeeded(store: SettingsStore, app: AppModel) {
+    init(store: SettingsStore, app: AppModel) {
         self.store = store
         self.app = app
-        refresh()
-        guard Onboarding.showsWindow(
-            completed: store.current.onboarding.completed,
-            state: PermissionState.current
-        ) else { return }
-        Log.info("showing the onboarding window")
-        // Once the run loop is up, so activation brings the window forward.
-        DispatchQueue.main.async { show() }
     }
 
-    static func show() {
-        guard let store else { return }
-        let window = self.window ?? makeWindow(store: store)
+    /// At launch: opens the window if `Onboarding.showsWindow` says so.
+    func startIfNeeded() {
+        refresh()
+        guard Onboarding.showsWindow(completed: store.current.onboarding.completed, state: PermissionState.current) else { return }
+        Log.info("showing the onboarding window")
+        // Once the run loop is up, so activation brings the window forward.
+        DispatchQueue.main.async { self.show() }
+    }
+
+    func show() {
+        let window = self.window ?? makeWindow()
         self.window = window
         startPolling()
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
-        // An accessory app's activation can be refused (a login-item launch
-        // while the user works elsewhere); the window still comes forward.
+        // Activation can be refused (a login-item launch while the user
+        // works elsewhere); the window still comes forward.
         window.orderFrontRegardless()
     }
 
-    private static func makeWindow(store: SettingsStore) -> NSWindow {
+    private func makeWindow() -> NSWindow {
         let model = OnboardingModel(settings: store.current)
-        model.onGetStarted = { [weak store] in
-            guard let store else { return }
-            store.write(Onboarding.apply(
-                hotkey: model.hotkey,
-                languages: model.languages,
-                preferred: model.preferred,
-                to: store.current
-            ))
+        model.onGetStarted = { [weak self, weak model] in
+            guard let self, let model else { return }
+            store.write(Onboarding.apply(hotkey: model.hotkey, languages: model.languages, preferred: model.preferred, to: store.current))
             Log.info("onboarding done: hold \(model.hotkey.shortName); languages \(model.languages.joined(separator: ", "))")
-            self.window?.close()
+            window?.close()
         }
         self.model = model
         let hosting = NSHostingView(rootView: OnboardingView(model: model))
@@ -76,25 +68,27 @@ enum OnboardingWindow {
         window.backgroundColor = Latte.windowBackground
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
-        window.delegate = delegate
+        window.delegate = self
         window.center()
         return window
     }
 
+    // MARK: Grants
+
     /// Polls while the window is open or a grant is missing, so the
-    /// checkmarks and the menu item follow System Settings.
-    private static func startPolling() {
+    /// checkmarks and Finish Setup follow System Settings.
+    private func startPolling() {
         guard poll == nil else { return }
-        poll = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { _ in
-            MainActor.assumeIsolated { refresh() }
+        poll = Timer.scheduledTimer(withTimeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
         }
     }
 
-    private static func refresh() {
+    private func refresh() {
         let state = PermissionState.current
         model?.update(state)
         app?.setupNeeded = !state.allGranted
-        if state.allGranted && window == nil {
+        if state.allGranted, window == nil {
             poll?.invalidate()
             poll = nil
         } else {
@@ -102,189 +96,23 @@ enum OnboardingWindow {
         }
     }
 
-    /// Closing the window by hand counts as done, like Get Started, without
-    /// saving the hotkey and languages shown. Quitting Quoth with the window
-    /// open, or a relaunch after an update, does not.
-    fileprivate static func closedByUser() {
-        if let store, !store.current.onboarding.completed {
-            store.update { $0.onboarding.completed = true }
+    // MARK: NSWindowDelegate
+
+    /// Only for the close button and ⌘W, not for Get Started's `close()` or
+    /// quitting: closing by hand counts as done, without saving the hotkey
+    /// and languages shown.
+    nonisolated func windowShouldClose(_ sender: NSWindow) -> Bool {
+        MainActor.assumeIsolated {
+            if !store.current.onboarding.completed { store.update { $0.onboarding.completed = true } }
         }
+        return true
     }
 
-    fileprivate static func closed() {
-        window = nil
-        model = nil
-        refresh()
-    }
-
-    private final class Delegate: NSObject, NSWindowDelegate {
-        /// Asked only for the close button and ⌘W, not for `close()` from
-        /// Get Started or for quitting.
-        func windowShouldClose(_ sender: NSWindow) -> Bool {
-            MainActor.assumeIsolated { OnboardingWindow.closedByUser() }
-            return true
+    nonisolated func windowWillClose(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            window = nil
+            model = nil
+            refresh()
         }
-
-        func windowWillClose(_ notification: Notification) {
-            MainActor.assumeIsolated { OnboardingWindow.closed() }
-        }
-    }
-}
-
-/// The choices on the page, the grants, and the Allow and Get Started actions.
-@MainActor
-final class OnboardingModel: ObservableObject {
-    @Published private(set) var state = PermissionState.current
-    @Published var hotkey: HotkeyKey
-    /// Ticked languages as codes, in the order ticked.
-    @Published private(set) var languages: [String]
-
-    let hotkeyChoices: [HotkeyKey]
-    let preferred: [String]
-    var onGetStarted: (() -> Void)?
-
-    init(settings: QuothDomain.Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
-        hotkey = settings.hotkey.key
-        hotkeyChoices = Onboarding.hotkeyChoices(current: settings.hotkey.key)
-        self.preferred = preferred
-        languages = Onboarding.initialLanguages(saved: settings.language.spoken, preferred: preferred)
-    }
-
-    var canGetStarted: Bool { state.allGranted && !languages.isEmpty }
-
-    func update(_ now: PermissionState) {
-        if now != state { state = now }
-    }
-
-    func isTicked(_ code: String) -> Bool { languages.contains(code) }
-
-    func toggle(_ code: String) {
-        if let index = languages.firstIndex(of: code) {
-            languages.remove(at: index)
-        } else {
-            languages.append(code)
-        }
-    }
-
-    /// Runs `kind`'s steps, waiting for the microphone prompt's answer before
-    /// re-reading the grants.
-    func allow(_ kind: Permissions.Kind) {
-        let steps = Permissions.allowSteps(for: kind, in: state)
-        if steps == [.requestMicrophone] {
-            MicrophoneAccess.requestIfUndetermined { [weak self] in
-                MainActor.assumeIsolated { self?.update(PermissionState.current) }
-            }
-            return
-        }
-        steps.forEach(Permissions.perform)
-    }
-
-    func getStarted() { onGetStarted?() }
-}
-
-/// The page, in Quoth's latte look: the app icon and name, the hotkey and
-/// languages, the grants, each with its reason, and Get Started.
-struct OnboardingView: View {
-    @ObservedObject var model: OnboardingModel
-    @State private var showsLanguages = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            AppBadge(size: 72)
-            Text("Welcome to Quoth")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Latte.text)
-                .padding(.top, 14)
-            Text("Hold a key, speak, and let go. Your words appear where you type.")
-                .foregroundStyle(Latte.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 4)
-
-            VStack(alignment: .leading, spacing: 18) {
-                SettingsSection("Set up") {
-                    SettingRow("Hotkey", caption: "Hold it to dictate; double-tap for hands-free.") {
-                        Picker("Hotkey", selection: Binding(get: { model.hotkey }, set: { model.hotkey = $0 })) {
-                            ForEach(model.hotkeyChoices, id: \.self) { Text($0.displayName).tag($0) }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
-                    }
-                    DictationClash(key: model.hotkey) { clash in
-                        if clash == .clashes {
-                            RowDivider()
-                            DictationClashRow(key: model.hotkey)
-                        }
-                    }
-                    RowDivider()
-                    SettingRow("Languages", caption: "The ones you dictate in.") {
-                        Button(Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) })) {
-                            showsLanguages.toggle()
-                        }
-                        .popover(isPresented: $showsLanguages, arrowEdge: .bottom) {
-                            OnboardingLanguages(model: model)
-                        }
-                    }
-                }
-
-                SettingsSection("Permissions") {
-                    SettingRow("Microphone", caption: "To hear you while you dictate.") {
-                        permission(.microphone, granted: model.state.microphone == .granted,
-                                   action: model.state.microphone == .denied ? "Open Settings" : "Allow")
-                    }
-                    RowDivider()
-                    SettingRow(HotkeyAccess.name, caption: Edition.isAppStore
-                        ? "To notice your hotkey. Quoth only watches keys like fn, never what you type."
-                        : "To notice your hotkey and paste at the cursor. Quoth never sees what you type.") {
-                        permission(.hotkey, granted: model.state.hotkey, action: "Allow")
-                    }
-                    if Edition.pasteNeedsOwnGrant {
-                        RowDivider()
-                        // Optional: without it, each transcript is copied for ⌘V.
-                        SettingRow("Paste at cursor", caption: "Optional. Without it, dictations are copied for ⌘V.") {
-                            permission(.paste, granted: model.state.paste, action: "Allow")
-                        }
-                    }
-                }
-            }
-            .padding(.top, 26)
-
-            Button("Get Started") { model.getStarted() }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.canGetStarted)
-                .padding(.top, 24)
-
-            Label("Audio and text never leave your Mac.", systemImage: "lock.fill")
-                .font(.caption)
-                .foregroundStyle(Latte.secondary)
-                .padding(.top, 12)
-        }
-        .padding(.horizontal, 32)
-        .padding(.top, 40)
-        .padding(.bottom, 24)
-        .frame(width: 480)
-        .tint(Latte.tint)
-        .background(Latte.background)
-    }
-
-    @ViewBuilder
-    private func permission(_ kind: Permissions.Kind, granted: Bool, action: String) -> some View {
-        if granted {
-            AllowedLabel()
-        } else {
-            Button(action) { model.allow(kind) }
-                // Prominent, so the missing grants read as what to do next.
-                .buttonStyle(.borderedProminent)
-        }
-    }
-}
-
-/// The Languages popover, observing the model so ticks show as they change.
-private struct OnboardingLanguages: View {
-    @ObservedObject var model: OnboardingModel
-
-    var body: some View {
-        LanguageChecklist(ticked: model.languages, toggle: model.toggle)
     }
 }

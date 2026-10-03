@@ -46,6 +46,7 @@ final class AppModel {
     @ObservationIgnored let card: QuoteCard
     @ObservationIgnored let switcher: ModelSwitcher
     @ObservationIgnored private lazy var settingsWindow = SettingsWindow(store: settings, dictionary: dictionary, app: self)
+    @ObservationIgnored lazy var onboarding = OnboardingWindow(store: settings, app: self)
     @ObservationIgnored private let fixWindow: FixDictationWindow
     @ObservationIgnored private let lastDictation = LastDictation()
     /// Set once the session exists, which needs this model for its context.
@@ -111,7 +112,7 @@ final class AppModel {
     }
 
     func finishSetup() {
-        OnboardingWindow.show()
+        onboarding.show()
     }
 
     func newQuoteCard() {
