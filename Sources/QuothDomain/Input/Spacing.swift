@@ -24,6 +24,26 @@ public enum TextBeforeCursor: Equatable {
     }
 }
 
+extension TextBeforeCursor {
+    /// What is before the cursor, from what the app reports over
+    /// Accessibility. `location` is where the selection starts, in UTF-16
+    /// units; `fieldLength`, the field's length; `before`, the two units
+    /// before `location` if the app answers for a range (two, since one
+    /// could be half an emoji); `value`, the field's whole text, read only if
+    /// needed.
+    ///
+    /// Terminals such as Ghostty report location 0 wherever the cursor is,
+    /// so 0 is the start only in a field that is empty.
+    public static func reading(location: Int, fieldLength: Int?, before: String?, value: () -> String?) -> TextBeforeCursor {
+        guard location > 0 else { return location == 0 && fieldLength == 0 ? .start : .unknown }
+        if let last = before?.last { return .character(last) }
+        guard let units = value()?.utf16, location <= units.count else { return .unknown }
+        let end = units.index(units.startIndex, offsetBy: location)
+        let start = units.index(end, offsetBy: -min(location, 2))
+        return String(units[start..<end])?.last.map(TextBeforeCursor.character) ?? .unknown
+    }
+}
+
 /// How a character behaves next to a space.
 enum SpacingClass: Equatable {
     case newline

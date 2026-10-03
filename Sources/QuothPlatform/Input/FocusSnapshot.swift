@@ -68,86 +68,62 @@ public struct FocusSnapshot {
         return false
     }
 
-    /// Secure only when the element says so. An element that cannot be read
-    /// is not treated as secure, or every app without Accessibility support
-    /// would lose its dictation.
+    /// Secure only when the element says so. One that can't be read isn't
+    /// treated as secure, or every app without Accessibility support would
+    /// lose its dictation.
     private static func isSecure(_ element: AXUIElement) -> Bool {
-        var subrole: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subrole) == .success,
-           let subrole = subrole as? String,
-           subrole == kAXSecureTextFieldSubrole as String {
-            return true
-        }
-        var protected: CFTypeRef?
-        let attribute = NSAccessibility.Attribute.containsProtectedContent.rawValue as CFString
-        if AXUIElementCopyAttributeValue(element, attribute, &protected) == .success,
-           let protected = protected as? Bool {
-            return protected
-        }
-        return false
+        if AX.value(element, kAXSubroleAttribute) as String? == kAXSecureTextFieldSubrole as String { return true }
+        return AX.value(element, NSAccessibility.Attribute.containsProtectedContent.rawValue) as Bool? ?? false
     }
 }
 
-/// An Accessibility element compared by identity (`CFEqual`).
+/// An Accessibility element compared by identity (`CFEqual`). Internal, with
+/// everything that reads it, so the App Store build, which never has one,
+/// links no Accessibility calls (ADR-006).
 struct FocusedElement: Equatable {
     let ref: AXUIElement
 
-    init(_ ref: AXUIElement) {
-        self.ref = ref
-    }
+    init(_ ref: AXUIElement) { self.ref = ref }
 
-    static func == (lhs: FocusedElement, rhs: FocusedElement) -> Bool {
-        CFEqual(lhs.ref, rhs.ref)
-    }
+    static func == (lhs: FocusedElement, rhs: FocusedElement) -> Bool { CFEqual(lhs.ref, rhs.ref) }
 
-    /// The character before the insertion point, for `Spacing`. Reads the
-    /// selected range, then the text just before it. Ranges count UTF-16
-    /// units, so two are read and the last character kept: one alone could
-    /// be half an emoji. Falls back to the whole value for apps without
-    /// `AXStringForRange`. Call after `FocusSnapshot.capture()`, which sets
-    /// the timeout, and never on a secure field.
+    /// The character before the insertion point, for `Spacing`. Call after
+    /// `FocusSnapshot.capture()`, which sets the timeout, and never on a
+    /// secure field.
     func textBeforeCursor() -> TextBeforeCursor {
-        var rangeValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(ref, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
-              let rangeValue, CFGetTypeID(rangeValue) == AXValueGetTypeID() else { return .unknown }
+        guard let rangeValue: CFTypeRef = AX.value(ref, kAXSelectedTextRangeAttribute),
+              CFGetTypeID(rangeValue) == AXValueGetTypeID() else { return .unknown }
         var range = CFRange()
         guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &range), range.location >= 0 else { return .unknown }
-        // Terminals such as Ghostty report position 0 wherever the cursor
-        // is, so 0 is the start only in a field that is empty.
-        if range.location == 0 { return characterCount() == 0 ? .start : .unknown }
-
-        let length = min(range.location, 2)
-        var before = CFRange(location: range.location - length, length: length)
-        var text: CFTypeRef?
-        if let query = AXValueCreate(.cfRange, &before),
-           AXUIElementCopyParameterizedAttributeValue(ref, kAXStringForRangeParameterizedAttribute as CFString, query, &text) == .success,
-           let character = (text as? String)?.last {
-            return .character(character)
-        }
-
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(ref, kAXValueAttribute as CFString, &value) == .success,
-              let value = value as? String else { return .unknown }
-        let units = value.utf16
-        guard range.location <= units.count else { return .unknown }
-        let end = units.index(units.startIndex, offsetBy: range.location)
-        let start = units.index(end, offsetBy: -length)
-        return String(units[start..<end]).flatMap { $0.last }.map(TextBeforeCursor.character) ?? .unknown
+        return .reading(
+            location: range.location,
+            fieldLength: range.location == 0 ? characterCount() : nil,
+            before: range.location > 0 ? string(before: range.location) : nil,
+            value: { AX.value(ref, kAXValueAttribute) }
+        )
     }
 
-    /// The field's length in UTF-16 units, from `AXNumberOfCharacters` or
-    /// else the value; nil when the app says neither.
+    /// Up to two UTF-16 units before `location`, where the app answers
+    /// `AXStringForRange`.
+    private func string(before location: Int) -> String? {
+        var range = CFRange(location: location - min(location, 2), length: min(location, 2))
+        guard let query = AXValueCreate(.cfRange, &range) else { return nil }
+        var text: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(ref, kAXStringForRangeParameterizedAttribute as CFString, query, &text) == .success else { return nil }
+        return text as? String
+    }
+
+    /// The field's length in UTF-16 units, or nil when the app doesn't say.
     private func characterCount() -> Int? {
-        var count: CFTypeRef?
-        if AXUIElementCopyAttributeValue(ref, kAXNumberOfCharactersAttribute as CFString, &count) == .success,
-           let count = count as? Int {
-            return count
-        }
+        AX.value(ref, kAXNumberOfCharactersAttribute) ?? (AX.value(ref, kAXValueAttribute) as String?)?.utf16.count
+    }
+}
+
+/// Reading one Accessibility attribute, typed.
+private enum AX {
+    static func value<T>(_ element: AXUIElement, _ attribute: String) -> T? {
         var value: CFTypeRef?
-        if AXUIElementCopyAttributeValue(ref, kAXValueAttribute as CFString, &value) == .success,
-           let value = value as? String {
-            return value.utf16.count
-        }
-        return nil
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+        return value as? T
     }
 }
