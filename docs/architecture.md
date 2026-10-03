@@ -225,3 +225,4 @@ The app never shows a system prompt unannounced. The onboarding window lists eac
 | [004](decisions/004-local-data-and-privacy.md) | Local data and privacy |
 | [005](decisions/005-signed-app-identity.md) | Signed app identity |
 | [006](decisions/006-two-editions.md) | Two editions from one codebase |
+| [007](decisions/007-modules-and-app-model.md) | Modules, a dictation state machine, one app model; no command line (in progress) |
