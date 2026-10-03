@@ -62,6 +62,14 @@ enum AppLaunch {
     /// Held for the life of the process.
     @MainActor private static var instanceLock: InstanceLock?
 
+    /// Passed to the new launch by `relaunch()`, which opens it on the
+    /// welcome window: Reopen was clicked there, so that's where the user
+    /// expects to be, seeing the grant take.
+    private static let continueSetupArgument = "--continue-setup"
+
+    /// Whether this launch came from Reopen Quoth.
+    static var isContinuingSetup: Bool { CommandLine.arguments.contains(continueSetupArgument) }
+
     /// Opens a new Quoth and quits this one, for a grant macOS shows only to
     /// a new launch (`Permissions.showsAfterRelaunch`). The new one starts
     /// once this one has let go of the instance lock.
@@ -69,6 +77,7 @@ enum AppLaunch {
     static func relaunch() {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
+        configuration.arguments = [continueSetupArgument]
         instanceLock = nil
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
             Task { @MainActor in

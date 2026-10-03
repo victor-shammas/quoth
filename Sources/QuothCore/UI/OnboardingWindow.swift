@@ -7,8 +7,8 @@ import SwiftUI
 /// its own Allow button, so macOS never asks before Quoth has said why.
 ///
 /// It opens at launch until the user has been through it once (Get Started,
-/// or closing it), and after that only while a grant is missing; Finish
-/// Setup in the menu reopens it. While a grant is missing it also keeps
+/// or closing it), and after that only while a grant is missing, or after
+/// Reopen Quoth; Finish Setup in the menu reopens it. While a grant is missing it also keeps
 /// `AppModel.setupNeeded` current, polling, since Accessibility has no
 /// change notification.
 @MainActor
@@ -31,7 +31,9 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     /// At launch: opens the window if `Onboarding.showsWindow` says so.
     func startIfNeeded() {
         refresh()
-        guard Onboarding.showsWindow(completed: store.current.onboarding.completed, state: PermissionState.current) else { return }
+        guard AppLaunch.isContinuingSetup
+            || Onboarding.showsWindow(completed: store.current.onboarding.completed, state: PermissionState.current)
+        else { return }
         Log.info("showing the onboarding window")
         // Once the run loop is up, so activation brings the window forward.
         DispatchQueue.main.async { self.show() }
