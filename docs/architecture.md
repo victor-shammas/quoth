@@ -100,6 +100,7 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
     ModelRegistry.swift, TranscriptionModel.swift, ModelSettings.swift, TranscriberTimings.swift
   Audio/
     SilenceTrimmer.swift
+    WAV.swift                   QUOTH_DUMP_WAV's files, and RMS
     LevelMeter.swift            microphone levels into the pill's six bars
   Support/
     Log.swift                   stderr logging; never logs transcript text
@@ -118,8 +119,10 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
   Audio/
     AudioCapture.swift, CaptureBuffer.swift
                                 capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
-    HALInput.swift, InputSink.swift
-                                the microphone through a Core Audio AUHAL unit, built per press
+    HALInput.swift              the microphone through a Core Audio AUHAL unit, built per press; follows format changes
+    AUHAL.swift                 building and configuring the unit, each step's status checked
+    RenderContext.swift         the realtime callback: render a slice, hand it to the InputSink
+    DeviceWatcher.swift         the default input switching, the device's format changing or going away
     HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
   Support/
     DictationServices.swift     Microphone, TextSink, FocusProbe: what DictationSession needs from the Mac

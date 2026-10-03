@@ -12,25 +12,25 @@ final class HALInputTests: XCTestCase {
 
     func testClientFormatRefusesFormatsThatCannotBeRecorded() {
         for (rate, channels) in [(0.0, UInt32(1)), (48_000, 0), (0, 0), (.nan, 1), (.infinity, 2), (-44_100, 1)] {
-            XCTAssertNil(HALInput.clientFormat(sampleRate: rate, channels: channels), "\(rate) Hz × \(channels)")
+            XCTAssertNil(AUHAL.clientFormat(sampleRate: rate, channels: channels), "\(rate) Hz × \(channels)")
         }
     }
 
     func testClientFormatIsFloatAtTheDeviceRateWithAtMostTwoChannels() throws {
-        let mono = try XCTUnwrap(HALInput.clientFormat(sampleRate: 44_100, channels: 1))
+        let mono = try XCTUnwrap(AUHAL.clientFormat(sampleRate: 44_100, channels: 1))
         XCTAssertEqual(mono.sampleRate, 44_100)
         XCTAssertEqual(mono.channelCount, 1)
         XCTAssertEqual(mono.commonFormat, .pcmFormatFloat32)
         XCTAssertFalse(mono.isInterleaved)
 
-        XCTAssertEqual(HALInput.clientFormat(sampleRate: 24_000, channels: 2)?.channelCount, 2)
-        XCTAssertEqual(HALInput.clientFormat(sampleRate: 96_000, channels: 8)?.channelCount, 2)
+        XCTAssertEqual(AUHAL.clientFormat(sampleRate: 24_000, channels: 2)?.channelCount, 2)
+        XCTAssertEqual(AUHAL.clientFormat(sampleRate: 96_000, channels: 8)?.channelCount, 2)
     }
 
     func testEveryClientFormatConvertsToSixteenKilohertzMono() throws {
         let cache = ConverterCache(targetFormat: AudioCapture.targetFormat)
         for (rate, channels) in [(8_000.0, UInt32(1)), (16_000, 1), (24_000, 1), (44_100, 1), (48_000, 2), (96_000, 4)] {
-            let format = try XCTUnwrap(HALInput.clientFormat(sampleRate: rate, channels: channels))
+            let format = try XCTUnwrap(AUHAL.clientFormat(sampleRate: rate, channels: channels))
             let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 512))
             pcm.frameLength = 512
             var out = 0

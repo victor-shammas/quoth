@@ -128,14 +128,13 @@ final class AudioCaptureTests: XCTestCase {
         XCTAssertEqual(stats.inputFrames, 4_800)
     }
 
-    func testBuffersOutsideARecordingAreCountedAndDropped() throws {
+    func testBuffersOutsideARecordingAreDropped() throws {
         let buffer = CaptureBuffer()
         let cache = ConverterCache(targetFormat: AudioCapture.targetFormat)
         let handle = AudioCapture.inputHandler(buffer: buffer, converters: cache, onLevel: nil)
         let pcm = try makeBuffer(sampleRate: 48_000, channels: 1, frames: 480)
 
         handle(pcm, 0, 0)
-        XCTAssertEqual(buffer.buffersWhileClosed, 1)
         XCTAssertEqual(buffer.currentStats.buffers, 0)
 
         buffer.reset(startedAt: 0)
@@ -143,7 +142,7 @@ final class AudioCaptureTests: XCTestCase {
         XCTAssertEqual(buffer.currentStats.buffers, 1)
         _ = try buffer.finish()
         handle(pcm, 0, 0)
-        XCTAssertEqual(buffer.buffersWhileClosed, 2)
+        XCTAssertEqual(buffer.samples(from: 0), [])
     }
 
     func testInputFailuresAreCountedPerRecording() {

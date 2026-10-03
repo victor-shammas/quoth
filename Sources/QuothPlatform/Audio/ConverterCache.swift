@@ -1,13 +1,11 @@
 import AVFoundation
 import Foundation
 
-/// Converts tap buffers to the capture's target format, keeping one
-/// `AVAudioConverter` and one output buffer per input format.
-///
-/// The tap is installed with `format: nil`, so the first buffer is the first
-/// time the real input format is known. Building the converter then, and
-/// reusing it for every later buffer in that format, keeps allocation out of
-/// the realtime callback after the first buffer.
+/// Converts input buffers to 16 kHz mono, keeping one `AVAudioConverter`
+/// and one output buffer per input format: built on the first buffer in a
+/// format and reused for every later one, so the realtime thread allocates
+/// only then. A recording can change format midway (`HALInput` follows a
+/// device's new rate), so there may be more than one.
 public final class ConverterCache: @unchecked Sendable {
     private final class Entry {
         let format: AVAudioFormat

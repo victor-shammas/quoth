@@ -2,79 +2,61 @@ import AVFoundation
 import Foundation
 import QuothDomain
 
-/// Captures microphone audio while recording is active and returns a 16 kHz
-/// mono Float32 buffer when stopped. Format-converts on the fly so callers
-/// don't have to worry about the input device's native rate.
+/// The microphone for one recording at a time: what a press starts and a
+/// release finishes, as 16 kHz mono Float32 whatever the input's own format.
 ///
-/// The microphone runs only between `start()` and `stop()`, through a
-/// `HALInput`; the checks before it (permission, a usable device) and the
-/// conversion and bookkeeping after it are here.
+/// The microphone runs only between `start()` and `finish()`, through a
+/// `HALInput`. Before it: the permission, and a device that can be
+/// recorded. After it: the conversion to 16 kHz and the bookkeeping, in a
+/// `CaptureBuffer`.
 public final class AudioCapture {
     public static let targetSampleRate: Double = 16_000
+    public static let targetFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: targetSampleRate, channels: 1, interleaved: false)!
 
-    public static let targetFormat = AVAudioFormat(
-        commonFormat: .pcmFormatFloat32,
-        sampleRate: targetSampleRate,
-        channels: 1,
-        interleaved: false
-    )!
-
-    /// Called for every audio buffer with the buffer's RMS level (0…~1).
-    /// Invoked on an arbitrary thread; hop to main if you touch UI.
+    /// Each converted buffer's level (RMS, 0 to about 1), for the pill. On
+    /// the realtime thread; hop to main to touch UI.
     public var onLevel: ((Float) -> Void)?
-
-    /// Called when the input route changes mid-recording (a headset
-    /// connects, the default input changes). Invoked on an arbitrary thread.
+    /// The input route changed mid-recording: a headset connected, the
+    /// default input moved. On an arbitrary thread.
     public var onRouteChange: (() -> Void)?
 
-    /// Counts and timings of the last finished capture, including press to
-    /// first sample. Nil until one finishes.
+    /// The last finished recording's counts and timings.
     public private(set) var lastStats: CaptureBuffer.Stats?
-
-    /// Buffers any input delivered while no recording was open. Stays 0
-    /// unless an input ran between presses.
-    public var buffersWhileStopped: Int { buffer.buffersWhileClosed }
-
-    /// The recording so far, for callers that wait on the first sample.
+    /// The recording so far.
     public var currentStats: CaptureBuffer.Stats { buffer.currentStats }
-
-    /// The 16 kHz samples recorded so far from `offset` on, while recording
-    /// continues (live text). Safe from any thread.
+    public var hasRouteChanged: Bool { buffer.hasRouteChanged }
+    /// The 16 kHz samples so far from `offset` on, while recording continues
+    /// (live text). Safe from any thread.
     public func samples(from offset: Int) -> [Float] { buffer.samples(from: offset) }
 
-    /// Whether the input route changed during this recording.
-    public var hasRouteChanged: Bool { buffer.hasRouteChanged }
-
     private let input = HALInput()
+    private let buffer = CaptureBuffer()
+    private let converters = ConverterCache(targetFormat: AudioCapture.targetFormat)
     private var recording = false
+    /// For the log line: the input, what the unit delivered, how long it took.
     private var device = InputDevice(sampleRate: 0, channels: 0)
     private var delivered = InputDevice(sampleRate: 0, channels: 0)
     private var startDelay: TimeInterval = 0
-    private let converters = ConverterCache(targetFormat: AudioCapture.targetFormat)
-    private let buffer = CaptureBuffer()
 
     public init() {}
 
-    /// Begin recording. Idempotent — calling while already recording is a no-op.
-    /// Throws `CaptureError`; on a throw nothing is left running.
+    /// Starts recording. Does nothing if already recording. Throws
+    /// `CaptureError`; on a throw nothing is left running.
     public func start() throws {
         guard !recording else { return }
-        // The press. Press-to-first-sample is measured from here.
-        let startedAt = HostClock.now()
-
+        // The press: press-to-first-sample is measured from here.
+        let pressed = HostClock.now()
         if let error = MicrophoneAccess.captureError(for: MicrophoneAccess.status) {
-            // A press is the one moment the user is looking; ask again if the
-            // system never has (a no-op while its prompt is open).
+            // A press is when the user is looking: ask, if macOS never has
+            // (nothing happens while its prompt is open).
             MicrophoneAccess.requestIfUndetermined()
             throw error
         }
-
-        // Check the device before any input touches it: a missing input or a
-        // 0 Hz / 0 channel format raises an ObjC exception in AVAudioEngine.
+        // A device that can be recorded, before the unit touches it.
         let device = try InputDevice.current()
 
         converters.resetAll()
-        buffer.reset(startedAt: startedAt)
+        buffer.reset(startedAt: pressed)
         let buffer = self.buffer
         let sink = InputSink(
             deliver: Self.inputHandler(buffer: buffer, converters: converters, onLevel: onLevel),
@@ -92,47 +74,41 @@ public final class AudioCapture {
         }
         recording = true
         self.device = device
-        startDelay = HostClock.seconds(from: startedAt, to: HostClock.now())
+        startDelay = HostClock.seconds(from: pressed, to: HostClock.now())
     }
 
-    /// Stop recording and throw the samples away, for a recording the
-    /// gesture discarded. A failure is logged; `finish()` returns the samples.
+    /// Stops and throws the recording away, for one the gesture discarded.
     public func stop() {
-        do {
-            _ = try finish()
-        } catch {
-            Log.error("capture failed: \(error)")
-        }
+        do { _ = try finish() } catch { Log.error("capture failed: \(error)") }
     }
 
-    /// Stop recording, stop the input, and return the captured samples.
-    /// Throws `CaptureError.routeChanged` instead of returning a partial
-    /// capture if the input route changed mid-recording, unless
-    /// `keepBeforeRouteChange` asks for what came before the change.
+    /// Stops and returns the recording. After a route change it throws
+    /// `CaptureError.routeChanged` rather than return part of a recording,
+    /// unless `keepBeforeRouteChange` asks for what came before the change.
     public func finish(keepBeforeRouteChange: Bool = false) throws -> [Float] {
         guard recording else { return [] }
         recording = false
         input.stop()
-
-        // The input has stopped; flush what the resampler still holds.
+        // The input has stopped: flush what the resampler still holds, the
+        // end of the last word.
         converters.drain { buffer.appendTail($0) }
         let stats = buffer.currentStats
         lastStats = stats
-        logStats(stats)
+        log(stats)
         return try buffer.finish(keepBeforeRouteChange: keepBeforeRouteChange)
     }
 
-    /// The body of an input callback: note when the buffer's first sample,
-    /// and its first non-zero sample, were captured, then convert to 16 kHz
-    /// and append. `firstFrame` and `now` are `HostClock` nanoseconds. A
-    /// buffer outside a recording is counted and dropped.
+    /// What the realtime thread does with each input buffer: note when its
+    /// first sample, and first non-zero one, were captured, then convert to
+    /// 16 kHz and keep it. `firstFrame` and `now` are `HostClock`
+    /// nanoseconds. A buffer outside a recording is dropped.
     public static func inputHandler(
         buffer: CaptureBuffer,
         converters: ConverterCache,
         onLevel: ((Float) -> Void)?
     ) -> (_ pcm: AVAudioPCMBuffer, _ firstFrame: UInt64, _ now: UInt64) -> Void {
-        return { pcm, firstFrame, now in
-            guard buffer.admit() else { return }
+        { pcm, firstFrame, now in
+            guard buffer.isRecording else { return }
             var firstSound: UInt64?
             if buffer.awaitingSound, pcm.format.sampleRate > 0, let frame = firstNonZeroFrame(pcm) {
                 firstSound = firstFrame &+ UInt64(Double(frame) / pcm.format.sampleRate * 1_000_000_000)
@@ -146,94 +122,33 @@ public final class AudioCapture {
         }
     }
 
-    /// The first frame in which any channel is not exactly zero, or nil.
+    /// The first frame in which any channel isn't exactly zero, or nil.
     public static func firstNonZeroFrame(_ pcm: AVAudioPCMBuffer) -> Int? {
         guard let channels = pcm.floatChannelData else { return nil }
         let interleaved = pcm.format.isInterleaved
-        let stride = pcm.stride
         var first: Int?
         for c in 0..<Int(pcm.format.channelCount) {
             let data = channels[interleaved ? 0 : c]
             let offset = interleaved ? c : 0
-            var i = 0
+            // Only frames before the earliest found so far can improve on it.
             let limit = first ?? Int(pcm.frameLength)
-            while i < limit {
-                if data[i * stride + offset] != 0 {
-                    first = i
-                    break
-                }
-                i += 1
-            }
+            if let i = (0..<limit).first(where: { data[$0 * pcm.stride + offset] != 0 }) { first = i }
         }
         return first
     }
 
-    /// One line per recording: counts and timings, never audio. Press to
-    /// first sample is the start of the dictation the user loses.
-    private func logStats(_ stats: CaptureBuffer.Stats) {
+    /// One line a recording: counts and timings, never audio. Press to first
+    /// sample is the start of the dictation the user loses.
+    private func log(_ stats: CaptureBuffer.Stats) {
         func ms(_ delay: TimeInterval?) -> String { delay.map { String(format: "%.0f ms", $0 * 1000) } ?? "none" }
         var line = String(
             format: "  input %.0f Hz × %u · delivered %.0f Hz × %u · hal start %.0f ms",
-            device.sampleRate, device.channels, delivered.sampleRate, delivered.channels,
-            startDelay * 1000
+            device.sampleRate, device.channels, delivered.sampleRate, delivered.channels, startDelay * 1000
         )
         line += " · press→first sample \(ms(stats.firstSampleDelay)) · first sound \(ms(stats.firstSoundDelay))"
         line += " · first buffer \(ms(stats.firstBufferDelay)) · \(stats.buffers) buffers · \(stats.inputFrames) frames"
-        if stats.conversionFailures > 0 {
-            line += " · \(stats.conversionFailures) conversion failures"
-        }
-        if stats.inputFailures > 0 {
-            line += " · \(stats.inputFailures) input failures"
-        }
+        if stats.conversionFailures > 0 { line += " · \(stats.conversionFailures) conversion failures" }
+        if stats.inputFailures > 0 { line += " · \(stats.inputFailures) input failures" }
         Log.info(line)
     }
-}
-
-// MARK: - WAV writer (for debugging M3 captures)
-
-public enum WAVWriter {
-    /// Write Float32 mono samples as 16-bit PCM WAV to `path`.
-    public static func write(samples: [Float], sampleRate: Int, to path: String) throws {
-        let bytesPerSample = 2
-        let dataSize = samples.count * bytesPerSample
-
-        var data = Data()
-        data.append(contentsOf: Array("RIFF".utf8))
-        data.append(uint32LE(36 + UInt32(dataSize)))
-        data.append(contentsOf: Array("WAVE".utf8))
-        data.append(contentsOf: Array("fmt ".utf8))
-        data.append(uint32LE(16))                       // fmt chunk size
-        data.append(uint16LE(1))                        // PCM
-        data.append(uint16LE(1))                        // mono
-        data.append(uint32LE(UInt32(sampleRate)))
-        data.append(uint32LE(UInt32(sampleRate * bytesPerSample)))
-        data.append(uint16LE(UInt16(bytesPerSample)))   // block align
-        data.append(uint16LE(16))                       // bits per sample
-        data.append(contentsOf: Array("data".utf8))
-        data.append(uint32LE(UInt32(dataSize)))
-
-        for s in samples {
-            let clamped = max(-1.0, min(1.0, s))
-            let i = Int16(clamped * 32767.0)
-            data.append(uint16LE(UInt16(bitPattern: i)))
-        }
-
-        try data.write(to: URL(fileURLWithPath: path))
-    }
-
-    private static func uint32LE(_ v: UInt32) -> Data {
-        var x = v.littleEndian
-        return Data(bytes: &x, count: 4)
-    }
-    private static func uint16LE(_ v: UInt16) -> Data {
-        var x = v.littleEndian
-        return Data(bytes: &x, count: 2)
-    }
-}
-
-public func computeRMS<C: Collection>(_ samples: C) -> Float where C.Element == Float {
-    guard !samples.isEmpty else { return 0 }
-    var sum: Double = 0
-    for s in samples { sum += Double(s * s) }
-    return Float((sum / Double(samples.count)).squareRoot())
 }
