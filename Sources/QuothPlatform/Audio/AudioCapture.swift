@@ -102,17 +102,13 @@ public final class AudioCapture {
         startDelay = HostClock.seconds(from: startedAt, to: HostClock.now())
     }
 
-    /// Stop recording and return all captured samples (16 kHz mono Float32).
-    /// Returns nothing if the capture failed, for example because the input
-    /// route changed mid-recording; the failure is logged. `finish()` is the
-    /// same with the failure thrown instead.
-    @discardableResult
-    public func stop() -> [Float] {
+    /// Stop recording and throw the samples away, for a recording the
+    /// gesture discarded. A failure is logged; `finish()` returns the samples.
+    public func stop() {
         do {
-            return try finish()
+            _ = try finish()
         } catch {
             Log.error("capture failed: \(error)")
-            return []
         }
     }
 

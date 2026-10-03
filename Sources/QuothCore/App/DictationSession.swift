@@ -16,13 +16,14 @@ final class DictationSession {
 
     var state: DictationMachine.State { machine.state }
 
-    private let capture: AudioCapture
+    private let capture: Microphone
     /// Replaced by `replaceTranscriber` when the model changes.
     private var transcriber: Transcriber
     private let processors: [TranscriptProcessor]
     private let observers: [DictationObserver]
     private let dumpWav: Bool
-    private let delivery: TextDelivery
+    private let delivery: TextSink
+    private let focus: FocusProbe
     /// What to tell the transcriber about each dictation, asked once per
     /// release. Features such as the dictionary fill it; the session only
     /// passes it on.
@@ -68,15 +69,17 @@ final class DictationSession {
     }
 
     init(
-        capture: AudioCapture,
+        capture: Microphone,
         transcriber: Transcriber,
         processors: [TranscriptProcessor] = [],
         observers: [DictationObserver],
         dumpWav: Bool = false,
-        delivery: TextDelivery,
+        delivery: TextSink,
+        focus: FocusProbe = SystemFocus(),
         context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() }
     ) {
         self.capture = capture
+        self.focus = focus
         self.transcriber = transcriber
         self.processors = processors
         self.observers = observers
@@ -133,7 +136,7 @@ final class DictationSession {
         for effect in effects {
             switch effect {
             case .started:
-                focusAtStart = FocusSnapshot.capture()
+                focusAtStart = focus.current()
                 Log.info("● recording")
                 observers.forEach { $0.dictationStarted() }
             case .locked:
@@ -156,7 +159,7 @@ final class DictationSession {
             case .finishCapture(let keepBeforeRouteChange):
                 finishCapture(keepBeforeRouteChange: keepBeforeRouteChange)
             case .stopCapture:
-                _ = capture.stop()
+                capture.stop()
                 focusAtStart = nil
             case .openCard:
                 card?.open()
@@ -225,7 +228,7 @@ final class DictationSession {
             return
         }
         let samples = step.samples
-        let seconds = Double(samples.count) / AudioCapture.targetSampleRate
+        let seconds = Double(samples.count) / PauseSplitter.sampleRate
         Log.info(String(format: "○ captured %.2fs · rms %.3f", seconds, computeRMS(samples)))
         if dumpWav, !samples.isEmpty {
             writeDump(samples)
@@ -235,7 +238,7 @@ final class DictationSession {
             transcriptionTime: 0,
             charCount: 0,
             captureStop: CFAbsoluteTimeGetCurrent() - releasedAt,
-            pressToFirstSample: capture.lastStats?.firstSampleDelay
+            pressToFirstSample: capture.lastFirstSampleDelay
         )
         let hasSpeech = !samples.isEmpty && PauseSplitter.hasSpeech(samples, minRun: PauseSplitter.minPushToTalkRun)
         perform(machine.captured(.audio(hasSpeech: hasSpeech)), &step)

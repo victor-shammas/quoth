@@ -107,6 +107,7 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
                                 ways of running the mic; the AUHAL unit is the default
     HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
   Support/
+    DictationServices.swift     Microphone, TextSink, FocusProbe: what DictationSession needs from the Mac
     Edition.swift               what the direct and App Store editions do differently (ADR-006)
     Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
 
@@ -186,7 +187,7 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ Dictat
                               AppModel ──▶ menu bar; LastDictation (memory only) for Copy and Fix
 ```
 
-`DictationMachine` decides: it holds the recording, its lock and where its live text goes, and counts the transcriptions in flight, so its state (`idle`, `recording`, `transcribing`) is derived rather than set. Each event returns a list of effects. `DictationSession` performs them and reports back how they went (the capture, the transcript, the delivery), and makes no decisions of its own. The machine is pure and unit tested (`DictationMachineTests`); the session is `@MainActor`, and transcription runs off the main actor.
+`DictationMachine` decides: it holds the recording, its lock and where its live text goes, and counts the transcriptions in flight, so its state (`idle`, `recording`, `transcribing`) is derived rather than set. Each event returns a list of effects. `DictationSession` performs them and reports back how they went (the capture, the transcript, the delivery), and makes no decisions of its own. The machine is pure and unit tested (`DictationMachineTests`). The session reaches the Mac only through `Microphone`, `TextSink` and `FocusProbe`, so `DictationSessionTests` runs it end to end with fakes; it is `@MainActor`, and transcription runs off the main actor.
 
 `AppModel` is the app's lasting state (what the loop is doing, the hotkey and whether it works, a model loading, missing grants, the last dictation) and its intents (Copy Last Dictation, New Quote Card, Settings, Fix Last Dictation). The menu bar renders it with Observation and sends every click to an intent; the Quote Card asks for what it needs through `QuoteCardHost`. Moments stay `DictationObserver`s: the pill's messages and level, the card's status, the latency log. `Assembly` builds all of this once and holds no behaviour.
 
