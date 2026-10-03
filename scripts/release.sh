@@ -8,7 +8,9 @@
 #   - a Developer ID Application certificate in the keychain;
 #   - the notary profile `quoth-notary` (xcrun notarytool store-credentials);
 #   - Quoth's Sparkle private key in the keychain (generate_keys), whose
-#     public half is SUPublicEDKey in packaging/Info.plist;
+#     public half is SUPublicEDKey in packaging/Info.plist. The first time,
+#     run generate_appcast once in Terminal and choose Always Allow at the
+#     keychain prompt; without that, a script can't reach the key;
 #   - gh, logged in to GitHub.
 #
 # Installed copies read releases/latest/download/appcast.xml, which always
@@ -41,10 +43,13 @@ cp "dist/Quoth-$VERSION.zip" "$FEED/"
 "$SPARKLE/generate_appcast" "$FEED" --download-url-prefix "https://github.com/$REPO/releases/download/$TAG/"
 grep -q 'sparkle:edSignature' "$FEED/appcast.xml" || { echo "the appcast isn't signed: is the Sparkle key in this keychain?" >&2; exit 1; }
 
-# 3. Tag the commit and publish.
+# 3. Tag the commit and publish. Quoth.dmg is the same DMG under a name that
+#    never changes, so releases/latest/download/Quoth.dmg (the website's
+#    Download button) always fetches the newest.
+cp "dist/Quoth-$VERSION.dmg" dist/Quoth.dmg
 git tag "$TAG"
 git push origin "$TAG"
 if [ -n "$NOTES" ]; then NOTE_ARGS=(--notes-file "$NOTES"); else NOTE_ARGS=(--generate-notes); fi
 gh release create "$TAG" -R "$REPO" --title "Quoth $VERSION" "${NOTE_ARGS[@]}" \
-    "dist/Quoth-$VERSION.dmg" "dist/Quoth-$VERSION.dmg.sha256" "dist/Quoth-$VERSION.zip" "$FEED/appcast.xml"
+    "dist/Quoth-$VERSION.dmg" dist/Quoth.dmg "dist/Quoth-$VERSION.dmg.sha256" "dist/Quoth-$VERSION.zip" "$FEED/appcast.xml"
 echo "✓ https://github.com/$REPO/releases/tag/$TAG"

@@ -17,7 +17,7 @@ Website: [victorshammas.com/quoth](https://victorshammas.com/quoth/).
 Quoth comes in two editions from this one codebase ([ADR-006](docs/decisions/006-two-editions.md)):
 
 - **Mac App Store**, $1.99, sandboxed. Pastes at the cursor once you allow it; otherwise each dictation is copied for ⌘V.
-- **Free and open source**, this repository. It also reads the text field it types into, for exact spacing and to keep out of password fields, and updates itself. Build it from source (section 6) until there is a release.
+- **Free and open source**, this repository. It also reads the text field it types into, for exact spacing and to keep out of password fields, and updates itself. [Download the latest release](https://github.com/victor-shammas/quoth/releases/latest/download/Quoth.dmg) (notarized), or build it from source (section 6).
 
 Requires macOS 14+ on Apple silicon. Open Quoth and allow it when macOS asks for the microphone and Accessibility (Input Monitoring in the App Store edition). The first start downloads the speech model (about 150 MB).
 
