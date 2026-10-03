@@ -2,6 +2,8 @@ import WhisperKit
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
+@testable import QuothSpeech
 
 final class LivePromptTests: XCTestCase {
     func testThePromptContinuesThePreviousSegment() {
@@ -51,8 +53,8 @@ final class DictionaryContextTests: XCTestCase {
     func testKnownLanguageOnlyForSingleLanguageModels() throws {
         let base = try XCTUnwrap(ModelRegistry.find("whisper-base.en"))
         let turbo = try XCTUnwrap(ModelRegistry.find("whisper-large-v3-turbo"))
-        XCTAssertEqual(DictionaryContext.knownLanguage(of: base), "en")
-        XCTAssertNil(DictionaryContext.knownLanguage(of: turbo))
+        XCTAssertEqual(base.onlyLanguage, "en")
+        XCTAssertNil(turbo.onlyLanguage)
     }
 
     func testLanguageFollowsTheSettingOnlyForMultilingualModels() throws {

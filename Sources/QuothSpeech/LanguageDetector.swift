@@ -13,14 +13,14 @@ import WhisperKit
 /// and Spanish, a Spanish clip can never come back as Italian or Portuguese,
 /// which Whisper confuses it with on short clips, and a wrong language comes
 /// back as a translation.
-enum LanguageDetector {
-    enum DetectionError: Error {
+public enum LanguageDetector {
+    public enum DetectionError: Error {
         case unavailable(String)
     }
 
     /// The most likely of `languages` in `audio`, with each language's
     /// probability, highest first. `languages` must be codes the model knows.
-    static func detect(
+    public static func detect(
         _ audio: [Float],
         among languages: [String],
         pipeline: WhisperKit

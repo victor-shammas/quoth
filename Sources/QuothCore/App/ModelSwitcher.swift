@@ -1,5 +1,7 @@
 import Foundation
 import QuothDomain
+import QuothPlatform
+import QuothSpeech
 
 /// Applies a model change while Quoth runs: loads the new model behind
 /// the menu bar, downloading it first if needed, while the current one keeps

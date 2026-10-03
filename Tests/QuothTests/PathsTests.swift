@@ -1,5 +1,7 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothPlatform
+@testable import QuothSpeech
 
 final class PathsTests: XCTestCase {
     func testFilesLiveUnderTheirDirectories() {

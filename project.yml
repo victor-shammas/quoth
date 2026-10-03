@@ -47,6 +47,23 @@ targets:
         PRODUCT_NAME: QuothPlatform
         # Edition.swift decides what the App Store build does differently.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APPSTORE
+  QuothSpeech:
+    type: library.static
+    platform: macOS
+    sources:
+      - path: Sources/QuothSpeech
+    dependencies:
+      - target: QuothDomain
+        link: false
+      - target: QuothPlatform
+        link: false
+      - package: argmax-oss-swift
+        product: WhisperKit
+        link: false
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        PRODUCT_NAME: QuothSpeech
   Quoth:
     type: application
     platform: macOS
@@ -62,6 +79,7 @@ targets:
     dependencies:
       - target: QuothDomain
       - target: QuothPlatform
+      - target: QuothSpeech
       - package: argmax-oss-swift
         product: WhisperKit
     settings:

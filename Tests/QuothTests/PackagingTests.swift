@@ -1,5 +1,6 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothPlatform
 
 final class PackagingTests: XCTestCase {
     // MARK: - Startup dialogs

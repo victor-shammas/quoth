@@ -1,17 +1,18 @@
 import CoreML
 import Foundation
 import QuothDomain
+import QuothPlatform
 import WhisperKit
 
-package actor WhisperKitTranscriber: Transcriber {
-    package let modelID: String
+public actor WhisperKitTranscriber: Transcriber {
+    public let modelID: String
     private let model: TranscriptionModel
-    let tuning: WhisperTuning
+    public let tuning: WhisperTuning
     private var pipeline: WhisperKit?
     /// Set by `unload`: this transcriber was replaced and loads nothing more.
     private var retired = false
 
-    package init(model: TranscriptionModel, tuning: WhisperTuning = .standard) {
+    public init(model: TranscriptionModel, tuning: WhisperTuning = .standard) {
         self.modelID = model.id
         self.model = model
         self.tuning = tuning
@@ -21,7 +22,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// Call once at startup so the first hotkey press isn't blocked on model
     /// download/load. `progress` gets the download's fraction done, 0 to 1,
     /// when there is anything to download.
-    package func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
+    public func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if pipeline != nil || retired { return }
         guard let whisperKitID = model.whisperKitID else {
             throw TranscriberError.missingEngineID
@@ -88,7 +89,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
     /// Frees the model after a swap to another one. A load still running
     /// finishes and is dropped, and a later `warmUp` returns at once.
-    package func unload() async {
+    public func unload() async {
         retired = true
         guard let pipeline else { return }
         self.pipeline = nil
@@ -100,7 +101,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// see `SpokenLanguage`. `context.vocabulary` is ignored: Whisper takes no
     /// word list, and a list given as a prompt scores no better than nothing
     ///.
-    package func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
+    public func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
         if pipeline == nil { try await warmUp() }
         guard let pipeline else { throw TranscriberError.notLoaded }
 
@@ -127,7 +128,7 @@ package actor WhisperKitTranscriber: Transcriber {
             languageDetection: detectTime,
             total: CFAbsoluteTimeGetCurrent() - started
         )
-        timings.language = language ?? DictionaryContext.knownLanguage(of: model)
+        timings.language = language ?? model.onlyLanguage
         return Transcript(text: text, timings: timings)
     }
 
@@ -167,7 +168,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
     /// The example sentence in `examples` for `language`, matched as the
     /// dictionary matches it.
-    static func example(in examples: [String: String], for language: String?) -> String? {
+    public static func example(in examples: [String: String], for language: String?) -> String? {
         examples.isEmpty ? nil : UserDictionary(examples: examples).example(for: language)
     }
 
@@ -175,7 +176,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// is what the pipeline spent outside preprocessing, the encoder and
     /// windowing; post-processing is the rest of the call. `ownPreprocessing` is
     /// time Quoth spent on the audio before handing it to WhisperKit.
-    static func timings(
+    public static func timings(
         from results: [TranscriptionTimings],
         audioSeconds: TimeInterval,
         preprocessing ownPreprocessing: TimeInterval,
@@ -211,7 +212,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// sentence, then the end of the previous segment, which is what Whisper
     /// conditions on to continue a sentence. Whisper reads at most 224
     /// prompt tokens; about 200 characters of context is plenty.
-    static func prompt(_ prompt: String?, continuing previous: String?) -> String? {
+    public static func prompt(_ prompt: String?, continuing previous: String?) -> String? {
         guard let previous = previous?.trimmingCharacters(in: .whitespacesAndNewlines), !previous.isEmpty else {
             return prompt
         }
@@ -220,7 +221,7 @@ package actor WhisperKitTranscriber: Transcriber {
         return prompt + " " + tail
     }
 
-    static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
+    public static func promptTokens(for prompt: String?, tokenizer: WhisperTokenizer?) -> [Int]? {
         guard let tokenizer,
               let text = prompt?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty
         else { return nil }
@@ -233,7 +234,7 @@ package actor WhisperKitTranscriber: Transcriber {
     /// Strip Whisper's non-speech bracket tokens ([BLANK_AUDIO], [MUSIC],
     /// (silence), <|nospeech|>, etc.) and collapse whitespace. When the model
     /// hears silence it emits these literally; we don't want to paste them.
-    static func sanitize(_ text: String) -> String {
+    public static func sanitize(_ text: String) -> String {
         let patterns = [
             #"\[[^\]]*\]"#,        // [BLANK_AUDIO], [MUSIC], [Applause]
             #"\([^)]*\)"#,          // (silence), (music playing)
@@ -253,7 +254,7 @@ package actor WhisperKitTranscriber: Transcriber {
 
 extension WhisperKitTranscriber {
     /// True if `model`'s weights are already under `Paths.appSupport`.
-    package static func isCached(_ model: TranscriptionModel) -> Bool {
+    public static func isCached(_ model: TranscriptionModel) -> Bool {
         guard let variant = model.whisperKitID else { return false }
         let dir = Paths.appSupport.appendingPathComponent(folders(for: variant)[0])
         return FileManager.default.fileExists(atPath: dir.path)
@@ -261,7 +262,7 @@ extension WhisperKitTranscriber {
 
     /// Bytes `model` takes on disk under `base`: its weights and download
     /// metadata. Nil if it isn't downloaded.
-    package static func diskBytes(_ model: TranscriptionModel, base: URL = Paths.appSupport) -> Int64? {
+    public static func diskBytes(_ model: TranscriptionModel, base: URL = Paths.appSupport) -> Int64? {
         guard let variant = model.whisperKitID else { return nil }
         let folders = folders(for: variant).prefix(2).map { base.appendingPathComponent($0) }
         guard FileManager.default.fileExists(atPath: folders[0].path) else { return nil }
@@ -271,7 +272,7 @@ extension WhisperKitTranscriber {
     /// Deletes `model`'s weights and download metadata under `base`, so it
     /// downloads again when chosen. The tokenizer stays: it is small and
     /// the large-v3 builds share one.
-    package static func deleteDownload(_ model: TranscriptionModel, base: URL = Paths.appSupport) throws {
+    public static func deleteDownload(_ model: TranscriptionModel, base: URL = Paths.appSupport) throws {
         guard let variant = model.whisperKitID else { return }
         for folder in folders(for: variant).prefix(2) {
             let url = base.appendingPathComponent(folder)
@@ -295,7 +296,7 @@ extension WhisperKitTranscriber {
 
     /// Whether `variant`'s weights and tokenizer are both on disk under
     /// `base`, so it can load with no network.
-    static func isOnDisk(_ variant: String, base: URL) -> Bool {
+    public static func isOnDisk(_ variant: String, base: URL) -> Bool {
         let fm = FileManager.default
         let paths = folders(for: variant)
         let weights = base.appendingPathComponent(paths[0])
@@ -326,7 +327,7 @@ extension WhisperKitTranscriber {
     }
 }
 
-enum TranscriberError: Error {
+public enum TranscriberError: Error {
     case missingEngineID
     case notLoaded
 }

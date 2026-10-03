@@ -11,7 +11,7 @@ Last updated: `2026.10.03`
 | Module | Holds | Imports |
 |---|---|---|
 | `QuothDomain` | Pure Swift: the dictation state machine, gesture rules, delivery decisions, spacing, voice commands, the dictionary model and matcher, pause splitting, settings values, the model catalog | Foundation only |
-| `QuothSpeech` | The `Transcriber` protocol's engine (WhisperKit), decoding options, the on-disk model store | Domain, WhisperKit |
+| `QuothSpeech` | The `Transcriber` protocol's engine (WhisperKit), decoding options, the on-disk model store | Domain, Platform (for `Paths`), WhisperKit |
 | `QuothPlatform` | macOS behind small protocols: `Microphone`, `HotkeySource`, `TextSink`, `FocusProbe`, `Permissions`, `Capabilities` | Domain, AppKit, Core Audio, ApplicationServices |
 | `QuothApp` | `AppModel`, `DictationSession`, the windows and views, and the composition root | all of the above |
 
@@ -85,7 +85,7 @@ Each phase is one pull request, with the app working and the tests passing at it
 | 3a | The command line goes: one entry point, `QuothApp.main()`, for both editions. |
 | 3b | `AppModel` and the composition root (`Assembly`); the menu bar reads the model; `Daemon` goes. |
 | 4 | `QuothPlatform`: capture, the hotkey tap, text insertion, focus and permissions behind protocols; `Capabilities` replaces `Edition`. |
-| 5 | `QuothSpeech`; the settings and dictionary stores; `quoth-bench` against the modules. |
+| 5 | `QuothSpeech`; `Paths` to Platform; `quoth-bench` against the modules. The settings and dictionary stores stay with the windows that edit them. |
 | 6 | `architecture.md` rewritten for the new structure; ADR-001 marked superseded. |
 
 ## 5. When to revisit

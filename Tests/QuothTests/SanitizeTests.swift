@@ -1,5 +1,8 @@
 import XCTest
 @testable import QuothCore
+@testable import QuothDomain
+@testable import QuothPlatform
+@testable import QuothSpeech
 
 final class SanitizeTests: XCTestCase {
     func testStripsNonSpeechTokens() {

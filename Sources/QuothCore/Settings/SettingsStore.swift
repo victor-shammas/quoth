@@ -1,5 +1,6 @@
 import Foundation
 import QuothDomain
+import QuothPlatform
 
 /// Loads `settings.json`, writes it atomically, and reloads it when it
 /// changes on disk, so a hand edit applies without a restart (ADR-002).

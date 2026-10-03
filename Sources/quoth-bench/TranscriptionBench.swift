@@ -2,6 +2,7 @@ import CoreML
 import Foundation
 import QuothCore
 import QuothDomain
+import QuothSpeech
 import WhisperKit
 
 /// Flags for `quoth-bench transcription`.

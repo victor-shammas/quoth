@@ -98,6 +98,16 @@ extension TranscriptionModel {
         languages.contains("multi") || languages.count > 1
     }
 
+    /// The language a model will hear, when that is certain without a
+    /// setting: a single-language model such as `whisper-base.en`. Nil for
+    /// multilingual models, whose language comes from the Language setting or
+    /// detection: an example sentence in the wrong language drags the decoder
+    /// into it.
+    public var onlyLanguage: String? {
+        guard languages.count == 1, let only = languages.first, only != "multi" else { return nil }
+        return only
+    }
+
     /// The language codes the model can be told to expect.
     public var supportedLanguages: Set<String> {
         languages.contains("multi") ? SpokenLanguage.whisperLanguages : Set(languages)

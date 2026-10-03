@@ -25,12 +25,23 @@ let package = Package(
             name: "QuothPlatform",
             dependencies: ["QuothDomain"]
         ),
+        // Speech recognition: WhisperKit, its tuning, language detection,
+        // and the models on disk.
+        .target(
+            name: "QuothSpeech",
+            dependencies: [
+                "QuothDomain",
+                "QuothPlatform",
+                .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ]
+        ),
         // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
         .target(
             name: "QuothCore",
             dependencies: [
                 "QuothDomain",
                 "QuothPlatform",
+                "QuothSpeech",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
@@ -49,6 +60,7 @@ let package = Package(
                 "QuothCore",
                 "QuothDomain",
                 "QuothPlatform",
+                "QuothSpeech",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
@@ -59,6 +71,7 @@ let package = Package(
                 "QuothCore",
                 "QuothDomain",
                 "QuothPlatform",
+                "QuothSpeech",
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
             ]
         ),

@@ -2,6 +2,8 @@ import ApplicationServices
 import AVFoundation
 import Foundation
 import QuothDomain
+import QuothPlatform
+import QuothSpeech
 
 /// Why Quoth could not start.
 ///

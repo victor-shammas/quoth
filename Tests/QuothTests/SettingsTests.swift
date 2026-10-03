@@ -1,6 +1,8 @@
 import XCTest
 @testable import QuothCore
 @testable import QuothDomain
+@testable import QuothPlatform
+@testable import QuothSpeech
 
 final class SettingsTests: XCTestCase {
     private func decode(_ json: String) throws -> Settings {
