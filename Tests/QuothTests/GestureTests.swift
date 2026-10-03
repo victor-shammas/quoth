@@ -189,7 +189,7 @@ final class GestureLockTests: XCTestCase {
 
 final class HotkeyMatchTests: XCTestCase {
     private func input(_ keycode: Int64, _ flags: CGEventFlags, _ key: HotkeyKey, held: Bool) -> Gesture.Input? {
-        HotkeyMonitor.input(keycode: keycode, flags: flags, key: key, held: held)
+        HotkeyMatching.input(keycode: keycode, flags: flags, key: key, held: held)
     }
 
     /// Device-dependent low bits, which vary by keyboard and must not matter.

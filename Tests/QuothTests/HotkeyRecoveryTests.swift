@@ -50,10 +50,10 @@ final class HotkeyRecoveryTests: XCTestCase {
     }
 
     func testResyncEmitsOnlyAMissedRelease() {
-        XCTAssertEqual(HotkeyMonitor.resyncEvent(wasPressed: true, heldNow: false), .released)
-        XCTAssertNil(HotkeyMonitor.resyncEvent(wasPressed: true, heldNow: true))
-        XCTAssertNil(HotkeyMonitor.resyncEvent(wasPressed: false, heldNow: true))
-        XCTAssertNil(HotkeyMonitor.resyncEvent(wasPressed: false, heldNow: false))
+        XCTAssertTrue(HotkeyMatching.missedRelease(wasHeld: true, heldNow: false))
+        XCTAssertFalse(HotkeyMatching.missedRelease(wasHeld: true, heldNow: true))
+        XCTAssertFalse(HotkeyMatching.missedRelease(wasHeld: false, heldNow: true))
+        XCTAssertFalse(HotkeyMatching.missedRelease(wasHeld: false, heldNow: false))
     }
 
     func testDegradedHealthNamesTheCause() {

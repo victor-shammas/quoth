@@ -105,12 +105,15 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
 
 Sources/QuothPlatform/          macOS, behind small types; the only module besides Core compiled with APPSTORE
   Input/
-    HotkeyMonitor.swift         the listen-only tap for modifier changes, the lock's time limit
+    HotkeyMonitor.swift         the dictation key: modifier changes through Gesture into events; the lock's time limit
+    HotkeyMatching.swift        what one modifier change means for the key (pure, tested)
+    EventTap.swift              the listen-only tap on modifier changes, kept on: re-enabling, watchdog, health
     HotkeyKey+Flag.swift        each key's CGEventFlags
-    TapRecovery.swift           re-enabling a disabled tap; the menu's hotkey status
+    TapRecovery.swift           when to re-enable a disabled tap (pure, tested); the menu's hotkey status
     FocusSnapshot.swift         what was focused, and whether it is secure; field details in the direct edition (internal: none in the App Store build)
     Delivery.swift              insert, copy or discard (pure decision, tested)
-    TextInjector.swift          paste or typed Unicode; the borrowed clipboard
+    TextInjector.swift          paste or typed Unicode, through Keystrokes
+    Clipboard.swift             borrowing the clipboard for a paste and giving it back
   Audio/
     AudioCapture.swift, CaptureBuffer.swift
                                 capture, conversion to 16 kHz, per-capture stats; samples so far, for live text
