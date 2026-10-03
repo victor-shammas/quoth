@@ -19,3 +19,7 @@ Quoth.xcodeproj/
 
 # App Store Connect keys, archives and exports (scripts/appstore.sh); never committed
 release/
+
+# App Store listing text and review notes; kept local
+AppStore/metadata.md
+AppStore/review-notes.md
