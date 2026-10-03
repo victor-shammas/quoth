@@ -65,7 +65,7 @@ final class BenchRecordingsTests: XCTestCase {
         }
         try "hello there".write(to: dir.appendingPathComponent("b.txt"), atomically: true, encoding: .utf8)
 
-        let found = try TranscriptionBench.recordings(in: dir.path)
+        let found = try Recording.all(in: dir.path)
         XCTAssertEqual(found.map(\.audio.lastPathComponent), ["a.WAV", "b.wav"])
         XCTAssertNil(found[0].reference)
         XCTAssertEqual(found[1].reference, "hello there")

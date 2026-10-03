@@ -52,8 +52,8 @@ let package = Package(
             name: "quoth",
             dependencies: ["QuothCore"]
         ),
-        // Developer benchmarks (#49, #52), not shipped in Quoth.app:
-        // swift run -c release quoth-bench transcription|capture ...
+        // The transcription benchmark, not shipped in Quoth.app:
+        // swift run -c release quoth-bench <folder of .wav recordings>
         .executableTarget(
             name: "quoth-bench",
             dependencies: [
@@ -75,7 +75,7 @@ let package = Package(
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
             ]
         ),
-        // Unit tests for the benchmarks' pure parts.
+        // Unit tests for the benchmark's metrics.
         .testTarget(
             name: "QuothBenchTests",
             dependencies: ["quoth-bench"]

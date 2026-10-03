@@ -46,7 +46,7 @@ Package.swift (the direct edition)
   QuothSpeech     library     WhisperKit: transcribing, tuning, language detection, the model cache
   QuothCore       library     the app: the loop, AppModel, stores, windows, the entry point
   quoth           executable  the entry point: `QuothApp.main()`
-  quoth-bench     executable  developer benchmarks, never shipped
+  quoth-bench     executable  the transcription benchmark, never shipped
   QuothTests, QuothBenchTests
 
 project.yml (the App Store edition, generated with xcodegen)
@@ -175,7 +175,7 @@ Sources/QuothCore/
     QuoteCard.swift             the Quote Card: a floating card a dictation streams into, then ⌘↩ inserts
 
 Sources/quoth/main.swift        the direct edition's entry point: `QuothApp.main()`
-Sources/quoth-bench/            transcription and capture benchmarks
+Sources/quoth-bench/            the transcription benchmark: stages, word error rate, languages
 AppStore/                       the App Store edition: entry point, Info.plist, entitlements, privacy manifest, icon
 docs/                           these documents, and the website (index, support, privacy)
 ```
