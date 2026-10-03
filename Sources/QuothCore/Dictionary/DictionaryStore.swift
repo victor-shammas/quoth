@@ -123,7 +123,7 @@ package final class DictionaryStore: @unchecked Sendable {
             log("not saving the dictionary: the file has a mistake (\(problem))")
             return false
         }
-        if let base, base.rows().rows != loaded.dictionary.rows().rows {
+        if let base, base.entries != loaded.dictionary.entries {
             log("not saving the dictionary: it changed since it was read")
             return false
         }
@@ -132,7 +132,7 @@ package final class DictionaryStore: @unchecked Sendable {
             try FileManager.default.createDirectory(
                 at: target.deletingLastPathComponent(), withIntermediateDirectories: true,
                 attributes: [.posixPermissions: 0o700])
-            try Data(dictionary.text().text.utf8).write(to: target, options: .atomic)
+            try Data(dictionary.text.utf8).write(to: target, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
         } catch {
             log("couldn't save \(target.path): \(error.localizedDescription)")
@@ -156,16 +156,16 @@ package final class DictionaryStore: @unchecked Sendable {
         guard !word.isEmpty, !word.contains(","), !word.hasPrefix("#") else { return false }
         let variants = heardAs.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let base = current().dictionary
-        var rows = base.rows().rows
+        var rows = base.entries
         if let i = rows.firstIndex(where: { $0.word.caseInsensitiveCompare(word) == .orderedSame }) {
             rows[i].word = word
             for heard in variants where !rows[i].heardAs.contains(where: { $0.caseInsensitiveCompare(heard) == .orderedSame }) {
                 rows[i].heardAs.append(heard)
             }
         } else {
-            rows.append(UserDictionary.Row(word: word, heardAs: variants))
+            rows.append(UserDictionary.Entry(word: word, heardAs: variants))
         }
-        return save(UserDictionary(rows: rows, examples: base.examples), basedOn: base)
+        return save(UserDictionary(entries: rows, examples: base.examples), basedOn: base)
     }
 
     // MARK: - Reloading

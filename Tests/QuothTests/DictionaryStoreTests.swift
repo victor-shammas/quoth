@@ -4,6 +4,16 @@ import XCTest
 @testable import QuothPlatform
 @testable import QuothSpeech
 
+extension UserDictionary {
+    /// Tests build dictionaries in the terms the replacement pass reads them.
+    init(terms: [String] = [], replacements: [Replacement] = [], examples: [String: String] = [:]) {
+        self.init(
+            entries: terms.map { Entry(word: $0) } + replacements.map { Entry(word: $0.to, heardAs: $0.from) },
+            examples: examples
+        )
+    }
+}
+
 final class DictionaryParseTests: XCTestCase {
     private func parse(_ text: String) throws -> UserDictionary {
         try UserDictionary.parse(Data(text.utf8))
@@ -113,8 +123,8 @@ final class DictionaryParseTests: XCTestCase {
                 .init(from: ["cloud code"], to: "Claude Code"),
             ]
         )
-        let (text, rows, skipped) = dictionary.text()
-        XCTAssertEqual([rows, skipped], [3, 0])
+        let text = dictionary.text
+        XCTAssertEqual(dictionary.entries.count, 3)
         XCTAssertEqual(text, """
             # Words Quoth should spell your way. Replaces lists what it writes instead.
             # Separate the columns with two spaces or a tab.
@@ -137,7 +147,7 @@ final class DictionaryParseTests: XCTestCase {
                 .init(from: ["a2", "a1"], to: "A"),
             ]
         )
-        let parsed = try UserDictionary.parse(Data(dictionary.text().text.utf8))
+        let parsed = try UserDictionary.parse(Data(dictionary.text.utf8))
         XCTAssertEqual(parsed.terms, ["A", "Kubernetes"])
         XCTAssertEqual(parsed.replacements, [.init(from: ["a1", "a2"], to: "A"), .init(from: ["k8s"], to: "Kubernetes")])
     }
@@ -147,11 +157,17 @@ final class DictionaryParseTests: XCTestCase {
             terms: ["Smith, John", "#hashtag", "Tab\tbed"],
             replacements: [.init(from: ["one, two", "three"], to: "Three")]
         )
-        let (text, rows, skipped) = dictionary.text()
-        XCTAssertEqual([rows, skipped], [2, 3])
-        let parsed = try UserDictionary.parse(Data(text.utf8))
+        // Two commas and a leading # can't be written: those three are left out.
+        XCTAssertEqual(dictionary.entries.count, 2)
+        let parsed = try UserDictionary.parse(Data(dictionary.text.utf8))
         XCTAssertEqual(parsed.terms, ["Tab bed", "Three"])
         XCTAssertEqual(parsed.replacements, [.init(from: ["three"], to: "Three")])
+    }
+
+    func testAMishearingListedUnderTwoWordsGoesToTheWordListedFirst() throws {
+        let dictionary = try UserDictionary.parse(Data("Acme\nAckMe  ack me\nAcme  ack me\n".utf8))
+        XCTAssertEqual(dictionary.entries.map(\.word), ["Acme", "AckMe"])
+        XCTAssertEqual(DictionaryReplacer(dictionary).apply(to: "ack me"), "Acme")
     }
 
     func testTemplateIsTheAgreedShape() {

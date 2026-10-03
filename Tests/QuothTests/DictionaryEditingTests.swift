@@ -19,23 +19,23 @@ final class DictionaryEditingTests: XCTestCase {
 
     func testRowsRoundTrip() throws {
         let rows = [
-            UserDictionary.Row(word: "PostHog", heardAs: ["post hog"]),
-            UserDictionary.Row(word: "Parakeet", heardAs: []),
-            UserDictionary.Row(word: "Kubernetes", heardAs: ["k8s", "kates"]),
+            UserDictionary.Entry(word: "PostHog", heardAs: ["post hog"]),
+            UserDictionary.Entry(word: "Parakeet", heardAs: []),
+            UserDictionary.Entry(word: "Kubernetes", heardAs: ["k8s", "kates"]),
         ]
-        let dictionary = UserDictionary(rows: rows)
-        XCTAssertEqual(dictionary.rows().rows, rows)
-        XCTAssertEqual(try UserDictionary.parse(Data(dictionary.text().text.utf8)).rows().rows, rows)
+        let dictionary = UserDictionary(entries: rows)
+        XCTAssertEqual(dictionary.entries, rows)
+        XCTAssertEqual(try UserDictionary.parse(Data(dictionary.text.utf8)).entries, rows)
     }
 
     func testBlankWordsAreDropped() {
-        let dictionary = UserDictionary(rows: [.init(word: "  ", heardAs: ["x"]), .init(word: "Quoth", heardAs: [" ", "quote"])])
-        XCTAssertEqual(dictionary.rows().rows, [.init(word: "Quoth", heardAs: ["quote"])])
+        let dictionary = UserDictionary(entries: [.init(word: "  ", heardAs: ["x"]), .init(word: "Quoth", heardAs: [" ", "quote"])])
+        XCTAssertEqual(dictionary.entries, [.init(word: "Quoth", heardAs: ["quote"])])
     }
 
     func testSaveWritesAnOwnerOnlyFileAndAppliesAtOnce() throws {
         let store = DictionaryStore(file: file, log: { _ in })
-        XCTAssertTrue(store.save(UserDictionary(rows: [.init(word: "PostHog", heardAs: ["post hog"])])))
+        XCTAssertTrue(store.save(UserDictionary(entries: [.init(word: "PostHog", heardAs: ["post hog"])])))
         let mode = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? Int
         XCTAssertEqual(mode, 0o600)
         XCTAssertEqual(store.current().replacer.apply(to: "the post hog dashboard"), "the PostHog dashboard")
@@ -46,18 +46,18 @@ final class DictionaryEditingTests: XCTestCase {
         try Data().write(to: target)
         try FileManager.default.createSymbolicLink(at: file, withDestinationURL: target)
         let store = DictionaryStore(file: file, log: { _ in })
-        XCTAssertTrue(store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: [])])))
+        XCTAssertTrue(store.save(UserDictionary(entries: [.init(word: "Quoth", heardAs: [])])))
         XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: file.path), target.path)
         XCTAssertTrue(try String(contentsOf: target, encoding: .utf8).contains("Quoth"))
     }
 
     func testAddJoinsAnExistingRowInAnyCasing() throws {
         let store = DictionaryStore(file: file, log: { _ in })
-        store.save(UserDictionary(rows: [.init(word: "Kubernetes", heardAs: ["k8s"]), .init(word: "Quoth", heardAs: [])]))
+        store.save(UserDictionary(entries: [.init(word: "Kubernetes", heardAs: ["k8s"]), .init(word: "Quoth", heardAs: [])]))
         XCTAssertTrue(store.add(word: "kubernetes", heardAs: "kates"))
         XCTAssertTrue(store.add(word: "Kubernetes", heardAs: "KATES"))
         XCTAssertTrue(store.add(word: "Gaugeline", heardAs: "gauge line"))
-        XCTAssertEqual(store.current().dictionary.rows().rows, [
+        XCTAssertEqual(store.current().dictionary.entries, [
             // The latest spelling wins.
             .init(word: "Kubernetes", heardAs: ["k8s", "kates"]),
             .init(word: "Quoth", heardAs: []),
@@ -68,22 +68,22 @@ final class DictionaryEditingTests: XCTestCase {
 
     func testSaveRefusesAFileWithAMistake() throws {
         let store = DictionaryStore(file: file, log: { _ in })
-        store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: [])]))
+        store.save(UserDictionary(entries: [.init(word: "Quoth", heardAs: [])]))
         // A hand edit in progress: a comma in the word column.
         try "Word  Replaces\nPost, Hog  post hog\n".write(to: file, atomically: true, encoding: .utf8)
-        XCTAssertFalse(store.save(UserDictionary(rows: [.init(word: "Other", heardAs: [])])))
+        XCTAssertFalse(store.save(UserDictionary(entries: [.init(word: "Other", heardAs: [])])))
         XCTAssertFalse(store.add(word: "Gaugeline", heardAs: "gauge line"))
         XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("Post, Hog"))
     }
 
     func testSaveRefusesAFileThatChangedSinceItWasRead() throws {
         let store = DictionaryStore(file: file, log: { _ in })
-        store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: [])]))
+        store.save(UserDictionary(entries: [.init(word: "Quoth", heardAs: [])]))
         let base = store.current().dictionary
         // Fix Last Dictation adds a word while the editor holds `base`.
         XCTAssertTrue(store.add(word: "PostHog", heardAs: "post hog"))
-        XCTAssertFalse(store.save(UserDictionary(rows: [.init(word: "Quoth", heardAs: ["quote"])]), basedOn: base))
-        XCTAssertEqual(store.current().dictionary.rows().rows.map(\.word), ["Quoth", "PostHog"])
+        XCTAssertFalse(store.save(UserDictionary(entries: [.init(word: "Quoth", heardAs: ["quote"])]), basedOn: base))
+        XCTAssertEqual(store.current().dictionary.entries.map(\.word), ["Quoth", "PostHog"])
     }
 
     func testAddSplitsVariantsAndRefusesWordsTheFileCantHold() throws {
@@ -91,7 +91,7 @@ final class DictionaryEditingTests: XCTestCase {
         XCTAssertFalse(store.add(word: "Smith, John", heardAs: "smith john"))
         XCTAssertFalse(store.add(word: "#tag", heardAs: "tag"))
         XCTAssertTrue(store.add(word: "Acme", heardAs: "ack me, akme"))
-        XCTAssertEqual(store.current().dictionary.rows().rows, [.init(word: "Acme", heardAs: ["ack me", "akme"])])
+        XCTAssertEqual(store.current().dictionary.entries, [.init(word: "Acme", heardAs: ["ack me", "akme"])])
     }
 }
 

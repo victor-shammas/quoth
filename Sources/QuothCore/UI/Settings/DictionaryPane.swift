@@ -54,7 +54,7 @@ final class DictionaryEditor: ObservableObject {
         defer { reloading = false }
         problem = store.loadProblem()
         base = store.current().dictionary
-        rows = base.rows().rows.map {
+        rows = base.entries.map {
             Row(word: $0.word, heardAs: $0.heardAs.joined(separator: ", "))
         }
     }
@@ -64,7 +64,7 @@ final class DictionaryEditor: ObservableObject {
     func reloadIfIdle() {
         guard pending == nil else { return }
         let current = store.current().dictionary
-        guard current.rows().rows != base.rows().rows || store.loadProblem() != problem else { return }
+        guard current.entries != base.entries || store.loadProblem() != problem else { return }
         reload()
     }
 
@@ -114,19 +114,19 @@ final class DictionaryEditor: ObservableObject {
         pending = nil
         guard problem == nil else { return }
         let table = rows.map { row in
-            UserDictionary.Row(
+            UserDictionary.Entry(
                 word: row.word,
                 heardAs: row.heardAs.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             )
         }
-        let next = UserDictionary(rows: table)
+        let next = UserDictionary(entries: table)
         if store.save(next, basedOn: base) {
             base = next
             saveNote = nil
         } else if let problem = store.loadProblem() {
             self.problem = problem
             saveNote = "Not saved: the dictionary file has a mistake."
-        } else if store.current().dictionary.rows().rows != base.rows().rows {
+        } else if store.current().dictionary.entries != base.entries {
             reload()
             saveNote = "The dictionary changed elsewhere, so it was reloaded. Your last edit wasn't saved."
         } else {
