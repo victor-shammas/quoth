@@ -13,7 +13,7 @@ enum Assembly {
     @MainActor
     static func run() throws {
         let settings = SettingsStore()
-        let model = try Startup.check(modelID: knownModel(settings.current.model.id))
+        let model = try Startup.check(modelID: settings.current.model.id)
         let options = DeveloperOptions.current
         NSApplication.shared.setActivationPolicy(.accessory)
         // Before the menu, which offers "Check for Updates" only when running.
@@ -98,18 +98,6 @@ enum Assembly {
         }
     }
 
-    /// `id` if the registry knows it. A saved id that no longer exists (a
-    /// model removed in an update, a typo in a hand edit) falls back to the
-    /// recommended model instead of stopping Quoth.
-    static func knownModel(_ id: String?) -> String? {
-        guard let id else { return nil }
-        guard ModelRegistry.find(id) != nil else {
-            Log.warning("settings.json: unknown model \"\(id)\"; using the recommended model")
-            return nil
-        }
-        return id
-    }
-
     /// Loads the model behind the menu bar icon, so a first launch that
     /// downloads it shows "Loading model…" instead of nothing, then starts
     /// the hotkey, so a press never reaches an unloaded transcriber. A
@@ -128,7 +116,7 @@ enum Assembly {
                     try await transcriber.warmUp()
                     break
                 } catch {
-                    Log.error("\(StartupFailure.warmupFailed(error).message); retrying in \(retryDelay)s")
+                    Log.error("couldn't load the model: \(error); retrying in \(retryDelay)s")
                     app.hotkeyHealth = .modelFailed
                     for _ in 0..<retryDelay {
                         if switchedIn { break retrying }
@@ -159,7 +147,7 @@ enum Assembly {
                 app.hotkeyHealth = .ok
                 Log.info("listening on \(monitor.key.shortName) hold")
             } catch {
-                Log.error(StartupFailure.hotkeyUnavailable(error).message)
+                Log.error("couldn't start the hotkey tap: \(error)")
                 app.hotkeyHealth = .tapDisabled
             }
         }

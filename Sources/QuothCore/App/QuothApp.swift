@@ -14,11 +14,10 @@ public enum QuothApp {
             try Assembly.run()
             exit(0)
         } catch let failure as StartupFailure {
-            // A permanent failure exits 0, so launch at login doesn't
-            // relaunch into the same dialog.
+            // Exit 0, so launch at login doesn't reopen into the same dialog.
             Log.error(failure.message)
             AppLaunch.presentStartupFailure(failure)
-            exit(failure.isPermanent ? 0 : 1)
+            exit(0)
         } catch {
             Log.error("\(error)")
             exit(1)

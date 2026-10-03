@@ -1,85 +1,47 @@
-import ApplicationServices
 import AVFoundation
 import Foundation
 import QuothDomain
 import QuothPlatform
 import QuothSpeech
 
-/// Why Quoth could not start.
-///
-/// A permanent failure needs the user to act and a relaunch cannot fix it,
-/// so `QuothApp` shows it once and exits 0. Anything else (warmup errors, a
-/// crash) exits nonzero. The login item (`SMAppService.mainApp`) starts
-/// Quoth once per login and does not relaunch it.
-public enum StartupFailure: Error {
+/// What stops Quoth from starting: only the microphone denied, which the
+/// user alone can change, in System Settings. Everything else (loading the
+/// model, the hotkey's grant) happens behind the menu bar icon and retries.
+/// `QuothApp` explains it in a dialog and exits 0, so launch at login
+/// doesn't reopen into it.
+enum StartupFailure: Error, Equatable {
     case microphoneDenied
-    case unknownModel(String)
-    case warmupFailed(Error)
-    case hotkeyUnavailable(Error)
 
-    public var isPermanent: Bool {
-        switch self {
-        case .microphoneDenied, .unknownModel:
-            return true
-        case .warmupFailed, .hotkeyUnavailable:
-            return false
-        }
-    }
-
-    /// The one message to log. Permanent failures name the exact fix.
-    public var message: String {
-        switch self {
-        case .microphoneDenied:
-            return Self.permanent(
-                "microphone access denied",
-                fix: "enable Quoth in System Settings → Privacy & Security → Microphone"
-            )
-        case .unknownModel(let id):
-            return Self.permanent("unknown model: \(id)", fix: "choose a model in Settings › Model")
-        case .warmupFailed(let error):
-            return "warmup failed: \(error)"
-        case .hotkeyUnavailable(let error):
-            return "failed to register hotkey tap: \(error)"
-        }
-    }
-
-    private static func permanent(_ problem: String, fix: String) -> String {
-        "\(problem)\n"
-            + "  fix: \(fix), then restart Quoth "
-            + "(`open -a Quoth`, or log in again)."
+    /// For the log.
+    var message: String {
+        "microphone access denied: enable Quoth in System Settings → Privacy & Security → Microphone, then open Quoth again"
     }
 }
 
-/// Checks that run before any model loads, so a failing start costs nothing.
+/// What runs before anything loads, so a start that can't work costs nothing.
 enum Startup {
-    /// Runs the startup checks and returns the model to load.
-    /// Throws `StartupFailure`.
+    /// Returns the model to load, or throws `StartupFailure`.
     static func check(modelID: String?) throws -> TranscriptionModel {
-        let model = try resolveModel(modelID)
-
-        // The hotkey's grant is not checked here. A missing grant is not a
-        // startup failure: Quoth waits for it (Assembly.startHotkey).
-
-        // .notDetermined is left to the onboarding window, and to the first
-        // press if still undecided.
+        // Not determined yet is fine: the onboarding window asks, and so
+        // does the first press if it's still undecided.
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .denied, .restricted:
-            throw StartupFailure.microphoneDenied
-        default:
-            break
+        case .denied, .restricted: throw StartupFailure.microphoneDenied
+        default: break
         }
-
+        let model = model(for: modelID)
         if !WhisperKitTranscriber.isCached(model) {
             Log.info("\(model.id) not in \(Paths.appSupport.path), downloading")
         }
-
         return model
     }
 
-    /// The model for `id`, or the recommended one when `id` is nil.
-    static func resolveModel(_ id: String?) throws -> TranscriptionModel {
+    /// The model `id` names, or the recommended one: for no id, and for one
+    /// that no longer exists (a model removed in an update, a typo in a hand
+    /// edit), which shouldn't stop Quoth.
+    static func model(for id: String?) -> TranscriptionModel {
         guard let id else { return ModelRegistry.recommended }
-        guard let model = ModelRegistry.find(id) else { throw StartupFailure.unknownModel(id) }
-        return model
+        if let model = ModelRegistry.find(id) { return model }
+        Log.warning("settings.json: unknown model \"\(id)\"; using the recommended model")
+        return ModelRegistry.recommended
     }
 }

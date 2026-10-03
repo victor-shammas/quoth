@@ -233,7 +233,7 @@ Every location comes from `Paths`. In the App Store edition the home folder is t
 
 ## 7. Startup and failure
 
-`Startup` checks the microphone authorization and the selected model before loading anything. A permanent `StartupFailure` (denied microphone, unknown model) shows one actionable message in a dialog and exits 0, so launch at login doesn't reopen into it; anything else exits nonzero.
+`Startup` runs before anything loads. Only a denied microphone stops Quoth (`StartupFailure`): it explains that in a dialog with a button to the right pane of System Settings, and exits 0, so launch at login doesn't reopen into it. A saved model that no longer exists falls back to the recommended one.
 
 Everything after the checks happens behind the menu-bar icon: the model loads (downloading on first run) with "Loading model…" in the menu, a failed load retries with backoff, and the hotkey starts once a model is ready and its grant is in place.
 

@@ -86,23 +86,20 @@ enum AppLaunch {
 
     // MARK: - Startup failures
 
-    /// Explains a startup failure in a dialog, since nobody reads the log.
+    /// Explains why Quoth can't start, in a dialog, since nobody reads the
+    /// log, and offers the pane that fixes it.
     @MainActor
     static func presentStartupFailure(_ failure: StartupFailure) {
         NSApplication.shared.setActivationPolicy(.accessory)
-        let (title, message, pane) = appMessage(for: failure)
-        if let pane {
-            if alert(title, message, buttons: ["Open System Settings", "Quit"]) == .alertFirstButtonReturn,
-               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
-                NSWorkspace.shared.open(url)
-            }
-        } else {
-            _ = alert(title, message, buttons: ["Quit"])
+        let message = appMessage(for: failure)
+        if alert(message.title, message.body, buttons: ["Open System Settings", "Quit"]) == .alertFirstButtonReturn,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(message.pane)") {
+            NSWorkspace.shared.open(url)
         }
     }
 
-    /// Title, body, and the Privacy & Security pane to open, for the dialog.
-    static func appMessage(for failure: StartupFailure) -> (String, String, String?) {
+    /// The dialog's title and body, and the Privacy & Security pane it opens.
+    static func appMessage(for failure: StartupFailure) -> (title: String, body: String, pane: String) {
         switch failure {
         case .microphoneDenied:
             return (
@@ -110,20 +107,6 @@ enum AppLaunch {
                 "Turn on Quoth in System Settings → Privacy & Security → Microphone, then open Quoth again.",
                 "Privacy_Microphone"
             )
-        case .unknownModel:
-            return (
-                "Quoth couldn't find its speech model",
-                "Reinstall Quoth, then open it again. Your settings and dictionary are kept.",
-                nil
-            )
-        case .hotkeyUnavailable:
-            return (
-                "Quoth can't watch the dictation key",
-                "Allow Quoth under System Settings → Privacy & Security → \(HotkeyAccess.name), then open Quoth again.",
-                HotkeyAccess.settingsPane
-            )
-        case .warmupFailed:
-            return ("Quoth couldn't start", "Quit Quoth and open it again. If this keeps happening, reinstall it.", nil)
         }
     }
 

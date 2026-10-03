@@ -5,21 +5,11 @@ import XCTest
 final class PackagingTests: XCTestCase {
     // MARK: - Startup dialogs
 
-    func testPermissionFailuresPointAtTheirPane() {
-        XCTAssertEqual(AppLaunch.appMessage(for: .microphoneDenied).2, "Privacy_Microphone")
-        XCTAssertNil(AppLaunch.appMessage(for: .unknownModel("bogus")).2)
-    }
-
-    func testNoMessageSendsTheUserToATerminal() {
-        struct Boom: Error {}
-        let failures: [StartupFailure] = [
-            .microphoneDenied, .unknownModel("bogus"),
-            .warmupFailed(Boom()), .hotkeyUnavailable(Boom()),
-        ]
-        for failure in failures {
-            XCTAssertFalse(failure.message.contains("`quoth"), failure.message)
-            XCTAssertFalse(AppLaunch.appMessage(for: failure).1.contains("`quoth"))
-        }
+    func testTheMicrophoneDialogOpensItsPane() {
+        let message = AppLaunch.appMessage(for: .microphoneDenied)
+        XCTAssertEqual(message.pane, "Privacy_Microphone")
+        // It never sends the user to a terminal.
+        XCTAssertFalse(message.body.contains("`quoth"))
     }
 
     // MARK: - Developer options

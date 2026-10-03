@@ -161,12 +161,6 @@ final class SettingsStoreTests: XCTestCase {
         let saved = try JSONDecoder().decode(Settings.self, from: Data(contentsOf: target))
         XCTAssertEqual(saved.hotkey.key, .rightCommand)
     }
-
-    func testUnknownSavedModelFallsBack() {
-        XCTAssertNil(Assembly.knownModel("no-such-model"))
-        XCTAssertEqual(Assembly.knownModel("whisper-base.en"), "whisper-base.en")
-        XCTAssertNil(Assembly.knownModel(nil))
-    }
 }
 
 final class SettingsResetTests: XCTestCase {

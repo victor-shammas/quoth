@@ -3,42 +3,19 @@ import XCTest
 @testable import QuothDomain
 
 final class StartupTests: XCTestCase {
-    private struct Boom: Error {}
-
-    func testUserActionFailuresArePermanent() {
-        XCTAssertTrue(StartupFailure.microphoneDenied.isPermanent)
-        XCTAssertTrue(StartupFailure.unknownModel("bogus").isPermanent)
+    func testTheModelIsTheOneNamed() {
+        XCTAssertEqual(Startup.model(for: "whisper-small.en").id, "whisper-small.en")
     }
 
-    func testRetryableFailuresAreNotPermanent() {
-        XCTAssertFalse(StartupFailure.warmupFailed(Boom()).isPermanent)
-        XCTAssertFalse(StartupFailure.hotkeyUnavailable(Boom()).isPermanent)
+    func testNoModelNamedIsTheRecommendedOne() {
+        XCTAssertEqual(Startup.model(for: nil), ModelRegistry.recommended)
     }
 
-    func testPermanentMessagesNameTheFixAndRestart() {
-        let failures: [StartupFailure] = [
-            .microphoneDenied, .unknownModel("bogus"),
-        ]
-        for failure in failures {
-            XCTAssertTrue(failure.message.contains("\n  fix: "), failure.message)
-            XCTAssertTrue(
-                failure.message.contains("`open -a Quoth`"),
-                failure.message
-            )
-        }
+    func testAModelThatNoLongerExistsFallsBackRatherThanStoppingQuoth() {
+        XCTAssertEqual(Startup.model(for: "no-such-model"), ModelRegistry.recommended)
     }
 
-    func testUnknownModelMessage() {
-        XCTAssertTrue(StartupFailure.unknownModel("bogus").message.hasPrefix("unknown model: bogus\n"))
-    }
-
-    func testResolveModel() throws {
-        XCTAssertEqual(try Startup.resolveModel(nil).id, ModelRegistry.recommended.id)
-        XCTAssertEqual(try Startup.resolveModel("whisper-small.en").id, "whisper-small.en")
-        XCTAssertThrowsError(try Startup.resolveModel("bogus")) { error in
-            guard case StartupFailure.unknownModel("bogus") = error else {
-                return XCTFail("expected unknownModel, got \(error)")
-            }
-        }
+    func testTheMicrophoneMessageNamesTheFix() {
+        XCTAssertTrue(StartupFailure.microphoneDenied.message.contains("Privacy & Security → Microphone"))
     }
 }
