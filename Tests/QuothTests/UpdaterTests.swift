@@ -4,7 +4,7 @@ import XCTest
 final class UpdaterTests: XCTestCase {
     // A syntactically valid Ed25519 public key (32 zero bytes); never used to verify anything.
     private let key = Data(count: 32).base64EncodedString()
-    private let feed = "https://github.com/humanitas-labs/quoth/releases/latest/download/appcast.xml"
+    private let feed = "https://github.com/victor-shammas/quoth/releases/latest/download/appcast.xml"
 
     private func info(version: String, key: String? = nil, feed: String? = nil) -> [String: Any] {
         var info: [String: Any] = ["CFBundleVersion": version]

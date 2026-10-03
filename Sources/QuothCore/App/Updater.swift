@@ -55,26 +55,26 @@ public enum Updater {
         controller.checkForUpdates(nil)
     }
 
-    /// Why this bundle can't update itself, or nil if it can. A development
-    /// build (`git describe` versions such as `0.0.6-3-gabc1234-dirty`) must
-    /// not replace itself with a release, and a bundle still carrying the
-    /// placeholder key would fail every check.
+    /// Why this bundle can't update itself, or nil if it can: a development
+    /// build (a `git describe` version such as `0.0.6-3-gabc1234-dirty`)
+    /// mustn't replace itself with a release, and a bundle without a feed or
+    /// still carrying the placeholder key would fail every check.
     nonisolated static func configurationProblem(info: [String: Any]) -> String? {
         let version = info["CFBundleVersion"] as? String ?? ""
-        let isRelease = !version.isEmpty
-            && version.split(separator: ".", omittingEmptySubsequences: false)
-                .allSatisfy { !$0.isEmpty && $0.allSatisfy(\.isASCII) && $0.allSatisfy(\.isNumber) }
-        guard isRelease else { return "development build \(version.isEmpty ? "without a version" : version)" }
-
-        guard let feed = info["SUFeedURL"] as? String, URL(string: feed)?.scheme != nil else {
-            return "no SUFeedURL"
-        }
+        guard isRelease(version) else { return "development build \(version.isEmpty ? "without a version" : version)" }
+        guard let feed = info["SUFeedURL"] as? String, URL(string: feed)?.scheme != nil else { return "no SUFeedURL" }
         // An Ed25519 public key is 32 bytes, base64-encoded.
-        guard let key = info["SUPublicEDKey"] as? String,
-              let bytes = Data(base64Encoded: key), bytes.count == 32 else {
+        guard let key = info["SUPublicEDKey"] as? String, Data(base64Encoded: key)?.count == 32 else {
             return "SUPublicEDKey is not set to a real key"
         }
         return nil
+    }
+
+    /// Dot-separated whole numbers, as a release's version is: "1.0", "12".
+    nonisolated static func isRelease(_ version: String) -> Bool {
+        !version.isEmpty && version.split(separator: ".", omittingEmptySubsequences: false).allSatisfy {
+            !$0.isEmpty && $0.allSatisfy { $0.isASCII && $0.isNumber }
+        }
     }
 }
 
