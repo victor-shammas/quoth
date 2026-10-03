@@ -3,7 +3,7 @@ import QuothDomain
 
 /// Applies a model change while Quoth runs: loads the new model behind
 /// the menu bar, downloading it first if needed, while the current one keeps
-/// serving presses, then swaps it into the `DictationController` between
+/// serving presses, then swaps it into the `DictationSession` between
 /// dictations.
 ///
 /// A second change while a load runs supersedes it: the first load's result
@@ -12,11 +12,11 @@ import QuothDomain
 /// tries again.
 @MainActor
 final class ModelSwitcher {
-    /// The model the controller transcribes with.
+    /// The model the session transcribes with.
     private(set) var model: TranscriptionModel
     private var transcriber: WhisperKitTranscriber
-    /// Set by the daemon once the controller exists.
-    weak var controller: DictationController?
+    /// Set by the daemon once the session exists.
+    weak var session: DictationSession?
 
     private let menuBar: MenuBarController
     private let status: ModelLoadStatus
@@ -66,7 +66,7 @@ final class ModelSwitcher {
                 report(.loading, next, generation)
                 // Swap between dictations: never under one that is recording
                 // or transcribing.
-                while (controller?.state ?? .idle) != .idle {
+                while (session?.state ?? .idle) != .idle {
                     try await Task.sleep(nanoseconds: 100_000_000)
                 }
                 try Task.checkCancellation()
@@ -86,7 +86,7 @@ final class ModelSwitcher {
 
     private func swap(to next: TranscriptionModel, _ incoming: WhisperKitTranscriber) {
         let outgoing = transcriber
-        controller?.replaceTranscriber(incoming)
+        session?.replaceTranscriber(incoming)
         transcriber = incoming
         model = next
         load = nil
@@ -95,7 +95,7 @@ final class ModelSwitcher {
         menuBar.setModelStatus(nil)
         Log.info("model: \(next.id)")
         // Free the old model's memory. Nothing is transcribing with it: the
-        // swap waited for the controller to go idle.
+        // swap waited for the session to go idle.
         Task { await outgoing.unload() }
         onReady?()
     }

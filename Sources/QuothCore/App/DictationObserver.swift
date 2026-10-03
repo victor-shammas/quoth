@@ -1,42 +1,12 @@
 import Foundation
 import QuothDomain
 
-/// Counts and timings for one delivered dictation. Never the text.
-struct DictationResult: Equatable, Sendable {
-    /// Seconds of audio captured.
-    var captureDuration: TimeInterval
-    /// Seconds the transcriber took.
-    var transcriptionTime: TimeInterval
-    /// Characters delivered, after every `TranscriptProcessor`.
-    var charCount: Int
-    /// Seconds to stop the capture engine and collect its samples.
-    var captureStop: TimeInterval = 0
-    /// The transcriber's own breakdown, when the engine reports one.
-    var transcriber: TranscriberTimings?
-    /// Seconds in the `TranscriptProcessor`s.
-    var processing: TimeInterval = 0
-    /// Seconds to deliver the text to the cursor.
-    var delivery: TimeInterval = 0
-    /// Seconds from the hotkey release to the text being delivered.
-    var releaseToText: TimeInterval = 0
-    /// Seconds from the hotkey press to the capture time of the first
-    /// recorded sample: speech in that gap is lost. Nil if unknown.
-    var pressToFirstSample: TimeInterval?
-}
-
-enum DictationError: Error {
-    /// The hotkey was released with no audio captured.
-    case noAudio
-    /// The recording was discarded: a short tap, a chord, or a hotkey switch.
-    case cancelled
-}
-
 /// Follows the dictation loop: the overlay, the menu bar, and later stats.
 ///
-/// `DictationController` calls these on the main actor, in the order the
+/// `DictationSession` calls these on the main actor, in the order the
 /// observers were registered. Every method has an empty default, so an
 /// observer implements only what it needs. New behaviour that reacts to a
-/// dictation is an observer, not a branch in the controller.
+/// dictation is an observer, not a branch in the session.
 @MainActor
 protocol DictationObserver: AnyObject {
     /// Recording started.
@@ -65,9 +35,3 @@ extension DictationObserver {
     func dictationFailed(_ error: Error) {}
 }
 
-/// An error with a short message the user should see, for example in the
-/// overlay. Anything else reaching `dictationFailed` is only logged.
-protocol UserFacingError: Error {
-    /// One line, actionable, never containing transcript text.
-    var userMessage: String { get }
-}

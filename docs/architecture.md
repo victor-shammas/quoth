@@ -61,6 +61,10 @@ Everything that differs between the editions is decided in `Support/Edition.swif
 
 ```
 Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or WhisperKit
+  Dictation/
+    DictationMachine.swift      the loop's decisions: press, lock, release, cancel, delivery; returns effects
+    LiveTextLedger.swift        a lock's live text: what is typed, held for the clipboard, or scratched
+    DictationOutcome.swift      DictationResult (counts and timings, never text), DeliveryError, UserFacingError
   Input/
     Gesture.swift               press/release rules: short taps, chords, the double-tap lock
     HotkeySettings.swift        the key, the lock and live text
@@ -86,8 +90,8 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
 
 Sources/QuothCore/
   App/
-    DictationController.swift   the dictation loop: press → capture → transcribe → process → deliver; locks and live text
-    DictationObserver.swift     observer protocol and DictationResult (counts and timings, never text)
+    DictationSession.swift      performs DictationMachine's effects: the microphone, the transcriber, delivery, the card
+    DictationObserver.swift     the observer protocol
     LatencyLog.swift            one log line per dictation, as a DictationObserver
     LastDictation.swift         the last transcript, in memory only, for Copy and Fix Last Dictation
     Startup.swift               startup checks and StartupFailure (permanent vs transient)
@@ -124,7 +128,7 @@ Sources/QuothCore/
     WhisperTuning.swift         compute units and decoding options, measured with `quoth-bench`
     LanguageDetector.swift      Automatic: which language a dictation is in
   Pipeline/
-    LiveTranscription.swift     a locked recording's segments, transcribed and typed in order
+    LiveTranscription.swift     a locked recording's segments, transcribed in order; LiveTextLedger decides the rest
   Dictionary/
     DictionaryStore.swift       loads, reloads on change, saves without overwriting a change made elsewhere
     DictionaryProcessor.swift   the replacement pass as a TranscriptProcessor, reading the store
@@ -151,7 +155,7 @@ docs/                           these documents, and the website (index, support
 ### 4.1 — Flow
 
 ```
-HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ DictationController
+HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ DictationSession ⇄ DictationMachine
                                                          │
                                   start: FocusSnapshot + AudioCapture.start
                                   lock:  LiveTranscription polls the capture,
@@ -175,7 +179,7 @@ HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ Dictat
                               LastDictation (memory only): Copy and Fix Last Dictation
 ```
 
-`DictationController` owns the state machine (`idle`, `recording`, `transcribing`) and the lock. It is `@MainActor`; transcription runs off the main actor.
+`DictationMachine` decides: it holds the recording, its lock and where its live text goes, and counts the transcriptions in flight, so its state (`idle`, `recording`, `transcribing`) is derived rather than set. Each event returns a list of effects. `DictationSession` performs them and reports back how they went (the capture, the transcript, the delivery), and makes no decisions of its own. The machine is pure and unit tested (`DictationMachineTests`); the session is `@MainActor`, and transcription runs off the main actor.
 
 ### 4.2 — Extension points
 

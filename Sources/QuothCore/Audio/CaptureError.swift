@@ -1,4 +1,5 @@
 import Foundation
+import QuothDomain
 
 /// Why a recording could not start or produced nothing usable. Each case has
 /// a one-line `userMessage` for the overlay; `description` adds the details

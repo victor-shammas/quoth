@@ -79,7 +79,7 @@ public enum Daemon {
         return id
     }
 
-    /// Wires the hotkey, capture and UI to a `DictationController` and runs
+    /// Wires the hotkey, capture and UI to a `DictationSession` and runs
     /// the AppKit loop. Returns only if the app terminates.
     @MainActor
     private static func runLoop(
@@ -139,7 +139,7 @@ public enum Daemon {
         let card = QuoteCard()
         observers.append(card)
         let delivery = TextDelivery(mode: options.injectMode)
-        let controller = DictationController(
+        let session = DictationSession(
             capture: capture,
             transcriber: transcriber,
             processors: [VoiceCommands(), DictionaryProcessor(store: dictionary)],
@@ -148,14 +148,14 @@ public enum Daemon {
             delivery: delivery,
             context: dictionaryContext
         )
-        controller.liveText = settings.current.hotkey.liveText
-        controller.card = card
-        controller.lockOpensCard = { settings.current.hotkey.lockTarget == .card }
+        session.liveText = settings.current.hotkey.liveText
+        session.card = card
+        session.lockOpensCard = { settings.current.hotkey.lockTarget == .card }
 
         // Copy and Fix Last Dictation: the last transcript, in memory only.
         let lastDictation = LastDictation()
         let fixWindow = FixDictationWindow(dictionary: dictionary)
-        controller.onTranscript = { lastDictation.remember($0) }
+        session.onTranscript = { lastDictation.remember($0) }
         lastDictation.onChange = { available in
             menuBar.setLastDictationAvailable(available)
             if !available { fixWindow.forget() }
@@ -172,20 +172,23 @@ public enum Daemon {
             overlay?.showMessage("Copied")
         }
         card.remember = { lastDictation.remember($0) }
-        card.isDictating = { controller.state != .idle }
+        card.isDictating = { session.state != .idle }
         menuBar.onNewCard = { card.open() }
         menuBar.onFixLast = { fixWindow.show(text: lastDictation.text) }
         // A headset connecting mid-lock ends the lock and keeps what was
         // said before it; push-to-talk still discards a changed route.
         capture.onRouteChange = {
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { controller.routeChanged() }
+                MainActor.assumeIsolated { session.routeChanged() }
             }
         }
-        controller.onEndLock = { monitor.endLock(reason: $0) }
+        session.onEndLock = { monitor.endLock(reason: $0) }
+        // The microphone failed to start: this press must not go on to
+        // lock or transcribe a recording that isn't there.
+        session.onAbandonPress = { monitor.abandonPress() }
         card.endLock = { monitor.endLock(reason: "the Quote Card") }
         menuBar.onStopLock = { monitor.endLock(reason: "stopped from the menu") }
-        switcher.controller = controller
+        switcher.session = session
 
         // Each setting applies itself here when it changes, from the window
         // or a hand edit of settings.json. CLI flags only set the
@@ -196,7 +199,7 @@ public enum Daemon {
                 Log.info("double-tap lock: \(new.hotkey.doubleTapLock ? "on" : "off")")
             }
             if old.hotkey.liveText != new.hotkey.liveText {
-                controller.liveText = new.hotkey.liveText
+                session.liveText = new.hotkey.liveText
                 Log.info("live text: \(new.hotkey.liveText ? "on" : "off"); applies from the next lock")
             }
             if old.hotkey.key != new.hotkey.key {
@@ -253,12 +256,7 @@ public enum Daemon {
             switcher.onReady = nil
             do {
                 try startHotkey(monitor, menuBar: menuBar) { event in
-                    controller.handle(event)
-                    // The microphone failed to start: this press must not
-                    // go on to lock or transcribe a recording that isn't there.
-                    if event == .pressed, controller.state != .recording {
-                        monitor.abandonPress()
-                    }
+                    session.handle(event)
                 }
             } catch {
                 Log.error((error as? StartupFailure)?.message ?? "\(error)")
