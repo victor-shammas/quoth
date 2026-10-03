@@ -62,13 +62,18 @@ enum AppLaunch {
     /// Held for the life of the process.
     @MainActor private static var instanceLock: InstanceLock?
 
-    /// Passed to the new launch by `relaunch()`, which opens it on the
+    /// Left for the new launch by `relaunch()`, which opens it on the
     /// welcome window: Reopen was clicked there, so that's where the user
-    /// expects to be, seeing the grant take.
-    private static let continueSetupArgument = "--continue-setup"
+    /// expects to be, seeing the grant take. A default, not an argument:
+    /// macOS drops the arguments a sandboxed app passes to a launch.
+    private static let continueSetupKey = "continueSetupAfterRelaunch"
 
-    /// Whether this launch came from Reopen Quoth.
-    static var isContinuingSetup: Bool { CommandLine.arguments.contains(continueSetupArgument) }
+    /// Whether this launch came from Reopen Quoth. Read once, at launch.
+    @MainActor static let isContinuingSetup: Bool = {
+        let defaults = UserDefaults.standard
+        defer { defaults.removeObject(forKey: continueSetupKey) }
+        return defaults.bool(forKey: continueSetupKey)
+    }()
 
     /// Opens a new Quoth and quits this one, for a grant macOS shows only to
     /// a new launch (`Permissions.showsAfterRelaunch`). The new one starts
@@ -77,12 +82,13 @@ enum AppLaunch {
     static func relaunch() {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
-        configuration.arguments = [continueSetupArgument]
+        UserDefaults.standard.set(true, forKey: continueSetupKey)
         instanceLock = nil
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
             Task { @MainActor in
                 if let error {
                     Log.error("relaunch failed: \(error)")
+                    UserDefaults.standard.removeObject(forKey: continueSetupKey)
                     if case .held(let lock) = InstanceLock.claim(Paths.instanceLock) { instanceLock = lock }
                     return
                 }

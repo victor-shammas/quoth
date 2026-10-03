@@ -31,7 +31,9 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     /// At launch: opens the window if `Onboarding.showsWindow` says so.
     func startIfNeeded() {
         refresh()
-        guard AppLaunch.isContinuingSetup
+        let continuing = AppLaunch.isContinuingSetup
+        if continuing { Log.info("reopened from the welcome window") }
+        guard continuing
             || Onboarding.showsWindow(completed: store.current.onboarding.completed, state: PermissionState.current)
         else { return }
         Log.info("showing the onboarding window")
