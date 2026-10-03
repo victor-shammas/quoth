@@ -2,6 +2,8 @@
 
 Last updated: `2026.09.27`
 
+**Superseded by [ADR-007](007-modules-and-app-model.md)** (2026.10.03): `QuothCore` split into modules, `DictationController` became `DictationMachine` and `DictationSession`, and `Daemon` became `Assembly` and `AppModel`. The extension points below (`TranscriptProcessor`, `DictationObserver`, `TranscriptionContext`) remain. Kept for the reasoning.
+
 > All behaviour lives in a `QuothCore` library behind a thin `quoth` executable, and features attach to the dictation loop at named extension points instead of editing it. This keeps the loop small, makes the logic testable, and lets several contributors or agents work on features at once without colliding.
 
 ## 1. Decision

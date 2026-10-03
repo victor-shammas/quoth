@@ -59,7 +59,16 @@ project.yml (the App Store edition, generated with xcodegen)
 
 The direct `Quoth.app` wraps the `quoth` executable (`scripts/build-app.sh`). Both editions are the menu-bar app only, with one entry point, `QuothApp.main()`; there is no command line (ADR-007). Started from a terminal, the app logs there, and `DeveloperOptions` reads a few `QUOTH_*` variables for debugging.
 
-Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. ADR-007 is splitting QuothCore into modules, a phase at a time; `QuothDomain`, `QuothPlatform` and `QuothSpeech` have their APIs `public`. `FocusedElement` stays internal to QuothPlatform, so the App Store build links no Accessibility functions; `scripts/appstore.sh` fails if it does. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
+Modules depend one way only (ADR-007), and the compiler holds them to it:
+
+```
+QuothDomain  ◀──  QuothPlatform  ◀──  QuothSpeech  ◀──  QuothCore
+(Foundation)      (AppKit, Core Audio)  (WhisperKit)     (the app: SwiftUI, Sparkle)
+```
+
+Each module but QuothCore keeps its API `public`. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
+
+Everything that differs between the editions is decided in `QuothPlatform/Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. `FocusedElement` stays internal to QuothPlatform, so the App Store build links no Accessibility functions; `scripts/appstore.sh` fails if it does.
 
 ## 3. Layout
 
@@ -150,10 +159,12 @@ Sources/QuothCore/
     RecordingOverlay.swift      the pill: recording, locked, transcribing, messages
     OnboardingWindow.swift      hotkey, languages and the grants on one page
     SettingsWindow.swift        toolbar tabs, each pane sizing the window
-    Settings/                   GeneralPane, ModelPane, DownloadedModels, DictionaryPane, AboutPane
-    FixDictationWindow.swift, AcknowledgementsWindow.swift, AcknowledgementsText.swift (generated)
+    Settings/                   GeneralPane, ModelPane, DownloadedModels, DictionaryPane, HelpPane, AboutPane, Latte
+    FixDictationWindow.swift    Fix Last Dictation, opened from Settings › Dictionary
+    AcknowledgementsWindow.swift, AcknowledgementsText.swift (generated)
     EditingWindow.swift         a window whose fields take ⌘C, ⌘V and the rest without a main menu
-    Pill.swift                  the pill controls shared with onboarding
+    SharedViews.swift           views the onboarding and Settings windows share
+    QuoteCard.swift             the Quote Card: a floating card a dictation streams into, then ⌘↩ inserts
 
 Sources/quoth/main.swift        the direct edition's entry point: `QuothApp.main()`
 Sources/quoth-bench/            transcription and capture benchmarks
@@ -168,11 +179,11 @@ docs/                           these documents, and the website (index, support
 ```
 HotkeyMonitor ──flags──▶ Gesture ──start/stop/lock──▶ DictationSession ⇄ DictationMachine
                                                          │
-                                  start: FocusSnapshot + AudioCapture.start
+                                  start: FocusProbe + Microphone.start
                                   lock:  LiveTranscription polls the capture,
                                          cuts at pauses (PauseSplitter), and
                                          transcribes and delivers each segment
-                                  stop:  AudioCapture.finish → [Float]
+                                  stop:  Microphone.finish → [Float]
                                                          │
                                                          ▼
                               Transcriber.transcribe(audio, context)
@@ -246,16 +257,16 @@ Everything after the checks happens behind the menu-bar icon: the model loads (d
 
 macOS keys grants to the app's code identity, so builds are signed with a stable identity (`scripts/dev-install.sh` takes `QUOTH_SIGN_IDENTITY`). Without the hotkey's grant the app keeps running with "Allow … to start" in the menu and starts the hotkey as soon as the grant appears.
 
-The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Allow button, so prompts never stack; "Finish Setup" in the menu reopens it while a grant is missing. The rules are in `App/Onboarding.swift` and `App/Permissions.swift`, pure and tested.
+The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Allow button, so prompts never stack; "Finish Setup" in the menu reopens it while a grant is missing. The rules are in `QuothCore/App/Onboarding.swift` and `QuothPlatform/Support/Permissions.swift`, pure and tested.
 
 ## 10. Decision log
 
 | ADR | Decision |
 |---|---|
-| [001](decisions/001-core-library-and-extension-points.md) | Core library and extension points |
+| [001](decisions/001-core-library-and-extension-points.md) | Core library and extension points (superseded by 007) |
 | [002](decisions/002-settings-file.md) | Config in `~/.config/quoth`, data in Application Support |
 | [003](decisions/003-push-to-talk-on-a-modifier.md) | Push-to-talk on a modifier, with a hands-free lock |
 | [004](decisions/004-local-data-and-privacy.md) | Local data and privacy |
 | [005](decisions/005-signed-app-identity.md) | Signed app identity |
 | [006](decisions/006-two-editions.md) | Two editions from one codebase |
-| [007](decisions/007-modules-and-app-model.md) | Modules, a dictation state machine, one app model; no command line (in progress) |
+| [007](decisions/007-modules-and-app-model.md) | Modules, a dictation state machine, one app model; no command line |

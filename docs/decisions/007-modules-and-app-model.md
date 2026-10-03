@@ -13,7 +13,7 @@ Last updated: `2026.10.03`
 | `QuothDomain` | Pure Swift: the dictation state machine, gesture rules, delivery decisions, spacing, voice commands, the dictionary model and matcher, pause splitting, settings values, the model catalog | Foundation only |
 | `QuothSpeech` | The `Transcriber` protocol's engine (WhisperKit), decoding options, the on-disk model store | Domain, Platform (for `Paths`), WhisperKit |
 | `QuothPlatform` | macOS behind small protocols: `Microphone`, `HotkeySource`, `TextSink`, `FocusProbe`, `Permissions`, `Capabilities` | Domain, AppKit, Core Audio, ApplicationServices |
-| `QuothApp` | `AppModel`, `DictationSession`, the windows and views, and the composition root | all of the above |
+| `QuothCore` | The app: `AppModel`, `DictationSession`, the windows and views, the stores, and the composition root (`Assembly`) | all of the above |
 
 Dependencies point down the table and never back up. The compiler enforces it: a module can't import one it doesn't list.
 
@@ -21,7 +21,7 @@ Dependencies point down the table and never back up. The compiler enforces it: a
 
 - `DictationMachine` in `QuothDomain` is a value type with one method: `mutating func handle(_ event: Event) -> [Effect]`. Events are hotkey actions, capture results, transcripts, delivery outcomes and route changes. Effects are instructions: start capture, transcribe these samples, deliver this text, show this notice.
 - Every state the loop can be in is one case of one enum, with the data that state needs attached. There are no parallel flags such as `isLocked` beside `state`.
-- `DictationSession` in `QuothApp` is the only code that performs effects. It feeds their results back as events. It holds no decisions of its own.
+- `DictationSession` in `QuothCore` is the only code that performs effects. It feeds their results back as events. It holds no decisions of its own.
 - The edge cases in section 3 are unit tests of `DictationMachine`, with no audio, tap or WhisperKit involved.
 
 ### 1.3 — One app model
@@ -87,6 +87,8 @@ Each phase is one pull request, with the app working and the tests passing at it
 | 4 | `QuothPlatform`: capture, the hotkey tap, text insertion, focus and permissions behind protocols; `Capabilities` replaces `Edition`. |
 | 5 | `QuothSpeech`; `Paths` to Platform; `quoth-bench` against the modules. The settings and dictionary stores stay with the windows that edit them. |
 | 6 | `architecture.md` rewritten for the new structure; ADR-001 marked superseded. |
+
+All phases landed on 2026.10.03. The app module kept the name `QuothCore`, not `QuothApp` as first planned: the rename would touch every import, and `QuothApp` is the entry point's name.
 
 ## 5. When to revisit
 
