@@ -1,6 +1,6 @@
 import Foundation
 
-/// Where quoth keeps files on disk. User-authored config lives in
+/// Where Quoth keeps files on disk. User-authored config lives in
 /// ~/.config/quoth; everything else lives under ~/Library. Never /tmp or
 /// ~/Documents. Directories are owner-only (0700).
 public enum Paths {
@@ -22,7 +22,7 @@ public enum Paths {
     /// `~/Library/Logs/quoth` — the app's stdout/stderr.
     public static var logs: URL { library("Logs/quoth") }
 
-    /// `~/Library/Caches/quoth` — debug output such as `--dump-wav`.
+    /// `~/Library/Caches/quoth` — debug output such as `QUOTH_DUMP_WAV`'s.
     public static var caches: URL { library("Caches/quoth") }
 
     /// `settings.json` in `config`: preferences, read and written by `SettingsStore`.
@@ -33,10 +33,10 @@ public enum Paths {
     public static var dictionaryFile: URL { config.appendingPathComponent("dictionary") }
 
     /// The app's stdout.
-    public static var daemonOutLog: URL { logs.appendingPathComponent("quoth.out.log") }
+    public static var outLog: URL { logs.appendingPathComponent("quoth.out.log") }
 
     /// The app's stderr.
-    public static var daemonErrLog: URL { logs.appendingPathComponent("quoth.err.log") }
+    public static var errLog: URL { logs.appendingPathComponent("quoth.err.log") }
 
     /// Where `QUOTH_DUMP_WAV=1` writes the most recent capture.
     public static var dumpWav: URL { caches.appendingPathComponent("last-capture.wav") }

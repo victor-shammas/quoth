@@ -34,11 +34,14 @@ enum AppLaunch {
     @MainActor
     static func prepare() {
         // Started from a terminal, a developer reads the log there.
-        if isatty(STDERR_FILENO) == 0 { redirectOutput() }
+        if isatty(STDERR_FILENO) == 0 { LogFiles.redirectOutput() }
 
-        guard claimSingleInstance() else {
-            // LaunchServices normally activates the running copy instead; this
-            // is `open -n` or a login item racing a manual launch.
+        switch InstanceLock.claim(Paths.instanceLock) {
+        case .held(let lock): instanceLock = lock
+        case .unavailable: break
+        case .heldElsewhere:
+            // LaunchServices normally brings the running copy forward instead;
+            // this is `open -n`, or a login item racing a manual launch.
             Log.info("another Quoth is running; exiting")
             exit(0)
         }
@@ -56,33 +59,8 @@ enum AppLaunch {
         }
     }
 
-    // MARK: - Single instance
-
-    private static var lockDescriptor: Int32 = -1
-
-    /// Takes the instance lock for this process's lifetime. False if another
-    /// Quoth holds it. Idempotent. If the lock file can't be opened, runs
-    /// anyway: one extra instance is better than none.
-    static func claimSingleInstance() -> Bool {
-        if lockDescriptor >= 0 { return true }
-        do {
-            try Paths.prepareDirectory(Paths.appSupport)
-        } catch {
-            Log.warning("couldn't prepare \(Paths.appSupport.path): \(error)")
-            return true
-        }
-        let fd = open(Paths.instanceLock.path, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
-        guard fd >= 0 else {
-            Log.warning("couldn't open \(Paths.instanceLock.path)")
-            return true
-        }
-        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
-            close(fd)
-            return false
-        }
-        lockDescriptor = fd
-        return true
-    }
+    /// Held for the life of the process.
+    @MainActor private static var instanceLock: InstanceLock?
 
     // MARK: - Startup failures
 
@@ -111,24 +89,6 @@ enum AppLaunch {
     }
 
     // MARK: -
-
-    /// The app has no terminal: send stdout and stderr to the owner-only log
-    /// files in `Paths.logs`.
-    private static func redirectOutput() {
-        do {
-            try Paths.prepareDirectory(Paths.logs)
-            for (file, fd) in [(Paths.daemonOutLog, STDOUT_FILENO), (Paths.daemonErrLog, STDERR_FILENO)] {
-                try Paths.preparePrivateFile(file)
-                let out = open(file.path, O_WRONLY | O_APPEND | O_NOFOLLOW | O_CLOEXEC)
-                guard out >= 0 else { continue }
-                dup2(out, fd)
-                close(out)
-            }
-            setvbuf(stdout, nil, _IOLBF, 0)
-        } catch {
-            // Logging is best effort; the app still runs.
-        }
-    }
 
     private static func isOnDiskImageOrTranslocated(_ bundle: URL) -> Bool {
         let path = bundle.path
