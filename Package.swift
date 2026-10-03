@@ -32,14 +32,11 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ]
         ),
-        // Thin entry point: ArgumentParser commands that call into QuothCore.
+        // The direct edition's entry point: one call into QuothCore. Its
+        // executable is Quoth.app/Contents/MacOS/quoth (scripts/build-app.sh).
         .executableTarget(
             name: "quoth",
-            dependencies: [
-                "QuothCore",
-                "QuothDomain",
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-            ]
+            dependencies: ["QuothCore"]
         ),
         // Developer benchmarks (#49, #52), not shipped in Quoth.app:
         // swift run -c release quoth-bench transcription|capture ...

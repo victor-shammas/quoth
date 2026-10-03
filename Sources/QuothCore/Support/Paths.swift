@@ -38,16 +38,12 @@ package enum Paths {
     /// The app's stderr.
     static var daemonErrLog: URL { logs.appendingPathComponent("quoth.err.log") }
 
-    /// Where `--dump-wav` writes the most recent capture.
+    /// Where `QUOTH_DUMP_WAV=1` writes the most recent capture.
     package static var dumpWav: URL { caches.appendingPathComponent("last-capture.wav") }
 
-    /// Where the `quoth` command lives on `PATH`: a symlink to the executable
-    /// inside Quoth.app, or a plain binary from a pre-app install.
-    static let commandLineLink = URL(fileURLWithPath: "/usr/local/bin/quoth")
-
-    /// Held with `flock` by the running dictation loop, so the app and a
-    /// foreground `quoth` never both listen to the hotkey. In Application
-    /// Support, not Caches, because `quoth install --uninstall` removes Caches.
+    /// Held with `flock` by the running dictation loop, so two copies of
+    /// Quoth never both listen to the hotkey. In Application Support, not
+    /// Caches, which the system may clear.
     static var instanceLock: URL { appSupport.appendingPathComponent("quoth.lock") }
 
     /// `~/Documents`. The model cache must not resolve under it.

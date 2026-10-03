@@ -43,17 +43,17 @@ Quoth is a macOS menu-bar dictation app. Hold a key, speak, release, and the tra
 Package.swift (the direct edition)
   QuothDomain     library     pure logic, Foundation only: gesture, dictionary, voice commands, settings values, models
   QuothCore       library     everything else: capture, hotkey, transcription, the loop, stores, UI
-  quoth           executable  thin entry point: ArgumentParser commands that call into QuothCore
+  quoth           executable  the entry point: `QuothApp.main()`
   quoth-bench     executable  developer benchmarks, never shipped
   QuothTests, QuothBenchTests
 
 project.yml (the App Store edition, generated with xcodegen)
   QuothDomain     static lib  Sources/QuothDomain
   Quoth           app         Sources/QuothCore compiled with APPSTORE, plus AppStore/main.swift;
-                              leaves out Updater, CommandLineLink, Setup, Doctor, ModelCommands
+                              leaves out Updater
 ```
 
-The direct `Quoth.app` wraps the `quoth` executable (`scripts/build-app.sh`). The same binary runs as the app (launched by `SMAppService` or from Finder) and as the CLI (through a symlink); with no subcommand it runs the dictation loop. The App Store app is always the menu-bar app.
+The direct `Quoth.app` wraps the `quoth` executable (`scripts/build-app.sh`). Both editions are the menu-bar app only, with one entry point, `QuothApp.main()`; there is no command line (ADR-007). Started from a terminal, the app logs there, and `DeveloperOptions` reads a few `QUOTH_*` variables for debugging.
 
 Everything that differs between the editions is decided in `Support/Edition.swift` (`Edition`, `HotkeyAccess`, `PasteAccess`); see ADR-006. ADR-007 is splitting QuothCore into modules, a phase at a time; what has moved so far is `QuothDomain`, whose API is `public`. QuothCore types the benchmarks need are marked `package`; the App Store target compiles with `-package-name quoth` for the same reason.
 
@@ -97,17 +97,17 @@ Sources/QuothCore/
     Startup.swift               startup checks and StartupFailure (permanent vs transient)
     Permissions.swift           the hotkey, microphone and paste grants, and what each Allow button asks (pure, tested)
     Onboarding.swift            when the onboarding window shows and what Get Started saves (pure, tested)
-    Daemon.swift                the `run` command: startup, wiring, run loop
+    QuothApp.swift              the entry point of both editions: launch, run, startup failures
+    Daemon.swift                startup, wiring, run loop
     ModelSwitcher.swift         a model change while running: loads behind the menu bar, swaps between dictations
     AppLaunch.swift             the app role: bundle detection, single instance, startup dialogs
     LoginItem.swift             launch at login (SMAppService)
-    Updater.swift, CommandLineLink.swift, Setup.swift, Doctor.swift, ModelCommands.swift
-                                direct edition only: Sparkle, the `quoth` symlink, and the other commands
+    Updater.swift               direct edition only: Sparkle
   Support/
     Edition.swift               what the direct and App Store editions do differently (ADR-006)
     Paths.swift                 every on-disk location Quoth uses
     Log.swift                   stderr logging; never logs transcript text
-    SilentExit.swift            "message printed, exit with this code", so QuothCore needs no ArgumentParser
+    DeveloperOptions.swift      QUOTH_* environment variables for debugging, read once at launch
   Settings/
     SettingsStore.swift         load, atomic save, file watching, change publishing
   Input/
@@ -144,7 +144,7 @@ Sources/QuothCore/
     EditingWindow.swift         a window whose fields take ⌘C, ⌘V and the rest without a main menu
     Pill.swift                  the pill controls shared with onboarding
 
-Sources/quoth/main.swift        ArgumentParser commands: run, setup, doctor, models, install
+Sources/quoth/main.swift        the direct edition's entry point: `QuothApp.main()`
 Sources/quoth-bench/            transcription and capture benchmarks
 AppStore/                       the App Store edition: entry point, Info.plist, entitlements, privacy manifest, icon
 docs/                           these documents, and the website (index, support, privacy)
@@ -204,11 +204,11 @@ Every location comes from `Paths`. In the App Store edition the home folder is t
 | `~/.config/quoth/` | `settings.json` and `dictionary` (a plain-text table; see [dictionary.md](dictionary.md)) |
 | `~/Library/Application Support/quoth/` | `models/` and the single-instance lock |
 | `~/Library/Logs/quoth/` | logs, owner-only; timings and counts, never transcript text |
-| `~/Library/Caches/quoth/` | `--dump-wav` debug captures, owner-only |
+| `~/Library/Caches/quoth/` | `QUOTH_DUMP_WAV` debug captures, owner-only |
 
 ## 7. Startup and failure
 
-`Startup` checks the microphone authorization and the selected model before loading anything. A permanent `StartupFailure` (denied microphone, unknown model) shows one actionable message, a dialog in the app, and exits 0; anything else exits nonzero. The App Store edition's dialogs never mention the command line.
+`Startup` checks the microphone authorization and the selected model before loading anything. A permanent `StartupFailure` (denied microphone, unknown model) shows one actionable message in a dialog and exits 0, so launch at login doesn't reopen into it; anything else exits nonzero.
 
 Everything after the checks happens behind the menu-bar icon: the model loads (downloading on first run) with "Loading model…" in the menu, a failed load retries with backoff, and the hotkey starts once a model is ready and its grant is in place.
 

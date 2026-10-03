@@ -137,7 +137,7 @@ private func parseCaptureMode(_ raw: String) throws -> CaptureMode {
     return mode
 }
 
-/// Maps QuothCore's `SilentExit` to an exit code. Any other error reaches
+/// Maps `SilentExit` to an exit code. Any other error reaches
 /// ArgumentParser, which prints it and exits nonzero.
 private func exiting(_ body: () throws -> Void) throws {
     do {

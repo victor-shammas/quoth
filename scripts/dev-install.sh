@@ -9,14 +9,10 @@
 # identity across rebuilds and releases.
 #
 # Installs to /Applications, or ~/Applications when /Applications is not
-# writable, and links /usr/local/bin/quoth to the app's executable. A plain
-# binary already at that path (an old CLI install) is only replaced after you
-# say yes. A running copy is quit and reopened.
+# writable. A running copy is quit and reopened.
 #
 #   QUOTH_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
 #   QUOTH_INSTALL_DIR    where Quoth.app goes
-#   QUOTH_LINK_DIR       where the quoth link goes (default /usr/local/bin;
-#                         set it empty to skip the link)
 #   QUOTH_NO_RESTART=1   don't quit and reopen a running copy
 
 set -euo pipefail
@@ -29,7 +25,6 @@ if [ -z "${QUOTH_INSTALL_DIR:-}" ]; then
         QUOTH_INSTALL_DIR="$HOME/Applications"
     fi
 fi
-LINK_DIR="${QUOTH_LINK_DIR-/usr/local/bin}"
 BUILD="${QUOTH_BUILD_DIR:-build}"
 DEST="$QUOTH_INSTALL_DIR/Quoth.app"
 EXE="$DEST/Contents/MacOS/quoth"
@@ -53,25 +48,11 @@ mkdir -p "$QUOTH_INSTALL_DIR"
 rm -rf "$DEST"
 ditto "$BUILD/Quoth.app" "$DEST"
 
-if [ -n "$LINK_DIR" ]; then
-    LINK="$LINK_DIR/quoth"
-    REPLACE=1
-    if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
-        REPLACE=0
-        if [ -t 0 ]; then
-            printf '%s is a separate quoth binary (an old CLI install). Replace it with a link to %s? [y/N] ' "$LINK" "$EXE"
-            read -r answer
-            case "$answer" in y|Y|yes) REPLACE=1 ;; esac
-        fi
-        [ "$REPLACE" = 1 ] || echo "  left $LINK as it was"
-    fi
-    if [ "$REPLACE" = 1 ]; then
-        echo "→ linking $LINK"
-        mkdir -p "$LINK_DIR" 2>/dev/null || sudo mkdir -p "$LINK_DIR"
-        SUDO=""
-        [ -w "$LINK_DIR" ] || SUDO="sudo"
-        $SUDO ln -sfn "$EXE" "$LINK"
-    fi
+# Quoth has no command line any more (ADR-007). A link left by an older
+# install would start the app from a terminal; say so rather than delete it.
+OLD_LINK=/usr/local/bin/quoth
+if [ -L "$OLD_LINK" ] && [[ "$(readlink "$OLD_LINK")" == *Quoth.app* ]]; then
+    echo "! $OLD_LINK is left from the quoth command; remove it with: sudo rm $OLD_LINK"
 fi
 
 if [ "$WAS_RUNNING" = 1 ]; then
@@ -79,4 +60,4 @@ if [ "$WAS_RUNNING" = 1 ]; then
     open "$DEST"
 fi
 
-echo "✓ installed Quoth $("$EXE" --version 2>/dev/null || echo "$VERSION") at $DEST"
+echo "✓ installed Quoth $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$DEST/Contents/Info.plist" 2>/dev/null || echo "$VERSION") at $DEST"

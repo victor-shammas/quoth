@@ -21,17 +21,14 @@ enum OnboardingWindow {
     private static var poll: Timer?
     private static let delegate = Delegate()
 
-    /// Opens the window if this is Quoth.app and `Onboarding.showsWindow`
-    /// says so, and keeps "Grant Permissions…" shown while a grant is
-    /// missing. Does nothing in a foreground CLI run.
+    /// Opens the window if `Onboarding.showsWindow` says so, and keeps
+    /// "Grant Permissions…" shown while a grant is missing.
     static func startIfNeeded(store: SettingsStore, menuBar: MenuBarController) {
-        guard AppLaunch.isApp else { return }
         self.store = store
         self.menuBar = menuBar
         menuBar.onGrantPermissions = { show() }
         refresh()
         guard Onboarding.showsWindow(
-            isApp: true,
             completed: store.current.onboarding.completed,
             state: PermissionState.current
         ) else { return }

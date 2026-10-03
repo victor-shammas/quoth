@@ -2,74 +2,24 @@ import AppKit
 import Foundation
 import QuothDomain
 
-/// Flags for one foreground run of the dictation loop. Never persisted.
-public struct DaemonOptions {
-    public var skipDoctor: Bool
-    public var debugHotkey: Bool
-    public var dumpWav: Bool
-    public var noOverlay: Bool
-    public var model: String?
-    /// How transcripts are inserted. Paste unless `--inject-mode` says otherwise.
-    public var injectMode: InjectMode
-    /// How the microphone is run. The standard mode unless `--capture` says otherwise.
-    public var captureMode: CaptureMode
-    /// The push-to-talk key for this run only. Nil uses the saved setting.
-    public var hotkey: HotkeyKey?
-
-    public init(
-        skipDoctor: Bool,
-        debugHotkey: Bool,
-        dumpWav: Bool,
-        noOverlay: Bool,
-        model: String?,
-        injectMode: InjectMode = .paste,
-        captureMode: CaptureMode = .standard,
-        hotkey: HotkeyKey? = nil
-    ) {
-        self.skipDoctor = skipDoctor
-        self.debugHotkey = debugHotkey
-        self.dumpWav = dumpWav
-        self.noOverlay = noOverlay
-        self.model = model
-        self.injectMode = injectMode
-        self.captureMode = captureMode
-        self.hotkey = hotkey
-    }
-}
-
-/// The dictation daemon (`quoth`, `quoth run`): startup checks, then the
-/// AppKit run loop with the model loading behind the menu-bar icon. Does not
-/// return once running.
-public enum Daemon {
-    /// Throws `StartupFailure` if the daemon cannot start.
-    public static func run(_ options: DaemonOptions) throws {
-        // ArgumentParser calls run() on the main thread.
-        let settings = MainActor.assumeIsolated { SettingsStore() }
-        let savedModel = MainActor.assumeIsolated { settings.current.model.id }
-        let chosenModel = try Startup.check(
-            modelID: options.model ?? Self.knownModel(savedModel),
-            hotkey: options.hotkey,
-            skipDoctor: options.skipDoctor
-        )
-
-        // Startup has already exited on denied access. If the system has never
-        // asked, ask now, without waiting, so the prompt is answered while the
-        // model loads rather than on the first press. Quoth.app asks from
-        // the onboarding window's Allow instead, never unannounced.
-        if !AppLaunch.isApp {
-            MicrophoneAccess.requestIfUndetermined()
-        }
-
+/// The menu-bar app's dictation loop: startup checks, then the AppKit run
+/// loop with the model loading behind the menu-bar icon. Does not return
+/// once running.
+enum Daemon {
+    /// Throws `StartupFailure` if Quoth cannot start.
+    @MainActor
+    static func run() throws {
+        let settings = SettingsStore()
+        let chosenModel = try Startup.check(modelID: Self.knownModel(settings.current.model.id))
+        // The onboarding window asks for the microphone with its Allow
+        // button, never unannounced.
         let transcriber = WhisperKitTranscriber(model: chosenModel)
-
-        try MainActor.assumeIsolated {
-            try runLoop(model: chosenModel, transcriber: transcriber, settings: settings, options: options)
-        }
+        try runLoop(model: chosenModel, transcriber: transcriber, settings: settings, options: .current)
     }
 
     /// `id` if the registry knows it. A saved id that no longer exists (a
     /// model removed in an update, a typo in a hand edit) falls back to the
-    /// recommended model instead of stopping Quoth; `--model` stays strict.
+    /// recommended model instead of stopping Quoth.
     static func knownModel(_ id: String?) -> String? {
         guard let id else { return nil }
         guard ModelRegistry.find(id) != nil else {
@@ -86,24 +36,22 @@ public enum Daemon {
         model: TranscriptionModel,
         transcriber: WhisperKitTranscriber,
         settings: SettingsStore,
-        options: DaemonOptions
+        options: DeveloperOptions
     ) throws {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
         let monitor = HotkeyMonitor(
-            key: options.hotkey ?? settings.current.hotkey.key,
+            key: settings.current.hotkey.key,
             lockEnabled: settings.current.hotkey.doubleTapLock,
             debug: options.debugHotkey
         )
         let capture = AudioCapture(mode: options.captureMode)
-        let overlay: RecordingOverlay? = options.noOverlay ? nil : RecordingOverlay()
-        if let overlay {
-            capture.onLevel = { level in overlay.pushLevel(level) }
-        }
+        let overlay = RecordingOverlay()
+        capture.onLevel = { level in overlay.pushLevel(level) }
         // Before the menu, which shows "Check for Updates…" only when running.
         #if !APPSTORE
-        if AppLaunch.isApp { Updater.start() }
+        if AppBundle.current != nil { Updater.start() }
         #endif
         let menuBar = MenuBarController(modelID: model.id)
         menuBar.setHotkey(monitor.key)
@@ -130,8 +78,7 @@ public enum Daemon {
         }
 
         // Overlay first, then menu bar: the order the UI updated in before.
-        var observers: [DictationObserver] = []
-        if let overlay { observers.append(overlay) }
+        var observers: [DictationObserver] = [overlay]
         observers.append(menuBar)
         observers.append(LatencyLog())
         // The Quote Card follows the loop, to show what it's doing and to run
@@ -163,13 +110,13 @@ public enum Daemon {
         menuBar.onCopyLast = { lastDictation.copy() }
         card.insert = { text in
             if !delivery.insertNow(text) {
-                overlay?.showMessage(DeliveryError.copied.userMessage)
+                overlay.showMessage(DeliveryError.copied.userMessage)
             }
             lastDictation.remember(text)
         }
         card.copy = { text in
             SystemPasteboard(.general).write(text, markers: PasteboardSession.concealedMarkers)
-            overlay?.showMessage("Copied")
+            overlay.showMessage("Copied")
         }
         card.remember = { lastDictation.remember($0) }
         card.isDictating = { session.state != .idle }
@@ -191,8 +138,7 @@ public enum Daemon {
         switcher.session = session
 
         // Each setting applies itself here when it changes, from the window
-        // or a hand edit of settings.json. CLI flags only set the
-        // starting values of a foreground run.
+        // or a hand edit of settings.json.
         settings.observe { old, new in
             if old.hotkey.doubleTapLock != new.hotkey.doubleTapLock {
                 monitor.setLockEnabled(new.hotkey.doubleTapLock)
@@ -203,14 +149,10 @@ public enum Daemon {
                 Log.info("live text: \(new.hotkey.liveText ? "on" : "off"); applies from the next lock")
             }
             if old.hotkey.key != new.hotkey.key {
-                if options.hotkey != nil {
-                    Log.info("hotkey: \(new.hotkey.key.rawValue) saved; --hotkey \(monitor.key.rawValue) stays in effect for this run")
-                } else {
-                    // The tap stays; it matches the new key from the next event.
-                    monitor.setKey(new.hotkey.key)
-                    menuBar.setHotkey(new.hotkey.key)
-                    Log.info("hotkey: \(new.hotkey.key.rawValue); hold \(new.hotkey.key.shortName) to dictate")
-                }
+                // The tap stays; it matches the new key from the next event.
+                monitor.setKey(new.hotkey.key)
+                menuBar.setHotkey(new.hotkey.key)
+                Log.info("hotkey: \(new.hotkey.key.rawValue); hold \(new.hotkey.key.shortName) to dictate")
             }
             if old.model != new.model {
                 switcher.select(new.model.id)
@@ -264,6 +206,7 @@ public enum Daemon {
             }
         }
 
+        // ^C quits a copy started from a terminal.
         let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
         sigint.setEventHandler {
             Log.info("\nshutting down")
@@ -277,12 +220,9 @@ public enum Daemon {
         app.run()
     }
 
-    /// Starts the hotkey tap, or, without an Accessibility grant, asks for one
-    /// and waits. The grant belongs to this binary, not the terminal that ran
-    /// `quoth setup`, so the launch-at-login daemon has to ask for itself.
-    /// It asks once per launch and keeps running: exiting would make launchd
-    /// relaunch it and re-fire the prompt. Polling picks up the grant, so no
-    /// restart is needed.
+    /// Starts the hotkey tap, or, without its grant, waits for one. The
+    /// onboarding window asks for it; polling picks it up, so no restart is
+    /// needed.
     @MainActor
     private static func startHotkey(
         _ monitor: HotkeyMonitor,
@@ -309,10 +249,6 @@ public enum Daemon {
 
         Log.info("\(HotkeyAccess.name) not granted; waiting (System Settings → Privacy & Security → \(HotkeyAccess.name) → Quoth)")
         menuBar.setHotkeyHealth(.accessibilityMissing)
-        // Quoth.app leaves the prompt to the onboarding window's Allow.
-        if !AppLaunch.isApp {
-            HotkeyAccess.request()
-        }
 
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
             MainActor.assumeIsolated {

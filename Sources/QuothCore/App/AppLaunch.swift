@@ -3,20 +3,11 @@ import ApplicationServices
 import Foundation
 
 /// Quoth.app, when this process runs from it.
-///
-/// One executable, two roles: launched by LaunchServices (Finder, `open`,
-/// the login item) it is the menu-bar app; run from a terminal, usually
-/// through the `/usr/local/bin/quoth` symlink, it is the CLI.
 public enum AppBundle {
     /// Quoth's bundle identifier. TCC grants and the login item key to it,
     /// so it never changes (ADR-005): `local.quoth` for local direct builds,
     /// `com.victorshammas.quoth` for the App Store build.
     static let identifiers: Set<String> = ["local.quoth", "com.victorshammas.quoth"]
-
-    /// This bundle's identifier, or the direct build's outside a bundle.
-    static var identifier: String {
-        Bundle.main.bundleIdentifier.flatMap { identifiers.contains($0) ? $0 : nil } ?? "local.quoth"
-    }
 
     /// The bundle's URL when the main bundle is Quoth.app, else nil (a bare
     /// `swift build` binary).
@@ -30,65 +21,18 @@ public enum AppBundle {
     public static var version: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
     }
-
-    /// Re-executes through the resolved path when this process was started
-    /// through a symlink into a bundle. Foundation does not follow the link
-    /// when it looks for the main bundle, so without this the CLI would not
-    /// find Info.plist and `SMAppService.mainApp` would have no app to
-    /// register. Same process, so nothing else changes. Returns if there is
-    /// nothing to do or the exec fails.
-    public static func resolveSymlinkedLaunch() {
-        var size: UInt32 = 0
-        _ = _NSGetExecutablePath(nil, &size)
-        var buffer = [CChar](repeating: 0, count: Int(size))
-        guard _NSGetExecutablePath(&buffer, &size) == 0 else { return }
-        let invoked = String(cString: buffer)
-        guard let real = realpath(invoked, nil) else { return }
-        let resolved = String(cString: real)
-        free(real)
-        guard resolved != invoked, resolved.contains(".app/Contents/MacOS/") else { return }
-        // Only when a symlink is involved: realpath of an already-real path
-        // that differs only in spelling (./, //) would exec for nothing.
-        guard URL(fileURLWithPath: invoked).standardizedFileURL.path != resolved else { return }
-        var argv: [UnsafeMutablePointer<CChar>?] = CommandLine.arguments.map { strdup($0) }
-        argv.append(nil)
-        execv(resolved, &argv)
-    }
 }
 
-/// Setup that only the app role does: logging to files, the single-instance
-/// lock, moving off a pre-app install, and explaining startup failures in a
-/// dialog, since there is no terminal to print to.
-public enum AppLaunch {
-    /// True once `prepare()` ran: this process is the menu-bar app.
-    public private(set) static var isApp = false
-
-    /// Whether LaunchServices started this process as the app: inside the
-    /// bundle, no subcommand or flags, and stdin not a terminal. Running the
-    /// bundled executable from a terminal with no arguments is the CLI's
-    /// foreground `run`. `-psn_` is the process serial number older systems
-    /// pass to apps launched from Finder.
-    static func isAppLaunch(arguments: [String], stdinIsTTY: Bool, inBundle: Bool) -> Bool {
-        let args = arguments.dropFirst().filter { !$0.hasPrefix("-psn_") }
-        return inBundle && !stdinIsTTY && args.isEmpty
-    }
-
-    /// `isAppLaunch` for this process.
-    public static var launchedAsApp: Bool {
-        isAppLaunch(
-            arguments: CommandLine.arguments,
-            stdinIsTTY: isatty(STDIN_FILENO) != 0,
-            inBundle: AppBundle.current != nil
-        )
-    }
-
-    /// Runs before the dictation loop when `launchedAsApp`. Exits the process
-    /// if another Quoth is already running or the app runs from the DMG.
+/// Setup before the dictation loop: logging to files, the single-instance
+/// lock, refusing to run from the disk image, and explaining startup
+/// failures in a dialog.
+enum AppLaunch {
+    /// Runs before the dictation loop. Exits the process if another Quoth is
+    /// already running or the app runs from the DMG.
     @MainActor
-    public static func prepare() {
-        isApp = true
-        redirectOutput()
-        Log.info("Quoth \(AppBundle.version) starting")
+    static func prepare() {
+        // Started from a terminal, a developer reads the log there.
+        if isatty(STDERR_FILENO) == 0 { redirectOutput() }
 
         guard claimSingleInstance() else {
             // LaunchServices normally activates the running copy instead; this
@@ -117,7 +61,7 @@ public enum AppLaunch {
     /// Takes the instance lock for this process's lifetime. False if another
     /// Quoth holds it. Idempotent. If the lock file can't be opened, runs
     /// anyway: one extra instance is better than none.
-    public static func claimSingleInstance() -> Bool {
+    static func claimSingleInstance() -> Bool {
         if lockDescriptor >= 0 { return true }
         do {
             try Paths.prepareDirectory(Paths.appSupport)
@@ -140,11 +84,9 @@ public enum AppLaunch {
 
     // MARK: - Startup failures
 
-    /// Explains a startup failure in a dialog when running as the app, where
-    /// nobody reads stderr. The exit code rule in `Run` is unchanged.
+    /// Explains a startup failure in a dialog, since nobody reads the log.
     @MainActor
-    public static func presentStartupFailure(_ failure: StartupFailure) {
-        guard isApp else { return }
+    static func presentStartupFailure(_ failure: StartupFailure) {
         NSApplication.shared.setActivationPolicy(.accessory)
         let (title, message, pane) = appMessage(for: failure)
         if let pane {
@@ -157,8 +99,7 @@ public enum AppLaunch {
         }
     }
 
-    /// Title, body, and the Privacy & Security pane to open, for the app's
-    /// dialog. Permission failures get app wording; the rest reuse the CLI's.
+    /// Title, body, and the Privacy & Security pane to open, for the dialog.
     static func appMessage(for failure: StartupFailure) -> (String, String, String?) {
         switch failure {
         case .microphoneDenied:
@@ -179,16 +120,15 @@ public enum AppLaunch {
                 "Allow Quoth under System Settings → Privacy & Security → \(HotkeyAccess.name), then open Quoth again.",
                 HotkeyAccess.settingsPane
             )
-        case .checksFailed, .warmupFailed:
-            return ("Quoth couldn't start", Edition.hasDeveloperTools ? failure.message : "Quit Quoth and open it again. If this keeps happening, reinstall it.", nil)
+        case .warmupFailed:
+            return ("Quoth couldn't start", "Quit Quoth and open it again. If this keeps happening, reinstall it.", nil)
         }
     }
 
     // MARK: -
 
     /// The app has no terminal: send stdout and stderr to the owner-only log
-    /// files the LaunchAgent used, so `Log` output keeps landing in
-    /// `Paths.logs`.
+    /// files in `Paths.logs`.
     private static func redirectOutput() {
         do {
             try Paths.prepareDirectory(Paths.logs)

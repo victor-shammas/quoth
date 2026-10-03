@@ -88,7 +88,7 @@ enum TranscriptionBench {
             throw SilentExit(1)
         }
         guard WhisperKitTranscriber.isCached(model) else {
-            print("\(model.id) is not downloaded; run: quoth models download \(model.id)")
+            print("\(model.id) is not downloaded; choose it in Quoth's Settings › Model to download it")
             throw SilentExit(1)
         }
         var tuning = options.baseline ? WhisperTuning.baseline : WhisperTuning.standard
