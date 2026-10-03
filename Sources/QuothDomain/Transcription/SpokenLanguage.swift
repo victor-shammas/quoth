@@ -40,6 +40,21 @@ public enum SpokenLanguage {
         return .detect(among: candidates)
     }
 
+    /// How sure detection must be to switch away from the language the
+    /// previous part of a dictation was in.
+    public static let switchConfidence: Float = 0.75
+
+    /// The language to decode in, from detection's ranking (highest first)
+    /// and the language the previous part of the same dictation was decoded
+    /// in, if any. A confident switch is taken, so a bilingual speaker's next
+    /// sentence is heard in its own language; an unsure one keeps the
+    /// previous language, so a short or ambiguous segment doesn't flip it.
+    public static func choose(_ ranked: [(code: String, probability: Float)], previous: String?) -> String? {
+        guard let top = ranked.first else { return previous }
+        guard let previous, top.code != previous, ranked.contains(where: { $0.code == previous }) else { return top.code }
+        return top.probability >= switchConfidence ? top.code : previous
+    }
+
     /// Softmax over `scores` (a logit per language): each language's
     /// probability among these languages only, highest first.
     public static func probabilities(_ scores: [(String, Float)]) -> [(code: String, probability: Float)] {

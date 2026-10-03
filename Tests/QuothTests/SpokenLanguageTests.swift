@@ -94,4 +94,22 @@ final class SpokenLanguageTests: XCTestCase {
     func testLanguageTableMatchesWhisperKits() {
         XCTAssertEqual(WhisperLanguages.names, Constants.languages)
     }
+
+    // MARK: Switching languages within a dictation
+
+    func testTheFirstPartTakesWhatDetectionHeard() {
+        XCTAssertEqual(SpokenLanguage.choose([("no", 0.6), ("en", 0.4)], previous: nil), "no")
+    }
+
+    func testAConfidentSwitchIsTaken() {
+        XCTAssertEqual(SpokenLanguage.choose([("no", 0.99), ("en", 0.01)], previous: "en"), "no")
+    }
+
+    func testAnUnsureSwitchKeepsThePreviousLanguage() {
+        XCTAssertEqual(SpokenLanguage.choose([("no", 0.6), ("en", 0.4)], previous: "en"), "en")
+    }
+
+    func testAPreviousLanguageNoLongerACandidateIsDropped() {
+        XCTAssertEqual(SpokenLanguage.choose([("no", 0.6), ("de", 0.4)], previous: "en"), "no")
+    }
 }

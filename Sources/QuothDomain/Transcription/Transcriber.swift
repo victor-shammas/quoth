@@ -37,6 +37,10 @@ public struct TranscriptionContext: Equatable, Sendable {
     /// previous segment), so a segment cut mid-sentence continues it rather
     /// than starting a new one. Nil for a dictation on its own.
     public var previousText: String?
+    /// The language `previousText` was decoded in. A segment in another
+    /// language doesn't continue it: Whisper reads a prompt in the wrong
+    /// language as a cue to translate.
+    public var previousLanguage: String?
 
     public init(
         language: String? = nil,

@@ -11,8 +11,10 @@ import QuothPlatform
 /// transcribes what is left and waits for every segment.
 ///
 /// Each segment is transcribed with the end of the previous one as context,
-/// so a sentence cut at a pause carries on, and in the language the first
-/// segment settled on, so Automatic doesn't flip between segments.
+/// so a sentence cut at a pause carries on. With Language on Automatic each
+/// segment's language is detected anew, so a bilingual speaker's next
+/// sentence is heard in its own language rather than translated; an unsure
+/// detection keeps the previous segment's (`SpokenLanguage.choose`).
 ///
 /// What happens to each segment's text is `LiveTextLedger`'s call. A
 /// delivery failure and a segment that fails to transcribe are reported at
@@ -167,11 +169,9 @@ final class LiveTranscription {
         stats.audio += seconds
         stats.transcribing += elapsed
         stats.timings = raw.timings
-        // Later segments continue this one, in its language.
-        if context.language == nil, let language = raw.timings?.language {
-            context.language = language
-        }
+        // The next segment continues this one when it is in the same language.
         if !raw.text.isEmpty { context.previousText = raw.text }
+        context.previousLanguage = raw.timings?.language
         let processed = processors.reduce(raw) { $1.process($0) }
         let text = processed.text
         // Never log the text itself.

@@ -76,6 +76,20 @@ public enum PauseSplitter {
         return makeCut(atFrame: best, levels: levels, threshold: threshold)
     }
 
+    /// `samples` cut at each pause, as live text cuts a locked recording,
+    /// leaving out parts with no speech. One part when there is no pause.
+    public static func parts(_ samples: [Float]) -> [[Float]] {
+        var parts: [[Float]] = []
+        var offset = 0
+        while offset < samples.count, let cut = cut(Array(samples[offset...])), cut.end > 0 {
+            if cut.hasSpeech { parts.append(Array(samples[offset..<offset + cut.end])) }
+            offset += cut.end
+        }
+        let rest = Array(samples[offset...])
+        if hasSpeech(rest) { parts.append(rest) }
+        return parts
+    }
+
     /// Whether `samples` hold speech: for the tail left when a lock ends,
     /// and for a push-to-talk dictation, which takes a shorter `minRun`
     /// (150 ms) so a short "Yes." still counts.

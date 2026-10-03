@@ -71,6 +71,19 @@ final class PauseSplitterTests: XCTestCase {
         XCTAssertFalse(PauseSplitter.hasSpeech([Float](repeating: 0, count: 32_000), minRun: PauseSplitter.minPushToTalkRun))
     }
 
+    func testPartsAreCutAtEachPause() {
+        let parts = PauseSplitter.parts(Audio.speech(5) + Audio.pause(1.5) + Audio.speech(5) + Audio.pause(1.5))
+        XCTAssertEqual(parts.count, 2)
+    }
+
+    func testOneBreathIsOnePart() {
+        XCTAssertEqual(PauseSplitter.parts(Audio.speech(6)).count, 1)
+    }
+
+    func testSilenceHasNoParts() {
+        XCTAssertEqual(PauseSplitter.parts(Audio.pause(6)), [])
+    }
+
     func testHasSpeech() {
         XCTAssertTrue(PauseSplitter.hasSpeech(Audio.pause(1.5) + Audio.speech(0.5)))
         XCTAssertFalse(PauseSplitter.hasSpeech(Audio.pause(2)))
@@ -149,7 +162,7 @@ final class LiveTranscriptionTests: XCTestCase {
         XCTAssertTrue(copied.isEmpty)
     }
 
-    func testSegmentsContinueThePreviousOneInItsLanguage() async {
+    func testSegmentsContinueThePreviousOneAndSayWhichLanguageItWasIn() async {
         let live = makeLive()
         recording = Audio.speech(10) + Audio.pause(1.5)
         live.poll()
@@ -157,9 +170,12 @@ final class LiveTranscriptionTests: XCTestCase {
         _ = await live.finish(capture: recording)
         XCTAssertEqual(transcriber.contexts.count, 2)
         XCTAssertNil(transcriber.contexts[0].previousText)
-        XCTAssertNil(transcriber.contexts[0].language)
+        XCTAssertNil(transcriber.contexts[0].previousLanguage)
         XCTAssertEqual(transcriber.contexts[1].previousText, "10s")
-        XCTAssertEqual(transcriber.contexts[1].language, "de")
+        XCTAssertEqual(transcriber.contexts[1].previousLanguage, "de")
+        // Automatic stays Automatic: each segment's language is detected
+        // anew, so English after Norwegian isn't decoded as Norwegian.
+        XCTAssertNil(transcriber.contexts[1].language)
     }
 
     func testAFailedSegmentIsReportedAtOnce() async {

@@ -96,12 +96,24 @@ public actor WhisperKitTranscriber: Transcriber {
         await pipeline.unloadModels()
     }
 
+    /// Below this, detection over a whole recording suggests more than one
+    /// language in it: one language decodes at about 1.00, and an English
+    /// sentence followed by a Norwegian one at 0.77.
+    public static let mixedConfidence: Float = 0.9
+
     /// Uses `context.language` and `context.prompt`, or with no language
     /// (Automatic) detects one and takes its sentence from `context.examples`;
     /// see `SpokenLanguage`. `context.vocabulary` is ignored: Whisper takes no
-    /// word list, and a list given as a prompt scores no better than nothing
-    ///.
+    /// word list, and a list given as a prompt scores no better than nothing.
+    ///
+    /// Whisper decodes in one language, and told the wrong one it translates.
+    /// So when detection is unsure and the recording has pauses, each part
+    /// between them is transcribed in its own language.
     public func transcribe(_ audio: [Float], context: TranscriptionContext) async throws -> Transcript {
+        try await transcribe(audio, context: context, splitIfMixed: true)
+    }
+
+    private func transcribe(_ audio: [Float], context: TranscriptionContext, splitIfMixed: Bool) async throws -> Transcript {
         if pipeline == nil { try await warmUp() }
         guard let pipeline else { throw TranscriberError.notLoaded }
 
@@ -110,12 +122,22 @@ public actor WhisperKitTranscriber: Transcriber {
         let trimTime = CFAbsoluteTimeGetCurrent() - started
 
         let detectStarted = CFAbsoluteTimeGetCurrent()
-        let (language, prompt, detected) = await chooseLanguage(input, context: context, pipeline: pipeline)
-        let detectTime = detected ? CFAbsoluteTimeGetCurrent() - detectStarted : 0
+        let (language, prompt, confidence) = await chooseLanguage(input, context: context, pipeline: pipeline)
+        let detectTime = confidence != nil ? CFAbsoluteTimeGetCurrent() - detectStarted : 0
 
+        if splitIfMixed, let confidence, confidence < Self.mixedConfidence {
+            let parts = PauseSplitter.parts(audio)
+            if parts.count > 1 {
+                Log.info("language unsure; transcribing \(parts.count) parts on their own")
+                return try await transcribe(parts: parts, context: context)
+            }
+        }
+
+        // The previous segment's text helps only in its own language.
+        let continuing = context.previousLanguage == nil || context.previousLanguage == language ? context.previousText : nil
         let options = tuning.decodingOptions(
             language: language,
-            promptTokens: Self.promptTokens(for: Self.prompt(prompt, continuing: context.previousText), tokenizer: pipeline.tokenizer),
+            promptTokens: Self.promptTokens(for: Self.prompt(prompt, continuing: continuing), tokenizer: pipeline.tokenizer),
             audioSeconds: Double(input.count) / Double(WhisperKit.sampleRate)
         )
         let results = try await pipeline.transcribe(audioArray: input, decodeOptions: options)
@@ -132,36 +154,58 @@ public actor WhisperKitTranscriber: Transcriber {
         return Transcript(text: text, timings: timings)
     }
 
+    /// The parts of one recording, each in its own language and continuing
+    /// the one before when the language matches, joined as live text joins
+    /// its segments.
+    private func transcribe(parts: [[Float]], context: TranscriptionContext) async throws -> Transcript {
+        let started = CFAbsoluteTimeGetCurrent()
+        var context = context
+        var texts: [String] = []
+        var last: Transcript?
+        for part in parts {
+            let transcript = try await transcribe(part, context: context, splitIfMixed: false)
+            if !transcript.text.isEmpty {
+                texts.append(transcript.text)
+                context.previousText = transcript.text
+            }
+            context.previousLanguage = transcript.timings?.language
+            last = transcript
+        }
+        var timings = last?.timings ?? TranscriberTimings()
+        timings.total = CFAbsoluteTimeGetCurrent() - started
+        return Transcript(text: LiveTextLedger.join(texts), timings: timings)
+    }
+
     /// The language to decode `input` in, or nil for none; the prompt to go
-    /// with it; and whether detection ran. Logs what detection heard and what
-    /// was chosen, as codes, never text.
+    /// with it; and, when detection ran, how sure it was of its top language.
+    /// Logs what detection heard and what was chosen, as codes, never text.
     private func chooseLanguage(
         _ input: [Float],
         context: TranscriptionContext,
         pipeline: WhisperKit
-    ) async -> (language: String?, prompt: String?, detected: Bool) {
+    ) async -> (language: String?, prompt: String?, confidence: Float?) {
         let spoken = context.spokenLanguages.isEmpty ? SpokenLanguage.preferredCodes() : context.spokenLanguages
         switch SpokenLanguage.plan(setting: context.language, spoken: spoken, model: model) {
         case .none:
-            return (nil, context.prompt, false)
+            return (nil, context.prompt, nil)
         case .fixed(let code):
             // An explicit Language setting fills the prompt already; a single
             // spoken language comes here with it still unset.
-            return (code, context.prompt ?? Self.example(in: context.examples, for: code), false)
+            return (code, context.prompt ?? Self.example(in: context.examples, for: code), nil)
         case .detect(let candidates):
             let among = candidates.isEmpty ? Array(model.supportedLanguages) : candidates
-            let fallback = candidates.first
-            guard !input.isEmpty else { return (fallback, Self.example(in: context.examples, for: fallback), false) }
+            let fallback = context.previousLanguage ?? candidates.first
+            guard !input.isEmpty else { return (fallback, Self.example(in: context.examples, for: fallback), nil) }
             do {
                 let ranked = try await LanguageDetector.detect(input, among: among, pipeline: pipeline)
-                let chosen = ranked[0].code
+                let chosen = SpokenLanguage.choose(ranked, previous: context.previousLanguage) ?? ranked[0].code
                 Log.info("language: \(chosen) (" + ranked.prefix(3).map {
                     String(format: "%@ %.2f", $0.code, $0.probability)
                 }.joined(separator: " · ") + ")")
-                return (chosen, Self.example(in: context.examples, for: chosen), true)
+                return (chosen, Self.example(in: context.examples, for: chosen), ranked[0].probability)
             } catch {
                 Log.warning("language detection failed: \(error); using \(fallback ?? "the model's default")")
-                return (fallback, Self.example(in: context.examples, for: fallback), true)
+                return (fallback, Self.example(in: context.examples, for: fallback), nil)
             }
         }
     }
