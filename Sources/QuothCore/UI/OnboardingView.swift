@@ -14,9 +14,8 @@ final class OnboardingModel: ObservableObject {
     let hotkeyChoices: [HotkeyKey]
     let preferred: [String]
     var onGetStarted: (() -> Void)?
-    /// A grant changed: the microphone prompt was answered, or a switch
-    /// flipped in System Settings.
-    var onGrantsChanged: (() -> Void)?
+    /// Allow was clicked: macOS's prompt or System Settings is coming.
+    var onAllow: (() -> Void)?
 
     init(settings: QuothDomain.Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
         hotkey = settings.hotkey.key
@@ -28,9 +27,7 @@ final class OnboardingModel: ObservableObject {
     var canGetStarted: Bool { state.allGranted && !languages.isEmpty }
 
     func update(_ now: PermissionState) {
-        guard now != state else { return }
-        state = now
-        onGrantsChanged?()
+        if now != state { state = now }
     }
 
     func isTicked(_ code: String) -> Bool { languages.contains(code) }
@@ -55,6 +52,7 @@ final class OnboardingModel: ObservableObject {
     /// re-reading the grants.
     func allow(_ kind: Permissions.Kind) {
         asked.insert(kind)
+        onAllow?()
         let steps = Permissions.allowSteps(for: kind, in: state)
         if steps == [.requestMicrophone] {
             MicrophoneAccess.requestIfUndetermined { [weak self] in

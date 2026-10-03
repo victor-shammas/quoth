@@ -20,7 +20,9 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var model: OnboardingModel?
     private var poll: Timer?
-    private var settingsObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
+    /// Allow was clicked, and the window hasn't come back since.
+    private var awaitingReturn = false
 
     init(store: SettingsStore, app: AppModel) {
         self.store = store
@@ -40,7 +42,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         let window = self.window ?? makeWindow()
         self.window = window
         startPolling()
-        watchSystemSettings()
+        watchActivations()
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
         // Activation can be refused (a login-item launch while the user
@@ -56,9 +58,7 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
             Log.info("onboarding done: hold \(model.hotkey.shortName); languages \(model.languages.joined(separator: ", "))")
             self.window?.close()
         }
-        // Quoth has no Dock icon: when macOS's prompt or System Settings
-        // closes, focus goes back to the app before, over this window.
-        model.onGrantsChanged = { [weak self] in self?.show() }
+        model.onAllow = { [weak self] in self?.awaitingReturn = true }
         self.model = model
         let hosting = NSHostingView(rootView: OnboardingView(model: model))
         let window = NSWindow(
@@ -78,18 +78,28 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         return window
     }
 
-    /// Brings the window back when the user leaves System Settings. In the
-    /// App Store edition a switch flipped there changes nothing this launch
-    /// can read, so `onGrantsChanged` never fires; this is when Reopen Quoth
-    /// is wanted.
-    private func watchSystemSettings() {
-        guard settingsObserver == nil else { return }
-        settingsObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didDeactivateApplicationNotification, object: nil, queue: .main
+    /// Brings the window back after an Allow. Quoth has no Dock icon, so
+    /// when macOS's prompt closes, or the user leaves System Settings, focus
+    /// goes to the app before, over this window. That app's activation is
+    /// the moment to come forward: the grant itself lands earlier, while the
+    /// prompt is still closing, and in the App Store edition a switch
+    /// flipped in System Settings changes nothing this launch can read.
+    private func watchActivations() {
+        guard activationObserver == nil else { return }
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            guard app?.bundleIdentifier == "com.apple.systempreferences" else { return }
-            MainActor.assumeIsolated { self?.show() }
+            MainActor.assumeIsolated {
+                guard let self, self.awaitingReturn, let app else { return }
+                if app.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+                    // Back by the user's own click.
+                    self.awaitingReturn = false
+                } else if app.activationPolicy == .regular, app.bundleIdentifier != "com.apple.systempreferences" {
+                    self.awaitingReturn = false
+                    self.show()
+                }
+            }
         }
     }
 
@@ -132,8 +142,9 @@ final class OnboardingWindow: NSObject, NSWindowDelegate {
         MainActor.assumeIsolated {
             window = nil
             model = nil
-            if let settingsObserver { NSWorkspace.shared.notificationCenter.removeObserver(settingsObserver) }
-            settingsObserver = nil
+            if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
+            activationObserver = nil
+            awaitingReturn = false
             refresh()
         }
     }
