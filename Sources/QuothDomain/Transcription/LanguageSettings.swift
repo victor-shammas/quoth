@@ -1,8 +1,4 @@
-/// Spoken-language preferences.
-///
-/// The `settings.json` field for this feature; see `Settings`. Give each new
-/// field a default and decode it in `init(from:)` with
-/// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
+/// The languages Quoth listens for (`Settings.language`).
 public struct LanguageSettings: Codable, Equatable {
     /// An ISO 639-1 code such as "pt", or nil for Automatic. Ignored by
     /// English-only models.
@@ -13,12 +9,6 @@ public struct LanguageSettings: Codable, Equatable {
     public var spoken: [String]?
 
     public init() {}
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        code = try c.decodeIfPresent(String.self, forKey: .code)
-        spoken = try c.decodeIfPresent([String].self, forKey: .spoken)
-    }
 
     /// `spoken`, or the Mac's preferred languages while it is unset.
     public var spokenOrPreferred: [String] {

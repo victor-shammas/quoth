@@ -8,7 +8,6 @@ final class StartupTests: XCTestCase {
     func testUserActionFailuresArePermanent() {
         XCTAssertTrue(StartupFailure.microphoneDenied.isPermanent)
         XCTAssertTrue(StartupFailure.unknownModel("bogus").isPermanent)
-        XCTAssertTrue(StartupFailure.noModelsRegistered.isPermanent)
     }
 
     func testRetryableFailuresAreNotPermanent() {
@@ -18,7 +17,7 @@ final class StartupTests: XCTestCase {
 
     func testPermanentMessagesNameTheFixAndRestart() {
         let failures: [StartupFailure] = [
-            .microphoneDenied, .unknownModel("bogus"), .noModelsRegistered,
+            .microphoneDenied, .unknownModel("bogus"),
         ]
         for failure in failures {
             XCTAssertTrue(failure.message.contains("\n  fix: "), failure.message)
@@ -34,7 +33,7 @@ final class StartupTests: XCTestCase {
     }
 
     func testResolveModel() throws {
-        XCTAssertEqual(try Startup.resolveModel(nil).id, ModelRegistry.recommended()?.id)
+        XCTAssertEqual(try Startup.resolveModel(nil).id, ModelRegistry.recommended.id)
         XCTAssertEqual(try Startup.resolveModel("whisper-small.en").id, "whisper-small.en")
         XCTAssertThrowsError(try Startup.resolveModel("bogus")) { error in
             guard case StartupFailure.unknownModel("bogus") = error else {

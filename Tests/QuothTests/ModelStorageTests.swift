@@ -13,7 +13,7 @@ final class ModelStorageTests: XCTestCase {
     override func setUpWithError() throws {
         base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let repo = "models/argmaxinc/whisperkit-coreml"
-        let variant = try XCTUnwrap(model.whisperKitID)
+        let variant = try XCTUnwrap(model.variant)
         try write(100_000, to: "\(repo)/\(variant)/AudioEncoder.mlmodelc/weights.bin")
         try write(2_000, to: "\(repo)/.cache/huggingface/download/\(variant)/meta")
         try write(500, to: "models/openai/whisper-large-v3/tokenizer.json")

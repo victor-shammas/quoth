@@ -110,7 +110,7 @@ enum AppLaunch {
                 "Turn on Quoth in System Settings → Privacy & Security → Microphone, then open Quoth again.",
                 "Privacy_Microphone"
             )
-        case .unknownModel, .noModelsRegistered:
+        case .unknownModel:
             return (
                 "Quoth couldn't find its speech model",
                 "Reinstall Quoth, then open it again. Your settings and dictionary are kept.",

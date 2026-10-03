@@ -84,7 +84,7 @@ enum TranscriptionBench {
             print("--runs must be at least 1")
             throw SilentExit(64)
         }
-        guard let model = options.model.map(ModelRegistry.find) ?? ModelRegistry.recommended() else {
+        guard let model = options.model.map(ModelRegistry.find) ?? ModelRegistry.recommended else {
             print("unknown model: \(options.model ?? "")")
             throw SilentExit(1)
         }

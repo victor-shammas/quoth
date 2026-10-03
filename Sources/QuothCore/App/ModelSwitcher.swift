@@ -40,7 +40,7 @@ final class ModelSwitcher {
     /// Loads and swaps in `id`, a `ModelRegistry` id or nil for the
     /// recommended model.
     func select(_ id: String?) {
-        guard let next = Assembly.knownModel(id).flatMap(ModelRegistry.find) ?? ModelRegistry.recommended() else { return }
+        let next = Assembly.knownModel(id).flatMap(ModelRegistry.find) ?? ModelRegistry.recommended
         generation += 1
         load?.cancel()
         load = nil

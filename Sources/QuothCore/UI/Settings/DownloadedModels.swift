@@ -19,7 +19,7 @@ final class ModelStorage: ObservableObject {
 
     func refresh() {
         Task.detached(priority: .utility) {
-            let entries = ModelRegistry.shared.compactMap { model in
+            let entries = ModelRegistry.all.compactMap { model in
                 WhisperKitTranscriber.diskBytes(model).map { Entry(model: model, bytes: $0) }
             }
             await MainActor.run { self.entries = entries.sorted { $0.bytes > $1.bytes } }

@@ -1,66 +1,37 @@
 import Foundation
 
-/// Built-in transcription model registry.
-///
-/// The model list lives directly in source rather than as a JSON resource so
-/// the binary stays self-contained — no `Bundle.module` lookup, no per-target
-/// resource bundle to ship alongside the executable.
+/// The models Settings › Model offers, smallest English one first.
 public enum ModelRegistry {
-    public static let shared: [TranscriptionModel] = [
+    public static let all: [TranscriptionModel] = [
         TranscriptionModel(
-            id: "whisper-base.en",
-            displayName: "Whisper Base (English)",
-            engine: .whisperKit,
-            whisperKitID: "openai_whisper-base.en",
-            sizeMB: 145,
-            languages: ["en"],
-            recommended: true
+            id: "whisper-base.en", displayName: "Whisper Base (English)",
+            variant: "openai_whisper-base.en", sizeMB: 145, hears: .only("en")
         ),
         TranscriptionModel(
-            id: "whisper-large-v3-turbo",
-            displayName: "Whisper Large v3 Turbo",
-            engine: .whisperKit,
-            whisperKitID: "openai_whisper-large-v3-v20240930_turbo",
-            sizeMB: 1620,
-            languages: ["multi"],
-            recommended: false
+            id: "whisper-large-v3-turbo", displayName: "Whisper Large v3 Turbo",
+            variant: "openai_whisper-large-v3-v20240930_turbo", sizeMB: 1620, hears: .multilingual
         ),
-        // The same model as above, compressed: about 40% of the size for
-        // very little accuracy (fork addition).
+        // The model above, compressed to about 40% of the size for very
+        // little accuracy.
         TranscriptionModel(
-            id: "whisper-large-v3-turbo-compressed",
-            displayName: "Whisper Large v3 Turbo (compressed)",
-            engine: .whisperKit,
-            whisperKitID: "openai_whisper-large-v3-v20240930_turbo_632MB",
-            sizeMB: 646,
-            languages: ["multi"],
-            recommended: false
+            id: "whisper-large-v3-turbo-compressed", displayName: "Whisper Large v3 Turbo (compressed)",
+            variant: "openai_whisper-large-v3-v20240930_turbo_632MB", sizeMB: 646, hears: .multilingual
         ),
         TranscriptionModel(
-            id: "whisper-small.en",
-            displayName: "Whisper Small (English)",
-            engine: .whisperKit,
-            whisperKitID: "openai_whisper-small.en",
-            sizeMB: 488,
-            languages: ["en"],
-            recommended: false
+            id: "whisper-small.en", displayName: "Whisper Small (English)",
+            variant: "openai_whisper-small.en", sizeMB: 488, hears: .only("en")
         ),
         TranscriptionModel(
-            id: "whisper-small",
-            displayName: "Whisper Small",
-            engine: .whisperKit,
-            whisperKitID: "openai_whisper-small",
-            sizeMB: 490,
-            languages: ["multi"],
-            recommended: false
+            id: "whisper-small", displayName: "Whisper Small",
+            variant: "openai_whisper-small", sizeMB: 490, hears: .multilingual
         ),
     ]
 
-    public static func find(_ id: String) -> TranscriptionModel? {
-        shared.first { $0.id == id }
-    }
+    /// What a new install uses: small, quick on any Apple silicon Mac, and
+    /// English, which most people dictate in.
+    public static let recommended = all[0]
 
-    public static func recommended() -> TranscriptionModel? {
-        shared.first { $0.recommended } ?? shared.first
+    public static func find(_ id: String) -> TranscriptionModel? {
+        all.first { $0.id == id }
     }
 }

@@ -1,37 +1,34 @@
 import Foundation
 
-/// Push-to-talk key preferences.
-///
-/// The `settings.json` field for this feature; see `Settings`. Give each new
-/// field a default and decode it in `init(from:)` with
-/// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
+/// The dictation key and what a double tap does (`Settings.hotkey`).
 public struct HotkeySettings: Codable, Equatable {
-    /// The modifier held to dictate. An unknown name decodes to the default.
+    /// The modifier held to dictate.
     public var key: HotkeyKey = .fn
-    /// Whether a double tap of the key locks recording on, for hands-free
-    /// dictation (fork addition). The next tap stops it.
+    /// Whether a double tap locks recording on, for hands-free dictation;
+    /// the next tap stops it.
     public var doubleTapLock = true
     /// Whether a locked recording types its text at each pause instead of
-    /// all at the end (fork addition).
+    /// all at the end.
     public var liveText = true
-    /// Where a locked dictation goes: typed at the cursor, or into the
-    /// Quote Card to edit first.
+    /// Where a locked dictation goes: the cursor, or the Quote Card to edit
+    /// first.
     public var lockTarget: LockTarget = .cursor
 
     public init() {}
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        let name = try c.decodeIfPresent(String.self, forKey: .key)
-        key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
-        doubleTapLock = try c.decodeIfPresent(Bool.self, forKey: .doubleTapLock) ?? true
-        liveText = try c.decodeIfPresent(Bool.self, forKey: .liveText) ?? true
-        lockTarget = (try? c.decodeIfPresent(LockTarget.self, forKey: .lockTarget)) ?? .cursor
+        // A key or target this version doesn't know, from a hand edit or a
+        // newer Quoth, falls back to the default rather than failing the file.
+        key = (try? c.value(.key, or: key)) ?? key
+        doubleTapLock = try c.value(.doubleTapLock, or: doubleTapLock)
+        liveText = try c.value(.liveText, or: liveText)
+        lockTarget = (try? c.value(.lockTarget, or: lockTarget)) ?? lockTarget
     }
 }
 
-/// The modifiers Quoth can use as its push-to-talk key (ADR-003). The raw
-/// value is the name in `settings.json` and for `--hotkey`.
+/// The modifiers Quoth can use as its dictation key (ADR-003). The raw value
+/// is the name in `settings.json`.
 public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     case fn
     case leftOption = "left-option"
@@ -43,51 +40,35 @@ public enum HotkeyKey: String, Codable, CaseIterable, Sendable {
     case leftShift = "left-shift"
     case rightShift = "right-shift"
 
-    /// How the key is named in the menu and the Settings window.
+    /// Everything about a key, in one place: which side, which modifier,
+    /// and the virtual keycode its `flagsChanged` events carry (`kVK_…`).
+    private var facts: (side: String?, modifier: String, symbol: String, keycode: Int64) {
+        switch self {
+        case .fn: return (nil, "fn", "fn", 63)
+        case .leftOption: return ("left", "Option", "⌥", 58)
+        case .rightOption: return ("right", "Option", "⌥", 61)
+        case .leftCommand: return ("left", "Command", "⌘", 55)
+        case .rightCommand: return ("right", "Command", "⌘", 54)
+        case .leftControl: return ("left", "Control", "⌃", 59)
+        case .rightControl: return ("right", "Control", "⌃", 62)
+        case .leftShift: return ("left", "Shift", "⇧", 56)
+        case .rightShift: return ("right", "Shift", "⇧", 60)
+        }
+    }
+
+    /// In the Settings window: "Right Option (⌥)".
     public var displayName: String {
-        switch self {
-        case .fn: return "fn"
-        case .leftOption: return "Left Option (⌥)"
-        case .rightOption: return "Right Option (⌥)"
-        case .leftCommand: return "Left Command (⌘)"
-        case .rightCommand: return "Right Command (⌘)"
-        case .leftControl: return "Left Control (⌃)"
-        case .rightControl: return "Right Control (⌃)"
-        case .leftShift: return "Left Shift (⇧)"
-        case .rightShift: return "Right Shift (⇧)"
-        }
+        guard let side = facts.side else { return facts.modifier }
+        return "\(side.capitalized) \(facts.modifier) (\(facts.symbol))"
     }
 
-    /// The short name in the menu bar and log lines: "hold right ⌥ to dictate".
+    /// In the menu and the log: "hold right ⌥ to dictate".
     public var shortName: String {
-        switch self {
-        case .fn: return "fn"
-        case .leftOption: return "left ⌥"
-        case .rightOption: return "right ⌥"
-        case .leftCommand: return "left ⌘"
-        case .rightCommand: return "right ⌘"
-        case .leftControl: return "left ⌃"
-        case .rightControl: return "right ⌃"
-        case .leftShift: return "left ⇧"
-        case .rightShift: return "right ⇧"
-        }
+        guard let side = facts.side else { return facts.symbol }
+        return "\(side) \(facts.symbol)"
     }
 
-    /// The virtual keycode a `flagsChanged` event carries for this key
-    /// (`kVK_Function`, `kVK_Option`, `kVK_RightOption`, …).
-    public var keycode: Int64 {
-        switch self {
-        case .fn: return 63
-        case .leftOption: return 58
-        case .rightOption: return 61
-        case .leftCommand: return 55
-        case .rightCommand: return 54
-        case .leftControl: return 59
-        case .rightControl: return 62
-        case .leftShift: return 56
-        case .rightShift: return 60
-        }
-    }
+    public var keycode: Int64 { facts.keycode }
 }
 
 /// Where a hands-free dictation goes.

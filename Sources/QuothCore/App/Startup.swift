@@ -14,13 +14,12 @@ import QuothSpeech
 public enum StartupFailure: Error {
     case microphoneDenied
     case unknownModel(String)
-    case noModelsRegistered
     case warmupFailed(Error)
     case hotkeyUnavailable(Error)
 
     public var isPermanent: Bool {
         switch self {
-        case .microphoneDenied, .unknownModel, .noModelsRegistered:
+        case .microphoneDenied, .unknownModel:
             return true
         case .warmupFailed, .hotkeyUnavailable:
             return false
@@ -37,8 +36,6 @@ public enum StartupFailure: Error {
             )
         case .unknownModel(let id):
             return Self.permanent("unknown model: \(id)", fix: "choose a model in Settings › Model")
-        case .noModelsRegistered:
-            return Self.permanent("no models registered", fix: "reinstall Quoth")
         case .warmupFailed(let error):
             return "warmup failed: \(error)"
         case .hotkeyUnavailable(let error):
@@ -81,11 +78,8 @@ enum Startup {
 
     /// The model for `id`, or the recommended one when `id` is nil.
     static func resolveModel(_ id: String?) throws -> TranscriptionModel {
-        if let id {
-            guard let m = ModelRegistry.find(id) else { throw StartupFailure.unknownModel(id) }
-            return m
-        }
-        guard let m = ModelRegistry.recommended() else { throw StartupFailure.noModelsRegistered }
-        return m
+        guard let id else { return ModelRegistry.recommended }
+        guard let model = ModelRegistry.find(id) else { throw StartupFailure.unknownModel(id) }
+        return model
     }
 }

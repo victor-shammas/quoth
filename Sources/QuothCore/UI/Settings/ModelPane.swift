@@ -15,17 +15,17 @@ struct ModelPane: View {
         .map { (code: $0, name: SpokenLanguage.displayName($0)) }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
-    private var selectedModel: TranscriptionModel? {
-        store.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended()
+    private var selectedModel: TranscriptionModel {
+        store.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended
     }
 
     var body: some View {
         Pane {
             SettingsSection("Transcription") {
-                SettingRow("Model", caption: loading.current == nil ? selectedModel.map(summary) : nil) {
-                    SettingMenu(title: selectedModel.map(Self.menuTitle) ?? "None") {
-                        modelGroup("English only", ModelRegistry.shared.filter { !$0.isMultilingual })
-                        modelGroup("Multilingual, including English", ModelRegistry.shared.filter(\.isMultilingual))
+                SettingRow("Model", caption: loading.current == nil ? summary(selectedModel) : nil) {
+                    SettingMenu(title: Self.menuTitle(selectedModel)) {
+                        modelGroup("English only", ModelRegistry.all.filter { !$0.isMultilingual })
+                        modelGroup("Multilingual, including English", ModelRegistry.all.filter(\.isMultilingual))
                     }
                 }
                 if let state = loading.current {
@@ -58,7 +58,7 @@ struct ModelPane: View {
         Section(title) {
             ForEach(models.sorted { $0.sizeMB < $1.sizeMB }, id: \.id) { model in
                 Toggle(isOn: Binding(
-                    get: { selectedModel?.id == model.id },
+                    get: { selectedModel.id == model.id },
                     set: { on in if on { store.update { $0.model.id = model.id } } }
                 )) {
                     // A model not on the Mac yet downloads when chosen; the
@@ -116,10 +116,10 @@ struct ModelPane: View {
     /// Automatic, then every language by name. A saved code Whisper does not
     /// know shows as Automatic, which is how it is treated.
     @ViewBuilder private var languagePicker: some View {
-        let multilingual = selectedModel?.isMultilingual ?? false
+        let multilingual = selectedModel.isMultilingual
         let code = store.current.language.code?.lowercased()
         let selected = code.flatMap { SpokenLanguage.whisperLanguages.contains($0) ? $0 : nil }
-        SettingRow("Language", caption: multilingual ? nil : "This model hears \(SpokenLanguage.displayName(selectedModel?.languages.first ?? "en")) only. For other languages, choose a multilingual model.") {
+        SettingRow("Language", caption: multilingual ? nil : "This model hears \(SpokenLanguage.displayName(selectedModel.onlyLanguage ?? "en")) only. For other languages, choose a multilingual model.") {
             SettingMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatic") {
                 languageToggle("Automatic", nil, selected: selected)
                 Divider()

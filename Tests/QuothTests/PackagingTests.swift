@@ -7,13 +7,13 @@ final class PackagingTests: XCTestCase {
 
     func testPermissionFailuresPointAtTheirPane() {
         XCTAssertEqual(AppLaunch.appMessage(for: .microphoneDenied).2, "Privacy_Microphone")
-        XCTAssertNil(AppLaunch.appMessage(for: .noModelsRegistered).2)
+        XCTAssertNil(AppLaunch.appMessage(for: .unknownModel("bogus")).2)
     }
 
     func testNoMessageSendsTheUserToATerminal() {
         struct Boom: Error {}
         let failures: [StartupFailure] = [
-            .microphoneDenied, .unknownModel("bogus"), .noModelsRegistered,
+            .microphoneDenied, .unknownModel("bogus"),
             .warmupFailed(Boom()), .hotkeyUnavailable(Boom()),
         ]
         for failure in failures {

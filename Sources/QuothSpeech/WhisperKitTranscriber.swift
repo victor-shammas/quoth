@@ -24,9 +24,7 @@ public actor WhisperKitTranscriber: Transcriber {
     /// when there is anything to download.
     public func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if pipeline != nil || retired { return }
-        guard let whisperKitID = model.whisperKitID else {
-            throw TranscriberError.missingEngineID
-        }
+        let whisperKitID = model.variant
         Log.info("loading \(model.id)...")
         // Explicit downloadBase: the HubApi default is ~/Documents/huggingface,
         // which a login item can't always read and iCloud may evict. The
@@ -299,16 +297,14 @@ public actor WhisperKitTranscriber: Transcriber {
 extension WhisperKitTranscriber {
     /// True if `model`'s weights are already under `Paths.appSupport`.
     public static func isCached(_ model: TranscriptionModel) -> Bool {
-        guard let variant = model.whisperKitID else { return false }
-        let dir = Paths.appSupport.appendingPathComponent(folders(for: variant)[0])
+        let dir = Paths.appSupport.appendingPathComponent(folders(for: model.variant)[0])
         return FileManager.default.fileExists(atPath: dir.path)
     }
 
     /// Bytes `model` takes on disk under `base`: its weights and download
     /// metadata. Nil if it isn't downloaded.
     public static func diskBytes(_ model: TranscriptionModel, base: URL = Paths.appSupport) -> Int64? {
-        guard let variant = model.whisperKitID else { return nil }
-        let folders = folders(for: variant).prefix(2).map { base.appendingPathComponent($0) }
+        let folders = folders(for: model.variant).prefix(2).map { base.appendingPathComponent($0) }
         guard FileManager.default.fileExists(atPath: folders[0].path) else { return nil }
         return folders.reduce(0) { $0 + allocatedBytes(under: $1) }
     }
@@ -317,8 +313,7 @@ extension WhisperKitTranscriber {
     /// downloads again when chosen. The tokenizer stays: it is small and
     /// the large-v3 builds share one.
     public static func deleteDownload(_ model: TranscriptionModel, base: URL = Paths.appSupport) throws {
-        guard let variant = model.whisperKitID else { return }
-        for folder in folders(for: variant).prefix(2) {
+        for folder in folders(for: model.variant).prefix(2) {
             let url = base.appendingPathComponent(folder)
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             try FileManager.default.removeItem(at: url)
@@ -372,6 +367,5 @@ extension WhisperKitTranscriber {
 }
 
 public enum TranscriberError: Error {
-    case missingEngineID
     case notLoaded
 }

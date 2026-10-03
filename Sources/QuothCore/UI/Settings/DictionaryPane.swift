@@ -295,8 +295,8 @@ private struct ExampleSentence: View {
     @State private var pending: Task<Void, Never>?
 
     private var languages: [String] {
-        let model = settings.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended()
-        guard model?.isMultilingual == true else { return ["en"] }
+        let model = settings.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended
+        guard model.isMultilingual else { return ["en"] }
         let spoken = settings.current.language.spokenOrPreferred.filter(SpokenLanguage.whisperLanguages.contains)
         return spoken.isEmpty ? ["en"] : spoken
     }
