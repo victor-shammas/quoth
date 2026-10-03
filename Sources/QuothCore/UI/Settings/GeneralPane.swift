@@ -12,8 +12,11 @@ struct GeneralPane: View {
 
     var body: some View {
         Pane {
-            SettingsSection("Dictation", footer: hotkey.key == .fn && hotkey.doubleTapLock
-                ? "If a double tap of fn starts Apple's Dictation instead, turn off its shortcut in Keyboard settings."
+            DictationClash(key: hotkey.key) { clash in
+            VStack(alignment: .leading, spacing: 18) {
+            // The App Store edition can't read the shortcut, so for fn it can only advise.
+            SettingsSection("Dictation", footer: clash == .unknown && hotkey.key == .fn && hotkey.doubleTapLock
+                ? "If a double tap of fn starts Apple's Dictation too, turn off its shortcut in Keyboard settings."
                 : nil) {
                 SettingRow("Hotkey", caption: "Hold it to dictate.") {
                     Picker("Hotkey", selection: Binding(
@@ -24,6 +27,10 @@ struct GeneralPane: View {
                     }
                     .labelsHidden()
                     .fixedSize()
+                }
+                if clash == .clashes {
+                    RowDivider()
+                    DictationClashRow(key: hotkey.key)
                 }
                 RowDivider()
                 SettingRow("Double-tap to lock", caption: "Hands-free dictation; tap once to stop.") {
@@ -62,16 +69,14 @@ struct GeneralPane: View {
                 }
             }
 
-            if hotkey.key == .fn && hotkey.doubleTapLock {
-                Button("Open Keyboard Settings") {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-                .buttonStyle(.link)
-                .font(.caption)
-                .padding(.top, -14)
-                .padding(.leading, 4)
+            if clash == .unknown && hotkey.key == .fn && hotkey.doubleTapLock {
+                Button("Open Keyboard Settings") { SystemDictation.openKeyboardSettings() }
+                    .buttonStyle(.link)
+                    .font(.caption)
+                    .padding(.top, -14)
+                    .padding(.leading, 4)
+            }
+            }
             }
 
             SettingsSection("Startup") {

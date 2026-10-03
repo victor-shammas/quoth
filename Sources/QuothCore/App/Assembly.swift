@@ -33,6 +33,9 @@ enum Assembly {
             lockEnabled: settings.current.hotkey.doubleTapLock,
             debug: options.debugHotkey
         )
+        if SystemDictation.clash(with: monitor.key) == .clashes {
+            Log.warning("macOS Dictation's shortcut is a double press of \(monitor.key.shortName) too, so a hands-free lock starts it as well; turn it off in System Settings › Keyboard › Dictation")
+        }
         let card = QuoteCard()
         let switcher = ModelSwitcher(model: model, transcriber: transcriber)
         let app = AppModel(

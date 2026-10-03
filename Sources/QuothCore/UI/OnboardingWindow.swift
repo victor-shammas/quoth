@@ -209,6 +209,12 @@ struct OnboardingView: View {
                         .labelsHidden()
                         .fixedSize()
                     }
+                    DictationClash(key: model.hotkey) { clash in
+                        if clash == .clashes {
+                            RowDivider()
+                            DictationClashRow(key: model.hotkey)
+                        }
+                    }
                     RowDivider()
                     SettingRow("Languages", caption: "The ones you dictate in.") {
                         Button(Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) })) {

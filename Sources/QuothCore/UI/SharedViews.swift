@@ -1,5 +1,6 @@
 import AppKit
 import QuothDomain
+import QuothPlatform
 import SwiftUI
 
 // Views the onboarding and Settings windows share.
@@ -62,5 +63,39 @@ struct LanguageChecklist<Footer: View>: View {
 extension LanguageChecklist where Footer == EmptyView {
     init(ticked: [String], toggle: @escaping (String) -> Void) {
         self.init(ticked: ticked, toggle: toggle, footer: { EmptyView() })
+    }
+}
+
+/// Watches for macOS Dictation's shortcut sharing `key`, which starts Apple's
+/// Dictation along with Quoth's hands-free lock (`SystemDictation`). Looked
+/// up again whenever Quoth comes back to the front, as after the user has
+/// been to System Settings.
+struct DictationClash<Content: View>: View {
+    let key: HotkeyKey
+    @ViewBuilder let content: (SystemDictation.Clash) -> Content
+    @State private var clash = SystemDictation.Clash.none
+
+    var body: some View {
+        content(clash)
+            .onAppear { clash = SystemDictation.clash(with: key) }
+            .onChange(of: key) { _, key in clash = SystemDictation.clash(with: key) }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                clash = SystemDictation.clash(with: key)
+            }
+    }
+}
+
+/// The row that says macOS Dictation will start too, and opens the setting
+/// that stops it.
+struct DictationClashRow: View {
+    let key: HotkeyKey
+
+    var body: some View {
+        SettingRow(
+            "macOS Dictation shares this key",
+            caption: "A double press of \(key.shortName) starts Apple's Dictation too. Turn its shortcut off in Keyboard › Dictation."
+        ) {
+            Button("Open Keyboard Settings") { SystemDictation.openKeyboardSettings() }
+        }
     }
 }
