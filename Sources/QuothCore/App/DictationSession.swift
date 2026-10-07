@@ -63,6 +63,8 @@ final class DictationSession {
         /// The transcript, after processing.
         var text = ""
         var deliveryError: DeliveryError?
+        /// `deliver` chose the cursor; the paste is awaited after the effects.
+        var deliverAtCursor = false
         var result: DictationResult?
         /// Live text that stopped delivering and still finishes its segments.
         var stoppedLive: LiveTranscription?
@@ -185,11 +187,7 @@ final class DictationSession {
                 if target == .card, let card {
                     card.append(step.text)
                 } else {
-                    do {
-                        try delivery.deliver(step.text, focusAtStart: step.focus)
-                    } catch {
-                        step.deliveryError = error as? DeliveryError
-                    }
+                    step.deliverAtCursor = true
                 }
             case .remember:
                 onTranscript?(step.text)
@@ -255,7 +253,7 @@ final class DictationSession {
             context: context(),
             processors: processors,
             deliver: { text in
-                if let toCard { toCard.append(text) } else { try delivery.deliver(text, focusAtStart: focus) }
+                if let toCard { toCard.append(text) } else { try await delivery.deliver(text, focusAtStart: focus) }
             },
             scratch: { toCard?.scratchLast() ?? delivery.scratchLast() },
             copy: { delivery.copyToClipboard($0) },
@@ -317,6 +315,13 @@ final class DictationSession {
             let processed = CFAbsoluteTimeGetCurrent()
             step.text = transcript.text
             perform(machine.transcribed(scratchesPrevious: transcript.scratchesPrevious, cardOpen: card?.isOpen == true), &step)
+            if step.deliverAtCursor {
+                do {
+                    try await delivery.deliver(step.text, focusAtStart: step.focus)
+                } catch {
+                    step.deliveryError = error as? DeliveryError
+                }
+            }
             let done = CFAbsoluteTimeGetCurrent()
             step.result?.transcriptionTime = transcribed - started
             step.result?.charCount = transcript.text.count

@@ -70,12 +70,20 @@ public enum DeliveryError: UserFacingError, Equatable {
     /// This build can't paste at the cursor (the App Store build without its
     /// grant). The transcript is on the clipboard.
     case copied
+    /// The paste went unread: the app in front had nowhere to put it. The
+    /// transcript is on the clipboard.
+    case notPasted
+
+    /// Whether the refused text is left on the clipboard, so a locked
+    /// recording holds its later segments for it too.
+    public var holdsText: Bool { self == .focusChanged || self == .notPasted }
 
     public var userMessage: String {
         switch self {
         case .secureField: return "password field, transcript discarded"
         case .focusChanged: return "focus changed, transcript copied"
         case .copied: return "Copied — press ⌘V to paste"
+        case .notPasted: return "couldn't paste here, transcript copied"
         }
     }
 }

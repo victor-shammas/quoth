@@ -34,12 +34,19 @@ public final class TextInjector {
         )
     }
 
-    /// Inserts `text` at the cursor.
-    public func inject(_ text: String) {
-        guard !text.isEmpty else { return }
+    /// Inserts `text` at the cursor. Returns false when a paste wasn't
+    /// read by the app in front, which leaves `text` on the clipboard.
+    /// Typed text can't be checked, so it counts as landed.
+    public func inject(_ text: String) async -> Bool {
+        guard !text.isEmpty else { return true }
         switch mode {
-        case .paste: clipboard.paste(text)
-        case .typeUnicode: Keystrokes.type(text)
+        case .paste:
+            return await withCheckedContinuation { done in
+                clipboard.paste(text) { done.resume(returning: $0) }
+            }
+        case .typeUnicode:
+            Keystrokes.type(text)
+            return true
         }
     }
 

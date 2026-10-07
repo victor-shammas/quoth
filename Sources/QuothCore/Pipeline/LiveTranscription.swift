@@ -47,7 +47,7 @@ final class LiveTranscription {
     private var context: TranscriptionContext
     private let processors: [TranscriptProcessor]
     /// Delivers at the cursor; throws `DeliveryError`.
-    private let deliver: (String) throws -> Void
+    private let deliver: (String) async throws -> Void
     /// Leaves text on the clipboard.
     private let copy: (String) -> Void
     /// Removes the last thing delivered ("scratch that").
@@ -72,7 +72,7 @@ final class LiveTranscription {
         transcriber: Transcriber,
         context: TranscriptionContext,
         processors: [TranscriptProcessor],
-        deliver: @escaping (String) throws -> Void,
+        deliver: @escaping (String) async throws -> Void,
         scratch: @escaping () -> Bool = { false },
         copy: @escaping (String) -> Void,
         notice: @escaping (Error) -> Void = { _ in }
@@ -190,7 +190,7 @@ final class LiveTranscription {
         }
         lastDelivery = CFAbsoluteTimeGetCurrent()
         do {
-            try deliver(text)
+            try await deliver(text)
             ledger.delivered(text)
         } catch {
             ledger.deliveryFailed(text, error: error as? DeliveryError)

@@ -37,7 +37,7 @@ public protocol TextSink: AnyObject {
     var canInsert: Bool { get }
     /// Inserts `text`, checking focus against `focusAtStart`. Throws
     /// `DeliveryError` when it didn't reach the cursor.
-    func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws
+    func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws
     /// Removes the last insertion ("scratch that"). Returns whether it did.
     func scratchLast() -> Bool
     /// Leaves `text` on the clipboard.

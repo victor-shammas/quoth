@@ -55,9 +55,10 @@ public final class TextDelivery {
 
     /// Inserts `text` at the cursor now, for the Quote Card's Insert: no
     /// focus to compare with, but never into a password field. Returns
-    /// false, leaving the text on the clipboard, when this build can't paste.
+    /// false, leaving the text on the clipboard, when this build can't paste
+    /// or nothing took the paste.
     @discardableResult
-    public func insertNow(_ text: String) -> Bool {
+    public func insertNow(_ text: String) async -> Bool {
         let now = FocusSnapshot.capture()
         guard !now.isSecure else {
             Log.info("  secure field focused; card text not inserted")
@@ -69,7 +70,10 @@ public final class TextDelivery {
         }
         let before = now.element?.textBeforeCursor() ?? .unknown
         let spaced = Spacing.spaced(text, before: before)
-        injector.inject(spaced)
+        guard await injector.inject(spaced) else {
+            Log.info("  nothing took the paste; card text left on the clipboard")
+            return false
+        }
         insertions.append(Insertion(length: spaced.count, pid: now.pid, element: now.element, at: Date()))
         return true
     }
@@ -97,7 +101,9 @@ public final class TextDelivery {
     }
 
     /// Throws `DeliveryError` when the transcript did not reach the cursor.
-    public func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
+    /// A paste returns once the app in front read it, or the settle delay
+    /// passed without it doing so.
+    public func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws {
         guard !text.isEmpty else { return }
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {
@@ -110,7 +116,10 @@ public final class TextDelivery {
             let spaced = Spacing.spaced(text, before: before)
             // The kind of character only: the log never carries text.
             Log.info("  before cursor: \(before.kind)\(spaced.first == " " && text.first != " " ? " · leading space" : "")")
-            injector.inject(spaced)
+            guard await injector.inject(spaced) else {
+                Log.info("  nothing took the paste; transcript left on the clipboard")
+                throw DeliveryError.notPasted
+            }
             insertions.append(Insertion(length: spaced.count, pid: now.pid, element: now.element, at: Date()))
             if insertions.count > 20 { insertions.removeFirst() }
         case .discardSecure:

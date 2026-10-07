@@ -136,7 +136,7 @@ final class LiveTranscriptionTests: XCTestCase {
             deliver: { [unowned self] text in
                 if let error = failNext {
                     failNext = nil
-                    if error == .focusChanged { copied.append(text) }
+                    if error.holdsText { copied.append(text) }
                     throw error
                 }
                 typed.append(text)

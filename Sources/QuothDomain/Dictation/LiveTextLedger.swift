@@ -5,7 +5,8 @@ import Foundation
 /// delivers what this says to.
 ///
 /// When a delivery fails, later segments are not typed: after a focus
-/// change everything from that segment on is held for the clipboard, and
+/// change or an unread paste everything from that segment on is held for
+/// the clipboard, and
 /// after a password field (or anything else) nothing more is delivered.
 /// Text already typed stays.
 public struct LiveTextLedger: Equatable, Sendable {
@@ -17,7 +18,8 @@ public struct LiveTextLedger: Equatable, Sendable {
     public private(set) var deliveryError: DeliveryError?
     /// Delivery stopped for a reason other than a `DeliveryError`.
     private var stoppedOtherwise = false
-    /// Segments held back after a focus change, for the clipboard.
+    /// Segments held back after a focus change or an unread paste, for the
+    /// clipboard.
     private var held: [String] = []
     /// The segments typed so far, so "scratch that" can take the last one
     /// back out of `text`.
@@ -51,7 +53,7 @@ public struct LiveTextLedger: Equatable, Sendable {
         chars += segment.count
         text = Self.join([text, segment].filter { !$0.isEmpty })
         guard isDelivering else {
-            if deliveryError == .focusChanged { held.append(segment) }
+            if deliveryError?.holdsText == true { held.append(segment) }
             return false
         }
         return true
@@ -62,13 +64,14 @@ public struct LiveTextLedger: Equatable, Sendable {
         typed.append(segment)
     }
 
-    /// The segment from `add` was refused. After a focus change it is on the
-    /// clipboard already; the end copies it again with everything after it.
+    /// The segment from `add` was refused. After a focus change or an unread
+    /// paste it is on the clipboard already; the end copies it again with
+    /// everything after it.
     public mutating func deliveryFailed(_ segment: String, error: DeliveryError?) {
         guard isDelivering else { return }
         if let error {
             deliveryError = error
-            if error == .focusChanged { held.append(segment) }
+            if error.holdsText { held.append(segment) }
         } else {
             stoppedOtherwise = true
         }

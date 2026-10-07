@@ -54,6 +54,7 @@ final class DeliveryTests: XCTestCase {
     func testUserMessagesNeverCarryText() {
         XCTAssertEqual(DeliveryError.secureField.userMessage, "password field, transcript discarded")
         XCTAssertEqual(DeliveryError.focusChanged.userMessage, "focus changed, transcript copied")
+        XCTAssertEqual(DeliveryError.notPasted.userMessage, "couldn't paste here, transcript copied")
     }
 }
 
@@ -118,6 +119,8 @@ final class PasteboardSessionTests: XCTestCase {
         var changeCount = 0
         var contents = PasteboardSnapshot(items: [])
         var writes: [(text: String, markers: [String])] = []
+        /// The pending offer's reader, until an app reads it.
+        private var onRead: (() -> Void)?
 
         func snapshot() -> PasteboardSnapshot { contents }
 
@@ -127,12 +130,24 @@ final class PasteboardSessionTests: XCTestCase {
         }
 
         func write(_ text: String, markers: [String]) {
+            onRead = nil
             writes.append((text, markers))
             contents = PasteboardSnapshot(items: [
                 [PasteboardRepresentation(type: "public.utf8-plain-text", data: Data(text.utf8))]
                     + markers.map { PasteboardRepresentation(type: $0, data: Data()) },
             ])
             changeCount += 1
+        }
+
+        func offer(_ text: String, markers: [String], onRead: @escaping () -> Void) {
+            write(text, markers: markers)
+            self.onRead = onRead
+        }
+
+        /// The app in front reads the offered text, as a paste does.
+        func appReads() {
+            onRead?()
+            onRead = nil
         }
 
         /// Another app or the user copies something.
@@ -144,6 +159,8 @@ final class PasteboardSessionTests: XCTestCase {
 
     private var pasteboard: FakePasteboard!
     private var pending: [() -> Void] = []
+    /// Every ⌘V is read by the app in front unless this is false.
+    private var appTakesPaste = true
     private var pastes = 0
     private var session: PasteboardSession!
 
@@ -159,11 +176,15 @@ final class PasteboardSessionTests: XCTestCase {
         pasteboard = FakePasteboard()
         pasteboard.contents = original
         pending = []
+        appTakesPaste = true
         pastes = 0
         session = PasteboardSession(
             pasteboard: pasteboard,
             settleDelay: 0.25,
-            postPaste: { [unowned self] in self.pastes += 1 },
+            postPaste: { [unowned self] in
+                self.pastes += 1
+                if self.appTakesPaste { self.pasteboard.appReads() }
+            },
             schedule: { [unowned self] _, work in self.pending.append(work) }
         )
     }
@@ -235,6 +256,37 @@ final class PasteboardSessionTests: XCTestCase {
         XCTAssertEqual(pasteboard.writes.last?.text, "fallback")
         XCTAssertNotEqual(pasteboard.contents, original)
         XCTAssertFalse(session.isRestorePending)
+    }
+
+    func testReadPasteReportsLanded() {
+        var landed: [Bool] = []
+        session.paste("hello") { landed.append($0) }
+        XCTAssertEqual(landed, [])
+        runPending()
+        XCTAssertEqual(landed, [true])
+        XCTAssertEqual(pasteboard.contents, original)
+    }
+
+    func testUnreadPasteLeavesTheTextOnTheClipboard() {
+        appTakesPaste = false
+        var landed: [Bool] = []
+        session.paste("hello") { landed.append($0) }
+        runPending()
+        XCTAssertEqual(landed, [false])
+        XCTAssertEqual(pasteboard.writes.last?.text, "hello")
+        XCTAssertEqual(pasteboard.writes.last?.markers, ["org.nspasteboard.ConcealedType"])
+        XCTAssertFalse(session.isRestorePending)
+    }
+
+    func testUnreadPasteKeepsAnExternalCopy() {
+        appTakesPaste = false
+        var landed: [Bool] = []
+        session.paste("hello") { landed.append($0) }
+        pasteboard.externalCopy("user copied this")
+        let theirs = pasteboard.contents
+        runPending()
+        XCTAssertEqual(landed, [false])
+        XCTAssertEqual(pasteboard.contents, theirs)
     }
 
     func testEmptyClipboardRestoresEmpty() {

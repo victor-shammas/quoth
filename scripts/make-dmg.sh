@@ -6,8 +6,8 @@
 #                                     dist/Quoth-<version>.zip
 #
 # Signing the update archive and writing the appcast (Sparkle's
-# sign_update and generate_appcast, with Quoth's EdDSA key) are separate
-# steps; Quoth has no release workflow or update feed yet (ADR-005).
+# generate_appcast, with Quoth's EdDSA key) happen in scripts/release.sh,
+# which runs this script first (ADR-005).
 #
 # Notary credentials, first match wins:
 #

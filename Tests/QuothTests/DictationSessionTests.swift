@@ -36,7 +36,7 @@ final class DictationSessionTests: XCTestCase {
         private(set) var scratched = 0
         private(set) var copied: [String] = []
 
-        func deliver(_ text: String, focusAtStart: FocusSnapshot?) throws {
+        func deliver(_ text: String, focusAtStart: FocusSnapshot?) async throws {
             if let refuse { throw refuse }
             if !text.isEmpty { typed.append(text) }
         }

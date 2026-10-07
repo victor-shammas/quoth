@@ -36,6 +36,15 @@ final class LiveTextLedgerTests: XCTestCase {
         XCTAssertEqual(ledger.text, "One. Two. Three.")
     }
 
+    func testAfterAnUnreadPasteTheRestIsHeldForTheClipboard() {
+        var ledger = typed(["One."])
+        XCTAssertTrue(ledger.add("Two."))
+        ledger.deliveryFailed("Two.", error: .notPasted)
+        XCTAssertFalse(ledger.add("Three."))
+        XCTAssertEqual(ledger.heldText, "Two. Three.")
+        XCTAssertEqual(ledger.deliveryError, .notPasted)
+    }
+
     func testAfterAPasswordFieldNothingMoreIsDeliveredOrHeld() {
         var ledger = typed(["One."])
         XCTAssertTrue(ledger.add("Two."))

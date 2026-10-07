@@ -194,10 +194,12 @@ extension AppModel: QuoteCardHost {
     var isDictating: Bool { (session?.state ?? .idle) != .idle }
 
     func insertFromCard(_ text: String) {
-        if !delivery.insertNow(text) {
-            overlay.showMessage(DeliveryError.copied.userMessage)
-        }
         lastDictation.remember(text)
+        Task {
+            if await !delivery.insertNow(text) {
+                overlay.showMessage(DeliveryError.copied.userMessage)
+            }
+        }
     }
 
     func copyFromCard(_ text: String) {
