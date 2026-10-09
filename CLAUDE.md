@@ -92,10 +92,16 @@ It calls `scripts/build-app.sh [version]`, which writes `build/Quoth.app`,
 embeds and signs Sparkle, and signs with the first Developer ID Application
 identity, else Apple Development, else ad hoc (with a warning).
 
-Run from a terminal to see the log, with optional developer variables
-(`Sources/QuothCore/Support/DeveloperOptions.swift`):
+Run with optional developer variables
+(`Sources/QuothCore/Support/DeveloperOptions.swift`) through `open`, with
+any running copy quit first, and follow the log:
 
-    QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth
+    open -a Quoth --env QUOTH_DUMP_WAV=1
+    tail -f ~/Library/Logs/quoth/quoth.err.log
+
+Not `QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth`: macOS
+then checks the terminal's privacy grants, not Quoth's, and the microphone
+is refused. Away from a terminal, stdout and stderr go to `~/Library/Logs/quoth/`.
 
 `QUOTH_DEBUG_HOTKEY=1` logs modifier changes; `QUOTH_INJECT_MODE=type-unicode`
 types instead of pasting. There is no command line (ADR-007).

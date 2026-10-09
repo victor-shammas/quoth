@@ -3,10 +3,11 @@ import QuothDomain
 import QuothPlatform
 
 /// Switches for working on Quoth, read once at launch from the environment.
-/// Never persisted, never shown in Settings. Run the app with them from a
-/// terminal:
+/// Never persisted, never shown in Settings. Run the app with them through
+/// `open`, so macOS checks Quoth's own privacy grants rather than the
+/// terminal's, and read the log in `Paths.errLog`:
 ///
-///     QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth
+///     open -a Quoth --env QUOTH_DUMP_WAV=1
 ///
 /// - `QUOTH_DEBUG_HOTKEY=1`: log each modifier change the hotkey tap sees.
 /// - `QUOTH_DUMP_WAV=1`: write each capture to `Paths.dumpWav`.

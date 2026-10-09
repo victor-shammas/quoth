@@ -47,7 +47,7 @@ Add your names and technical terms to `~/.config/quoth/dictionary`, a plain-text
 
 Everything is in **Settings**: the hotkey, models (download, switch and delete them under **Model**), languages, the dictionary, and launch at login. Quoth has no command line ([ADR-007](docs/decisions/007-modules-and-app-model.md)).
 
-For working on Quoth, start the app from a terminal with any of these, and its log prints there:
+For working on Quoth, start the app with any of these through `open`, and follow its log in `~/Library/Logs/quoth/quoth.err.log`:
 
 | Variable | What it does |
 |---|---|
@@ -56,8 +56,11 @@ For working on Quoth, start the app from a terminal with any of these, and its l
 | `QUOTH_INJECT_MODE=type-unicode` | Type instead of paste (leaves the clipboard alone) |
 
 ```sh
-QUOTH_DUMP_WAV=1 /Applications/Quoth.app/Contents/MacOS/quoth
+open -a Quoth --env QUOTH_DUMP_WAV=1
+tail -f ~/Library/Logs/quoth/quoth.err.log
 ```
+
+Quit a running Quoth first. Started through `open`, macOS checks Quoth's own microphone and Accessibility grants; running the binary from a terminal checks the terminal's instead, which usually has none.
 
 ## 5. How it works
 
