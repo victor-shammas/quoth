@@ -43,17 +43,17 @@
     </details>
     <details>
       <summary>Which permissions does Quoth need, and why?</summary>
-      <p><strong>Microphone</strong>, to hear you, and permission to notice your dictation key: <strong>Input Monitoring</strong> in the App Store edition, <strong>Accessibility</strong> in the open-source edition. Quoth only listens to modifier keys like fn, so it never sees what you type. The App Store edition also offers <strong>Paste at cursor</strong>, which is optional: without it, each dictation is copied for you to paste with <kbd>⌘V</kbd>. If you skipped a permission, choose <em>Finish Setup…</em> in the menu.</p>
+      <p><strong>Microphone</strong>, to hear you. The open-source edition also needs <strong>Accessibility</strong>, to notice your dictation key; it only listens to modifier keys like fn, so it never sees what you type. The App Store edition's dictation key is a key combination (<kbd>⌥Space</kbd> by default) registered with macOS, which needs no permission. The App Store edition also offers <strong>Paste at cursor</strong>, which is optional: without it, each dictation is copied for you to paste with <kbd>⌘V</kbd>. If you skipped a permission, choose <em>Finish Setup…</em> in the menu.</p>
     </details>
     <details>
       <summary>Nothing happens the first time I hold the key.</summary>
-      <p>The first start downloads a speech model, about 150 MB, once. The menu says <em>Loading model…</em> until it's ready, then <em>Ready — hold fn to dictate</em>.</p>
+      <p>The first start downloads a speech model, about 150 MB, once. The menu says <em>Loading model…</em> until it's ready, then <em>Ready — hold fn to dictate</em> (<em>hold ⌥Space</em> in the App Store edition).</p>
     </details>
 
     <h2 id="dictating">Dictating</h2>
     <details>
       <summary>Holding fn does nothing.</summary>
-      <p>Many third-party keyboards, including most Logitech ones, handle fn inside the keyboard and never tell the Mac about it. Choose another key in Settings › General › Hotkey: left or right Option, Command, Control or Shift. Also check System Settings › Keyboard › "Press 🌐 key to": it should be <em>Do Nothing</em>, or the Mac acts on fn itself.</p>
+      <p>This is about the open-source edition; the App Store edition uses a key combination, <kbd>⌥Space</kbd> unless you chose another. Many third-party keyboards, including most Logitech ones, handle fn inside the keyboard and never tell the Mac about it. Choose another key in Settings › General › Hotkey: left or right Option, Command, Control or Shift. Also check System Settings › Keyboard › "Press 🌐 key to": it should be <em>Do Nothing</em>, or the Mac acts on fn itself.</p>
     </details>
     <details>
       <summary>Do shortcuts that use my hotkey still work?</summary>
@@ -131,7 +131,7 @@
         <li><strong>App Store edition:</strong> delete <code>~/Library/Containers/com.victorshammas.quoth</code>.</li>
         <li><strong>Open-source edition:</strong> delete <code>~/.config/quoth</code>, <code>~/Library/Application Support/quoth</code>, <code>~/Library/Logs/quoth</code> and <code>~/Library/Caches/quoth</code>.</li>
       </ul>
-      <p>In Finder, choose Go › Go to Folder… (<kbd>⇧⌘G</kbd>) and paste the path. You can remove Quoth from System Settings › Privacy &amp; Security › Microphone, Input Monitoring and Accessibility too.</p>
+      <p>In Finder, choose Go › Go to Folder… (<kbd>⇧⌘G</kbd>) and paste the path. You can remove Quoth from System Settings › Privacy &amp; Security › Microphone and Accessibility too.</p>
     </details>
 
     <h2 id="contact">Contact</h2>
