@@ -15,6 +15,9 @@ public enum HotkeyHealth: Equatable {
     case modelLoading
     /// The model failed to load; a retry is scheduled.
     case modelFailed
+    /// Another app has registered the same key combination (App Store
+    /// edition).
+    case shortcutTaken
 
     /// The menu bar status line for a degraded tap, or nil when healthy.
     public var statusText: String? {
@@ -25,6 +28,7 @@ public enum HotkeyHealth: Equatable {
         case .accessibilityMissing: return "Allow \(HotkeyAccess.name) to start"
         case .modelLoading: return "Loading model…"
         case .modelFailed: return "Couldn't load the model. Retrying…"
+        case .shortcutTaken: return "Another app uses this hotkey. Choose another in Settings"
         }
     }
 

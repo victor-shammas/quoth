@@ -73,7 +73,8 @@ Connect API key?
        scripts/appstore.sh build
 
    Open `build/appstore/Build/Products/Release/Quoth.app` and check
-   onboarding (Microphone, Input Monitoring, Paste at cursor), dictation
+   onboarding (Microphone and Paste at cursor, each behind Continue), the
+   ⌥Space hotkey, dictation
    with and without the paste grant (copy for ⌘V), and the Quote Card.
 6. **Dependencies changed?** Regenerate the acknowledgements and commit:
 

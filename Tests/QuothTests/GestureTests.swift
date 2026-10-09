@@ -197,7 +197,8 @@ final class HotkeyMatchTests: XCTestCase {
     private let leftOptionDeviceBit = CGEventFlags(rawValue: 0x20)
 
     func testKeycodesAndFlags() {
-        XCTAssertEqual(HotkeyKey.allCases.map(\.keycode), [63, 58, 61, 55, 54, 59, 62, 56, 60])
+        XCTAssertEqual(HotkeyKey.modifierKeys.map(\.keycode), [63, 58, 61, 55, 54, 59, 62, 56, 60])
+        XCTAssertTrue(HotkeyKey.shortcuts.allSatisfy { $0.flag.isEmpty })
         XCTAssertEqual(HotkeyKey.fn.flag, .maskSecondaryFn)
         XCTAssertEqual(HotkeyKey.rightOption.flag, .maskAlternate)
         XCTAssertEqual(HotkeyKey.leftCommand.flag, .maskCommand)

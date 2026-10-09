@@ -7,8 +7,10 @@ import CoreGraphics
 ///   Developer ID, free and open source. Uses Accessibility for the hotkey,
 ///   for pasting, and to read the focused field.
 /// - **App Store** (Xcode project from `project.yml`, compiled with
-///   `APPSTORE`): sandboxed. The hotkey needs Input Monitoring; pasting needs
-///   its own grant; the focused field can't be read.
+///   `APPSTORE`): sandboxed. The hotkey is a key combination registered with
+///   the system, which needs no grant (App Review ruled out Input
+///   Monitoring, Guideline 2.4.5(v)); pasting needs its own grant; the
+///   focused field can't be read.
 ///
 /// Everything that differs is decided here, so the rest of the code asks a
 /// question ("can it read the focused field?") rather than testing the flag.
@@ -23,6 +25,10 @@ public enum Edition {
     /// App Store build keeps it behind its own grant, and turning this off
     /// makes it copy-only, should App Review rule out auto-paste (2.4.5).
     public static let allowsAutoPaste = true
+
+    /// Whether the hotkey is a key combination registered with the system
+    /// (`GlobalShortcut`) rather than a modifier key watched by an event tap.
+    public static let hotkeyIsShortcut = isAppStore
 
     /// Whether the focused field can be read over Accessibility: for the
     /// password-field and focus checks, and for the text before the cursor.
@@ -42,12 +48,15 @@ public enum Edition {
 }
 
 /// The grant the hotkey needs: Accessibility in the direct build (which also
-/// covers pasting and reading the focused field), Input Monitoring in the
-/// App Store build, whose tap only listens to modifier keys.
+/// covers pasting and reading the focused field). The App Store build's
+/// hotkey, a registered key combination, needs none.
 public enum HotkeyAccess {
+    /// Whether the hotkey needs a grant at all.
+    public static let needsGrant = !Edition.hotkeyIsShortcut
+
     public static var isGranted: Bool {
         #if APPSTORE
-        CGPreflightListenEventAccess()
+        true
         #else
         AXIsProcessTrusted()
         #endif
@@ -55,19 +64,17 @@ public enum HotkeyAccess {
 
     /// Shows the system prompt, which also lists Quoth in the pane.
     public static func request() {
-        #if APPSTORE
-        _ = CGRequestListenEventAccess()
-        #else
+        #if !APPSTORE
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
         #endif
     }
 
     /// The grant's name in System Settings → Privacy & Security.
-    public static var name: String { Edition.isAppStore ? "Input Monitoring" : "Accessibility" }
+    public static let name = "Accessibility"
 
     /// Its pane, for `Permissions.openSettings(pane:)`.
-    public static var settingsPane: String { Edition.isAppStore ? "Privacy_ListenEvent" : "Privacy_Accessibility" }
+    public static let settingsPane = "Privacy_Accessibility"
 }
 
 /// The grant for pasting at the cursor. The direct build has it with

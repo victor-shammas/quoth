@@ -7,6 +7,14 @@ noted where the history records it.
 
 ## Unreleased
 
+- App Store edition, for App Review (review of 1.0 (2), 2026-10-08):
+  - The hotkey is a key combination registered with macOS, ⌥Space by
+    default (or ⌃⌥Space, ⌥⇧Space, ⇧⌘Space), and needs no permission.
+    Input Monitoring is gone (Guideline 2.4.5(v)); hold-to-talk and the
+    double-tap lock work as before. ADR-008.
+  - The buttons before a permission prompt say Continue, not Allow, in
+    both editions (Guideline 5.1.1(iv)).
+  - The website's privacy policy and support page describe the new hotkey.
 - While AirPods or other Bluetooth headphones are playing and their
   microphone is the input, Quoth records the Mac's own microphone instead,
   so the music stays at full quality. Opening the headphones' microphone

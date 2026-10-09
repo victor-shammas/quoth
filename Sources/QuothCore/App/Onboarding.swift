@@ -12,11 +12,11 @@ enum Onboarding {
     }
 
     /// The keys offered for a first pick. The left-hand keys and Shift are
-    /// held for shortcuts and capitals, so they stay in Settings only. A
-    /// current key outside these is kept, so the window never changes it by
-    /// showing it.
-    static func hotkeyChoices(current: HotkeyKey) -> [HotkeyKey] {
-        let keys: [HotkeyKey] = [.fn, .rightOption, .rightCommand, .rightControl]
+    /// held for shortcuts and capitals, so they stay in Settings only. With
+    /// key combinations (the App Store edition), all of them. A current key
+    /// outside these is kept, so the window never changes it by showing it.
+    static func hotkeyChoices(current: HotkeyKey, shortcuts: Bool = Edition.hotkeyIsShortcut) -> [HotkeyKey] {
+        let keys: [HotkeyKey] = shortcuts ? HotkeyKey.shortcuts : [.fn, .rightOption, .rightCommand, .rightControl]
         return keys.contains(current) ? keys : keys + [current]
     }
 

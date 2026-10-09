@@ -3,7 +3,8 @@ import QuothDomain
 import QuothPlatform
 import SwiftUI
 
-/// The choices on the page, the grants, and the Allow and Get Started actions.
+/// The choices on the page, the grants, and the Continue and Get Started
+/// actions.
 @MainActor
 final class OnboardingModel: ObservableObject {
     @Published private(set) var state = PermissionState.current
@@ -14,7 +15,7 @@ final class OnboardingModel: ObservableObject {
     let hotkeyChoices: [HotkeyKey]
     let preferred: [String]
     var onGetStarted: (() -> Void)?
-    /// Allow was clicked: macOS's prompt or System Settings is coming.
+    /// Continue was clicked: macOS's prompt or System Settings is coming.
     var onAllow: (() -> Void)?
 
     init(settings: QuothDomain.Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
@@ -40,10 +41,10 @@ final class OnboardingModel: ObservableObject {
         }
     }
 
-    /// The grants whose Allow was clicked in this window.
+    /// The grants whose Continue was clicked in this window.
     @Published private(set) var asked = Set<Permissions.Kind>()
 
-    /// Allow was clicked, but this launch can't see the grant: only a new one can.
+    /// Continue was clicked, but this launch can't see the grant: only a new one can.
     func needsReopen(_ kind: Permissions.Kind) -> Bool {
         asked.contains(kind) && Permissions.showsAfterRelaunch(kind)
     }
@@ -79,7 +80,7 @@ struct OnboardingView: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(Latte.text)
                 .padding(.top, 14)
-            Text("Hold a key, speak, and let go. Your words appear where you type.")
+            Text("Hold your hotkey, speak, and let go. Your words appear where you type.")
                 .foregroundStyle(Latte.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
@@ -113,19 +114,19 @@ struct OnboardingView: View {
                 SettingsSection("Permissions") {
                     SettingRow("Microphone", caption: "To hear you while you dictate.") {
                         permission(.microphone, granted: model.state.microphone == .granted,
-                                   action: model.state.microphone == .denied ? "Open Settings" : "Allow")
+                                   action: model.state.microphone == .denied ? "Open Settings" : "Continue")
                     }
-                    RowDivider()
-                    SettingRow(HotkeyAccess.name, caption: Edition.isAppStore
-                        ? "To notice your hotkey. Quoth only watches keys like fn, never what you type."
-                        : "To notice your hotkey and paste at the cursor. Quoth never sees what you type.") {
-                        permission(.hotkey, granted: model.state.hotkey, action: "Allow")
+                    if HotkeyAccess.needsGrant {
+                        RowDivider()
+                        SettingRow(HotkeyAccess.name, caption: "To notice your hotkey and paste at the cursor. Quoth never sees what you type.") {
+                            permission(.hotkey, granted: model.state.hotkey, action: "Continue")
+                        }
                     }
                     if Edition.pasteNeedsOwnGrant {
                         RowDivider()
                         // Optional: without it, each transcript is copied for ⌘V.
                         SettingRow("Paste at cursor", caption: "Optional. Without it, dictations are copied for ⌘V.") {
-                            permission(.paste, granted: model.state.paste, action: "Allow")
+                            permission(.paste, granted: model.state.paste, action: "Continue")
                         }
                     }
                 }

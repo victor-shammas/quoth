@@ -42,7 +42,9 @@ final class EventTap {
 
     func start() throws {
         // The caller waits for the grant first; this is a guard, not a request.
-        guard HotkeyAccess.isGranted,
+        // Never in the App Store edition: a tap there would ask for Input
+        // Monitoring, which App Review rules out (Guideline 2.4.5(v)).
+        guard !Edition.hotkeyIsShortcut, HotkeyAccess.isGranted,
               let tap = CGEvent.tapCreate(
                   // The session level, where an app with the grant may tap.
                   tap: .cgSessionEventTap,

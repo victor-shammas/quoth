@@ -164,6 +164,9 @@ enum Assembly {
                 }
                 app.hotkeyHealth = .ok
                 Log.info("listening on \(monitor.key.shortName) hold")
+            } catch HotkeyMonitor.HotkeyError.shortcutTaken {
+                Log.error("couldn't register \(monitor.key.shortName): another app uses it; choose another in Settings")
+                app.hotkeyHealth = .shortcutTaken
             } catch {
                 Log.error("couldn't start the hotkey tap: \(error)")
                 app.hotkeyHealth = .tapDisabled

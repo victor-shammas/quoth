@@ -3,13 +3,15 @@ import CoreGraphics
 import Foundation
 import QuothDomain
 
-/// The dictation key: turns one modifier's presses and releases into
-/// dictation events.
+/// The dictation key: turns its presses and releases into dictation events.
 ///
-/// `EventTap` delivers the modifier changes, `HotkeyMatching` says what each
-/// means for the key, and `Gesture` decides: short taps and chords are
-/// discarded, so a shortcut typed on the hotkey produces no text, and a
-/// double tap locks. A lock ends on its own after `lockLimit`.
+/// A modifier key (the direct edition): `EventTap` delivers the modifier
+/// changes and `HotkeyMatching` says what each means for the key. A key
+/// combination (the App Store edition): `GlobalShortcut` delivers its press
+/// and release, with no event tap and no permission. Either way `Gesture`
+/// decides: short taps and chords are discarded, so a shortcut typed on the
+/// hotkey produces no text, and a double tap locks. A lock ends on its own
+/// after `lockLimit`.
 ///
 /// Everything runs on the main thread.
 public final class HotkeyMonitor {
@@ -24,7 +26,11 @@ public final class HotkeyMonitor {
         case locked
     }
 
-    public enum HotkeyError: Error { case tapCreateFailed }
+    public enum HotkeyError: Error {
+        case tapCreateFailed
+        /// Another app has registered the same key combination.
+        case shortcutTaken
+    }
 
     /// The longest a lock runs before it is transcribed on its own, so a
     /// forgotten one doesn't record indefinitely.
@@ -32,13 +38,14 @@ public final class HotkeyMonitor {
 
     /// The modifier held to dictate; change it with `setKey(_:)`.
     public private(set) var key: HotkeyKey
-    /// Called on the main thread when the tap's health changes.
-    public var onHealthChange: ((HotkeyHealth) -> Void)? {
-        get { tap.onHealthChange }
-        set { tap.onHealthChange = newValue }
-    }
+    /// Called on the main thread when the hotkey's health changes.
+    public var onHealthChange: ((HotkeyHealth) -> Void)?
 
     private let debug: Bool
+    /// The key combination, while the key is one.
+    private var shortcut: GlobalShortcut?
+    /// Whether the event tap is running, for a modifier key.
+    private var tapStarted = false
     private var gesture: Gesture
     private var onEvent: ((Event) -> Void)?
     private var lockTimer: Timer?
@@ -55,11 +62,11 @@ public final class HotkeyMonitor {
 
     public func start(onEvent: @escaping (Event) -> Void) throws {
         self.onEvent = onEvent
-        try tap.start()
+        try startListening()
     }
 
     public func stop() {
-        tap.stop()
+        stopListening()
         lockTimer?.invalidate()
         lockTimer = nil
         onEvent = nil
@@ -76,8 +83,24 @@ public final class HotkeyMonitor {
     public func setKey(_ newKey: HotkeyKey) {
         guard newKey != key else { return }
         let action = gesture.reset()
+        // Started, even if listening failed: a combination another app
+        // held may be free in its new form.
+        let wasListening = onEvent != nil
+        let sameKind = newKey.isShortcut == key.isShortcut
         key = newKey
         if let action { emit(action) }
+        guard wasListening else { return }
+        if sameKind, !key.isShortcut { return }
+        // A new combination to register, or (from a settings file of the
+        // other edition) a different way of listening.
+        stopListening()
+        do {
+            try startListening()
+            onHealthChange?(.ok)
+        } catch {
+            Log.error("couldn't listen for \(key.shortName): \(error)")
+            onHealthChange?(key.isShortcut ? .shortcutTaken : .tapDisabled)
+        }
     }
 
     /// Ends a lock now and transcribes it, as a tap of the key would: for the
@@ -95,6 +118,41 @@ public final class HotkeyMonitor {
     }
 
     // MARK: -
+
+    private func startListening() throws {
+        if key.isShortcut {
+            let shortcut = GlobalShortcut()
+            shortcut.onPress = { [weak self] in self?.shortcutPressed() }
+            shortcut.onRelease = { [weak self] in self?.shortcutReleased() }
+            guard shortcut.register(key) else { throw HotkeyError.shortcutTaken }
+            self.shortcut = shortcut
+        } else {
+            tap.onHealthChange = { [weak self] in self?.onHealthChange?($0) }
+            try tap.start()
+            tapStarted = true
+        }
+    }
+
+    private func stopListening() {
+        shortcut?.unregister()
+        shortcut = nil
+        if tapStarted { tap.stop() }
+        tapStarted = false
+    }
+
+    /// The combination's press. A combination is never a chord: its
+    /// modifiers are part of it.
+    private func shortcutPressed() {
+        guard !gesture.isHeld else { return }
+        if debug { Log.info("  [debug] \(key.shortName) down") }
+        feed(.hotkeyDown(othersHeld: false))
+    }
+
+    private func shortcutReleased() {
+        guard gesture.isHeld else { return }
+        if debug { Log.info("  [debug] \(key.shortName) up") }
+        feed(.hotkeyUp)
+    }
 
     private func modifiersChanged(_ event: CGEvent) {
         // A modifier's keycode, never a character.

@@ -24,7 +24,7 @@ struct GeneralPane: View {
                         get: { hotkey.key },
                         set: { key in store.update { $0.hotkey.key = key } }
                     )) {
-                        ForEach(HotkeyKey.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                        ForEach(HotkeyKey.choices(shortcuts: Edition.hotkeyIsShortcut), id: \.self) { Text($0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -155,20 +155,20 @@ private struct LaunchAtLoginRow: View {
 
 /// App Store build: the optional grant to paste at the cursor. Re-read when
 /// the window comes forward, since it is given in System Settings; macOS
-/// shows it only to a new launch, so after Allow the button reopens Quoth.
+/// shows it only to a new launch, so after Continue the button reopens Quoth.
 private struct PasteRow: View {
     @State private var granted = PasteAccess.isGranted
     @State private var asked = false
 
     var body: some View {
-        SettingRow("Paste at cursor", caption: "Allow Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
+        SettingRow("Paste at cursor", caption: "Turn on Quoth under Accessibility in System Settings. Without it, each dictation is copied, ready for ⌘V.") {
             if granted {
                 AllowedLabel()
             } else if asked && Permissions.showsAfterRelaunch(.paste) {
                 Button("Reopen Quoth") { AppLaunch.relaunch() }
                     .help("Once it's on in System Settings, Quoth sees it after reopening.")
             } else {
-                Button("Allow…") {
+                Button("Continue…") {
                     asked = true
                     Permissions.perform(.promptPaste)
                     Permissions.perform(.openPasteSettings)

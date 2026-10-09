@@ -1,5 +1,7 @@
 import XCTest
 @testable import QuothDomain
+@testable import QuothPlatform
+import Carbon.HIToolbox
 
 final class HotkeyKeyTests: XCTestCase {
     func testNamesAndKeycodes() {
@@ -13,6 +15,10 @@ final class HotkeyKeyTests: XCTestCase {
             .rightControl: ("Right Control (⌃)", "right ⌃", 62),
             .leftShift: ("Left Shift (⇧)", "left ⇧", 56),
             .rightShift: ("Right Shift (⇧)", "right ⇧", 60),
+            .optionSpace: ("⌥Space", "⌥Space", 49),
+            .controlOptionSpace: ("⌃⌥Space", "⌃⌥Space", 49),
+            .optionShiftSpace: ("⌥⇧Space", "⌥⇧Space", 49),
+            .commandShiftSpace: ("⇧⌘Space", "⇧⌘Space", 49),
         ]
         XCTAssertEqual(Set(expected.keys), Set(HotkeyKey.allCases))
         for (key, (display, short, keycode)) in expected {
@@ -20,6 +26,32 @@ final class HotkeyKeyTests: XCTestCase {
             XCTAssertEqual(key.shortName, short)
             XCTAssertEqual(key.keycode, keycode)
         }
+    }
+
+    func testEachEditionOffersItsOwnKind() {
+        XCTAssertEqual(HotkeyKey.choices(shortcuts: false), HotkeyKey.modifierKeys)
+        XCTAssertEqual(HotkeyKey.choices(shortcuts: true), HotkeyKey.shortcuts)
+        XCTAssertEqual(Set(HotkeyKey.modifierKeys + HotkeyKey.shortcuts), Set(HotkeyKey.allCases))
+        XCTAssertTrue(HotkeyKey.shortcuts.allSatisfy { $0.isShortcut && !$0.shortcutModifiers.isEmpty })
+        XCTAssertTrue(HotkeyKey.modifierKeys.allSatisfy { !$0.isShortcut && $0.shortcutModifiers.isEmpty })
+    }
+
+    func testAKeyTheEditionCantUseFallsBackToItsDefault() {
+        // The App Store edition can't watch modifier keys (Guideline 2.4.5(v)).
+        XCTAssertEqual(HotkeyKey.fn.usable(shortcuts: true), .optionSpace)
+        XCTAssertEqual(HotkeyKey.rightOption.usable(shortcuts: true), .optionSpace)
+        XCTAssertEqual(HotkeyKey.controlOptionSpace.usable(shortcuts: true), .controlOptionSpace)
+        XCTAssertEqual(HotkeyKey.optionSpace.usable(shortcuts: false), .fn)
+        XCTAssertEqual(HotkeyKey.rightCommand.usable(shortcuts: false), .rightCommand)
+    }
+
+    func testCombinationsRegisterWithTheirModifiers() {
+        XCTAssertEqual(GlobalShortcut.carbonModifiers(HotkeyKey.optionSpace.shortcutModifiers), UInt32(optionKey))
+        XCTAssertEqual(GlobalShortcut.carbonModifiers(HotkeyKey.controlOptionSpace.shortcutModifiers), UInt32(controlKey | optionKey))
+        XCTAssertEqual(GlobalShortcut.carbonModifiers(HotkeyKey.commandShiftSpace.shortcutModifiers), UInt32(cmdKey | shiftKey))
+        XCTAssertEqual(UInt32(HotkeyKey.optionSpace.keycode), UInt32(kVK_Space))
+        // A modifier key can't be registered as a combination.
+        XCTAssertFalse(GlobalShortcut().register(.fn))
     }
 
     func testAnUnknownKeyInTheFileFallsBackToFn() throws {

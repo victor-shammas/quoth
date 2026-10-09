@@ -164,6 +164,15 @@ final class SettingsStoreTests: XCTestCase {
 }
 
 final class SettingsResetTests: XCTestCase {
+    func testTheHotkeyFitsTheEdition() {
+        var settings = Settings()
+        XCTAssertEqual(SettingsStore.fitted(settings, shortcuts: true).hotkey.key, .optionSpace)
+        XCTAssertEqual(SettingsStore.fitted(settings, shortcuts: false).hotkey.key, .fn)
+        settings.hotkey.key = .commandShiftSpace
+        XCTAssertEqual(SettingsStore.fitted(settings, shortcuts: true).hotkey.key, .commandShiftSpace)
+        XCTAssertEqual(SettingsStore.fitted(settings, shortcuts: false).hotkey.key, .fn)
+    }
+
     func testResetKeepsWhatIsTheUsersOwn() {
         var settings = Settings()
         settings.hotkey.key = .rightOption

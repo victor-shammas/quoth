@@ -34,7 +34,7 @@ Keep all of these when editing those files.
 | Bundle ID | `com.victorshammas.quoth.direct` | `com.victorshammas.quoth` |
 | Price, channel | free, GitHub releases (notarized DMG) | $1.99, Mac App Store |
 | Sandbox | no (hardened runtime) | yes |
-| Hotkey grant | Accessibility | Input Monitoring |
+| Hotkey | a modifier key (fn), under Accessibility | a key combination (⌥Space), no grant (ADR-008) |
 | Paste at cursor | covered by Accessibility | its own optional grant; else copy for ⌘V |
 | Reads the focused field | yes | no (compiled out; `scripts/appstore.sh` fails if any `_AX*` symbol is linked) |
 | Updates | Sparkle, from GitHub releases | App Store |
@@ -49,7 +49,7 @@ Both editions use team `JPP8RN6BJB`. Everything that differs is decided in
 
 Read `docs/architecture.md` first: it is the target structure and says where
 each kind of change belongs. Decisions are in `docs/decisions/` (ADR-001 to
-ADR-007).
+ADR-008).
 
 - `Sources/QuothDomain/` — pure logic, Foundation only: `DictationMachine`
   (the loop's decisions), gestures, dictionary, voice commands, settings
@@ -131,7 +131,7 @@ Benchmark:
 
 ## Signing, sandbox, entitlements
 
-- macOS keys the Microphone, Accessibility and Input Monitoring grants to the
+- macOS keys the Microphone and Accessibility grants to the
   code identity. Always sign with a stable identity; an ad-hoc build loses
   its grants on the next rebuild (ADR-005). Changing a bundle ID, signing
   team, or the Sparkle key breaks grants or updates for existing users.
@@ -220,7 +220,10 @@ together.
   logs; every path from `Paths`; every preference through `SettingsStore`
   (no `UserDefaults` beyond Sparkle's); new post-transcription behaviour is
   a `TranscriptProcessor` or `DictationObserver`; the event tap listens to
-  `flagsChanged` only; only `Edition`/`HotkeyAccess`/`PasteAccess` test
+  `flagsChanged` only, and the App Store edition has no tap at all (ADR-008);
+  pre-permission buttons say Continue, never Allow (App Review 5.1.1(iv));
+  no OpenAI or ChatGPT in App Store metadata (App Review 5); only
+  `Edition`/`HotkeyAccess`/`PasteAccess` test
   `APPSTORE`. Every feature must work in, or degrade to, the clipboard-only
   App Store build.
 - Commit subjects: `Area: what changed, in plain words` (e.g. "Delivery:

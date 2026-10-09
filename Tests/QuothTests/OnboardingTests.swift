@@ -22,6 +22,8 @@ final class OnboardingTests: XCTestCase {
     func testHotkeyChoicesKeepAKeyChosenInSettings() {
         XCTAssertEqual(Onboarding.hotkeyChoices(current: .fn), [.fn, .rightOption, .rightCommand, .rightControl])
         XCTAssertEqual(Onboarding.hotkeyChoices(current: .leftShift).last, .leftShift)
+        // The App Store edition offers key combinations.
+        XCTAssertEqual(Onboarding.hotkeyChoices(current: .optionSpace, shortcuts: true), HotkeyKey.shortcuts)
     }
 
     func testLanguageMenuListsTheMacsLanguagesFirstWithoutRepeats() {

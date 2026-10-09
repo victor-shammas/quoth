@@ -25,7 +25,7 @@ final class SettingsStore: ObservableObject {
     init(file: URL = Paths.settingsFile, log: @escaping (String) -> Void = { Log.warning($0) }) {
         config = ConfigFile(file, maxBytes: 1 << 16)
         self.log = log
-        if let loaded = load() { current = loaded }
+        if let loaded = load() { current = Self.fitted(loaded) }
     }
 
     /// Calls `handler` with the old and new settings after every change.
@@ -75,10 +75,20 @@ final class SettingsStore: ObservableObject {
     // MARK: -
 
     private func apply(_ settings: Settings) {
+        let settings = Self.fitted(settings)
         guard settings != current else { return }
         let old = current
         current = settings
         for observer in observers { observer(old, settings) }
+    }
+
+    /// `settings` with a hotkey this edition can use: a key combination in
+    /// the App Store edition, a modifier key in the direct one. A file from
+    /// the other edition, or the default fn, gets this edition's default.
+    nonisolated static func fitted(_ settings: Settings, shortcuts: Bool = Edition.hotkeyIsShortcut) -> Settings {
+        var fitted = settings
+        fitted.hotkey.key = settings.hotkey.key.usable(shortcuts: shortcuts)
+        return fitted
     }
 
     /// The settings on disk, the defaults when there's no file, or nil when

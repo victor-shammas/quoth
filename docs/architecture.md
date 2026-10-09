@@ -110,7 +110,8 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
 
 Sources/QuothPlatform/          macOS, behind small types; the only module besides Core compiled with APPSTORE
   Input/
-    HotkeyMonitor.swift         the dictation key: modifier changes through Gesture into events; the lock's time limit
+    HotkeyMonitor.swift         the dictation key: modifier changes, or a key combination's press and release, through Gesture into events; the lock's time limit
+    GlobalShortcut.swift        the App Store edition's hotkey: a key combination registered with the system, no grant (ADR-008)
     HotkeyMatching.swift        what one modifier change means for the key (pure, tested)
     EventTap.swift              the listen-only tap on modifier changes, kept on: re-enabling, watchdog, health
     HotkeyKey+Flag.swift        each key's CGEventFlags
@@ -270,12 +271,12 @@ Everything after the checks happens behind the menu-bar icon: the model loads (d
 | Grant | Direct edition | App Store edition |
 |---|---|---|
 | Microphone | required | required |
-| The hotkey | Accessibility (which also covers pasting and reading the field) | Input Monitoring |
+| The hotkey | Accessibility (which also covers pasting and reading the field) | none: a key combination registered with macOS (ADR-008) |
 | Pasting at the cursor | covered by Accessibility | optional, listed under Accessibility; without it, transcripts are copied |
 
 macOS keys grants to the app's code identity, so builds are signed with a stable identity (`scripts/dev-install.sh` takes `QUOTH_SIGN_IDENTITY`). Without the hotkey's grant the app keeps running with "Allow … to start" in the menu and starts the hotkey as soon as the grant appears.
 
-The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Allow button, so prompts never stack; "Finish Setup" in the menu reopens it while a grant is missing. The rules are in `QuothCore/App/Onboarding.swift` and `QuothPlatform/Support/Permissions.swift`, pure and tested.
+The app never shows a system prompt unannounced. The onboarding window lists each grant with its own Continue button (App Review asks for "Continue" or "Next", not "Allow", before a system prompt, Guideline 5.1.1(iv)), so prompts never stack; "Finish Setup" in the menu reopens it while a grant is missing. The rules are in `QuothCore/App/Onboarding.swift` and `QuothPlatform/Support/Permissions.swift`, pure and tested.
 
 ## 10. Decision log
 
@@ -288,3 +289,4 @@ The app never shows a system prompt unannounced. The onboarding window lists eac
 | [005](decisions/005-signed-app-identity.md) | Signed app identity |
 | [006](decisions/006-two-editions.md) | Two editions from one codebase |
 | [007](decisions/007-modules-and-app-model.md) | Modules, a dictation state machine, one app model; no command line |
+| [008](decisions/008-app-store-hotkey.md) | The App Store edition's hotkey is a registered key combination, with no grant |

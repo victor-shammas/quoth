@@ -25,7 +25,7 @@ public enum MicrophonePermission: Equatable {
 /// The grants Quoth needs, read at one moment.
 public struct PermissionState: Equatable {
     /// The hotkey's grant (`HotkeyAccess`): Accessibility in the direct
-    /// build, Input Monitoring in the App Store build.
+    /// build; the App Store build needs none, so it is always true there.
     public var hotkey: Bool
     public var microphone: MicrophonePermission
     /// Pasting at the cursor (`PasteAccess`). Optional in the App Store
@@ -45,10 +45,10 @@ public struct PermissionState: Equatable {
     }
 }
 
-/// Reading and asking for Accessibility and Microphone. The onboarding
-/// window explains both before any of these requests is made.
+/// Reading and asking for the grants. The onboarding window explains each
+/// before its request is made, behind a Continue button.
 public enum Permissions {
-    /// One thing an Allow button does.
+    /// One thing a Continue button does.
     public enum Step: Equatable {
         /// The hotkey grant's prompt (`HotkeyAccess.request`), which also
         /// lists Quoth in its pane.
@@ -61,27 +61,26 @@ public enum Permissions {
         case openMicrophoneSettings
     }
 
-    /// The two grants, each with its own Allow button in the onboarding
-    /// window, so macOS never shows both prompts at once.
+    /// The grants, each with its own Continue button in the onboarding
+    /// window, so macOS never shows two prompts at once.
     public enum Kind: Hashable {
         case microphone
         case hotkey
         case paste
     }
 
-    /// What Allow does for `kind` in `state`: the microphone prompt while
+    /// Whether a grant made while Quoth runs shows only to a new launch. In
+    /// the App Store edition, pasting is read with CGPreflightPostEventAccess,
+    /// which keeps its first answer for the life of the process. The
+    /// microphone, and Accessibility in the direct edition, are read live.
+    public static func showsAfterRelaunch(_ kind: Kind) -> Bool {
+        Edition.isAppStore && kind == .paste
+    }
+
+    /// What Continue does for `kind` in `state`: the microphone prompt while
     /// the system has never asked, its System Settings pane once denied;
     /// the Accessibility prompt and its pane, so the user ends up where the
     /// switch is. Nothing once granted.
-    /// Whether a grant made while Quoth runs shows only to a new launch. In
-    /// the App Store edition, Input Monitoring and pasting are read with
-    /// CGPreflightListenEventAccess and CGPreflightPostEventAccess, which
-    /// keep their first answer for the life of the process. The microphone,
-    /// and Accessibility in the direct edition, are read live.
-    public static func showsAfterRelaunch(_ kind: Kind) -> Bool {
-        Edition.isAppStore && kind != .microphone
-    }
-
     public static func allowSteps(for kind: Kind, in state: PermissionState) -> [Step] {
         switch kind {
         case .microphone:
