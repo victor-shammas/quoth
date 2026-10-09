@@ -141,6 +141,8 @@ final class DictationSession {
                 focusAtStart = focus.current()
                 Log.info("● recording")
                 observers.forEach { $0.dictationStarted() }
+                let input = capture.recordingInput
+                observers.forEach { $0.dictationInput(input) }
             case .locked:
                 let live = machine.recording?.live
                 Log.info("● locked\(live != nil ? " · live text" : "")\(effects.contains(.openCard) ? " · card" : "")")
@@ -201,7 +203,11 @@ final class DictationSession {
         switch failure {
         case .noSpeech:
             if !step.samples.isEmpty { Log.info("  no speech; nothing transcribed") }
-            error = DictationError.noAudio
+            // Through the Mac's microphone in place of playing headphones,
+            // the user may be away from the Mac: say why, and the way out.
+            error = capture.recordingInput.inPlaceOfHeadset && !step.samples.isEmpty
+                ? MicrophoneNotice.macMicrophoneHeardNothing
+                : DictationError.noAudio
         case .cancelled:
             Log.info("○ discarded")
             error = DictationError.cancelled

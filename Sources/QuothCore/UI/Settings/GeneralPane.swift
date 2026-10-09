@@ -3,9 +3,9 @@ import QuothDomain
 import QuothPlatform
 import SwiftUI
 
-/// General: how dictation starts (the hotkey, the lock, live text), other
-/// sound while dictating, opening at login, and in the App Store build the
-/// optional paste grant.
+/// General: how dictation starts (the hotkey, the lock, live text), the
+/// microphone and other sound while dictating, opening at login, and in the
+/// App Store build the optional paste grant.
 struct GeneralPane: View {
     @ObservedObject var store: SettingsStore
 
@@ -80,7 +80,17 @@ struct GeneralPane: View {
             }
             }
 
-            SettingsSection("Sound") {
+            SettingsSection("Microphone and sound") {
+                SettingRow(
+                    "Use the Mac's microphone while headphones play",
+                    caption: "With music on AirPods or other Bluetooth headphones, Quoth listens through the Mac, so the music stays at full quality. With nothing playing, it uses the headphones."
+                ) {
+                    switchToggle("Use the Mac's microphone while headphones play", isOn: Binding(
+                        get: { store.current.microphone.builtInWhileBluetoothPlays },
+                        set: { on in store.update { $0.microphone.builtInWhileBluetoothPlays = on } }
+                    ))
+                }
+                RowDivider()
                 SettingRow(
                     "Fade out sound while dictating",
                     caption: "Lowers the Mac's volume while the microphone is on, and brings it back after. A Bluetooth headset recording with its own microphone is left alone."

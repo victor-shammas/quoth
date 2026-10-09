@@ -19,6 +19,12 @@ public final class AudioCapture {
     /// The input route changed mid-recording: a headset connected, the
     /// default input moved. On an arbitrary thread.
     public var onRouteChange: (() -> Void)?
+    /// Whether to record the Mac's microphone while Bluetooth headphones
+    /// play (`MicrophoneSettings.builtInWhileBluetoothPlays`). Read at each
+    /// `start()`; set it on the thread that calls `start()`.
+    public var builtInWhileBluetoothPlays = true
+    /// What the current or last recording records from.
+    public private(set) var recordingInput = RecordingInput()
 
     /// The last finished recording's counts and timings.
     public private(set) var lastStats: CaptureBuffer.Stats?
@@ -53,7 +59,8 @@ public final class AudioCapture {
             throw error
         }
         // A device that can be recorded, before the unit touches it.
-        let device = try InputDevice.current()
+        let selection = try InputDevice.select(builtInWhileBluetoothPlays: builtInWhileBluetoothPlays)
+        let device = selection.device
 
         converters.resetAll()
         buffer.reset(startedAt: pressed)
@@ -67,13 +74,17 @@ public final class AudioCapture {
             inputFailed: { buffer.recordInputFailure() }
         )
         do {
-            delivered = try input.start(device: device, sink: sink)
+            delivered = try input.start(device: device, defaultInput: selection.defaultInput, sink: sink)
         } catch {
             _ = try? buffer.finish()
             throw error
         }
         recording = true
         self.device = device
+        recordingInput = RecordingInput(
+            isBluetooth: InputDevice.isBluetooth(device.id),
+            inPlaceOfHeadset: selection.inPlaceOfHeadset
+        )
         startDelay = HostClock.seconds(from: pressed, to: HostClock.now())
     }
 
@@ -141,8 +152,10 @@ public final class AudioCapture {
     /// sample is the start of the dictation the user loses.
     private func log(_ stats: CaptureBuffer.Stats) {
         func ms(_ delay: TimeInterval?) -> String { delay.map { String(format: "%.0f ms", $0 * 1000) } ?? "none" }
-        var line = String(
-            format: "  input %.0f Hz × %u · delivered %.0f Hz × %u · hal start %.0f ms",
+        var line = "  input \(InputDevice.name(of: device.id) ?? "unnamed")"
+        if recordingInput.inPlaceOfHeadset { line += " (in place of the playing Bluetooth headphones)" }
+        line += String(
+            format: " · %.0f Hz × %u · delivered %.0f Hz × %u · hal start %.0f ms",
             device.sampleRate, device.channels, delivered.sampleRate, delivered.channels, startDelay * 1000
         )
         line += " · press→first sample \(ms(stats.firstSampleDelay)) · first sound \(ms(stats.firstSoundDelay))"
@@ -150,5 +163,10 @@ public final class AudioCapture {
         if stats.conversionFailures > 0 { line += " · \(stats.conversionFailures) conversion failures" }
         if stats.inputFailures > 0 { line += " · \(stats.inputFailures) input failures" }
         Log.info(line)
+        if recordingInput.inPlaceOfHeadset, stats.buffers > 0, stats.firstSoundDelay == nil {
+            // A microphone cut off in hardware gives exact zeros: a lid the
+            // clamshell check missed.
+            Log.warning("the Mac's microphone recorded only silence; is the lid closed?")
+        }
     }
 }

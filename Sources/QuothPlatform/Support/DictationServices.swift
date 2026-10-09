@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import QuothDomain
 
 /// What the dictation loop needs from the Mac, as `DictationSession` sees it
 /// (ADR-007). The real ones are `AudioCapture`, `TextDelivery` and
@@ -23,6 +24,8 @@ public protocol Microphone: AnyObject {
     /// For the last finished recording: seconds from the press to its first
     /// sample. Nil when unknown.
     var lastFirstSampleDelay: TimeInterval? { get }
+    /// What the current or last recording records from.
+    var recordingInput: RecordingInput { get }
 }
 
 extension AudioCapture: Microphone {

@@ -7,7 +7,8 @@ import QuothDomain
 /// The microphone through a Core Audio AUHAL input unit, without
 /// `AVAudioEngine`'s graph on top.
 ///
-/// Each press builds a unit for the default input, delivering Float32 at
+/// Each press builds a unit for the input `InputDevice.select` chose
+/// (usually the default input), delivering Float32 at
 /// the device's own rate (`AudioCapture` converts to 16 kHz), and starts
 /// it; the release stops and disposes of it, so the device runs only while
 /// the hotkey is held. Every Core Audio call returns a status, and formats
@@ -44,6 +45,9 @@ public final class HALInput {
         let context: RenderContext
         /// The device as the unit is configured for it now.
         var device: InputDevice
+        /// The default input when recording started: `device`, or the
+        /// Bluetooth input the Mac's microphone was taken in place of.
+        let defaultInput: AudioDeviceID
         let watcher: DeviceWatcher
     }
 
@@ -56,9 +60,10 @@ public final class HALInput {
     }
 
     /// Builds a unit for `device` (already validated) and starts recording
-    /// into `sink`. Returns the format it delivers. Throws `CaptureError`;
-    /// on a throw nothing is left running.
-    public func start(device: InputDevice, sink: InputSink) throws -> InputDevice {
+    /// into `sink`. `defaultInput` is the default input it was chosen
+    /// against, when that isn't `device` itself. Returns the format it
+    /// delivers. Throws `CaptureError`; on a throw nothing is left running.
+    public func start(device: InputDevice, defaultInput: AudioDeviceID? = nil, sink: InputSink) throws -> InputDevice {
         try control.sync {
             teardown()
             let unit = try AUHAL.makeUnit()
@@ -70,7 +75,10 @@ public final class HALInput {
                 let control = self.control
                 let watcher = DeviceWatcher(device: device.id) { [weak self] in control.async { self?.inputChanged() } }
                 context.begin(sink)
-                running = Running(unit: unit, context: context, device: device, watcher: watcher)
+                running = Running(
+                    unit: unit, context: context, device: device,
+                    defaultInput: defaultInput ?? device.id, watcher: watcher
+                )
                 try AUHAL.check(AudioOutputUnitStart(unit), "AudioOutputUnitStart")
                 return InputDevice(sampleRate: format.sampleRate, channels: format.channelCount, id: device.id)
             } catch {
@@ -88,7 +96,8 @@ public final class HALInput {
     /// A device notification arrived. On `control`.
     private func inputChanged() {
         guard let running else { return }
-        switch Self.classify(built: running.device, current: DeviceWatcher.snapshot(of: running.device.id)) {
+        let current = DeviceWatcher.snapshot(of: running.device.id)
+        switch Self.classify(built: running.device, defaultInput: running.defaultInput, current: current) {
         case .none: return
         case .route: running.context.routeChanged()
         case .format(let device): reformat(to: device)
@@ -134,9 +143,13 @@ public final class HALInput {
     }
 
     /// What `current`, a fresh read of the input, means for a unit
-    /// configured for `built`.
-    public static func classify(built: InputDevice, current: DeviceWatcher.Snapshot) -> Change {
-        guard current.defaultInput == built.id, current.isAlive else { return .route }
+    /// configured for `built` when the default input was `defaultInput`
+    /// (nil: `built` itself). The default input moving to another device is
+    /// a route change, unless it moved to the device being recorded: the
+    /// Mac's microphone, recording in place of headphones that went away.
+    public static func classify(built: InputDevice, defaultInput: AudioDeviceID? = nil, current: DeviceWatcher.Snapshot) -> Change {
+        let unchanged = current.defaultInput == (defaultInput ?? built.id) || current.defaultInput == built.id
+        guard unchanged, current.isAlive else { return .route }
         if sameInput(built, current.device) { return .none }
         guard (try? InputDevice.validate(sampleRate: current.device.sampleRate, channels: current.device.channels)) != nil else {
             return .route

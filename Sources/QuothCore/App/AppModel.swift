@@ -178,6 +178,10 @@ final class AppModel {
         if old.model != new.model {
             switcher.select(new.model.id)
         }
+        if old.microphone != new.microphone {
+            // Read at each press by AudioCapture; Assembly passes it on.
+            Log.info("Mac's microphone while Bluetooth headphones play: \(new.microphone.builtInWhileBluetoothPlays ? "on" : "off"); applies at next press")
+        }
         if old.sound != new.sound {
             // Read at each press by FadingMicrophone; Assembly passes it on.
             Log.info("fade out sound while dictating: \(new.sound.fadeWhileDictating ? "on" : "off"); applies at next press")

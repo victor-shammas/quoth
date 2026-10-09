@@ -3,7 +3,8 @@ import SwiftUI
 
 /// The pill: your words in quotes. Amber quotation marks, as in the app
 /// icon, around a cream waveform on espresso; a lock when the recording is
-/// locked, and the bars settling into dots while transcribing. The marks
+/// locked, a laptop when it uses the Mac's microphone in place of playing
+/// headphones, and the bars settling into dots while transcribing. The marks
 /// lean in with your voice, unless Reduce Motion is on.
 struct OverlayPill: View {
     @ObservedObject var model: OverlayModel
@@ -40,6 +41,13 @@ struct OverlayPill: View {
                     // The key is free; the next tap stops.
                     Image(systemName: "lock.fill")
                         .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Brand.amber)
+                        .transition(.scale.combined(with: .opacity))
+                }
+                if model.macMicrophone, model.state != .transcribing {
+                    // Listening through the Mac, not the headphones.
+                    Image(systemName: "laptopcomputer")
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Brand.amber)
                         .transition(.scale.combined(with: .opacity))
                 }

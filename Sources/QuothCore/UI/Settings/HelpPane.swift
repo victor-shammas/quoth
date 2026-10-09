@@ -15,6 +15,7 @@ struct HelpPane: View {
                     tip("Double-tap \(key)", "Dictate hands-free, with text at each pause. Tap once to stop.")
                     tip("Quote Card", "New Quote Card in the menu: dictate, edit, then ⌘↩ inserts it where you were.")
                     tip("Fix Last Dictation…", "In Settings › Dictionary: teach Quoth a word it got wrong.")
+                    tip("Music on headphones", "While Bluetooth headphones play, Quoth listens through the Mac's microphone, and the pill shows a laptop. Pause the music to dictate through the headphones.")
                 }
                 .padding(14)
             }

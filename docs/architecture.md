@@ -102,6 +102,7 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
     SilenceTrimmer.swift
     WAV.swift                   QUOTH_DUMP_WAV's files, and RMS
     LevelMeter.swift            microphone levels into the pill's six bars
+    MicrophoneSettings.swift    which input a press records: the Mac's microphone in place of playing Bluetooth headphones (pure, tested)
     SoundSettings.swift, VolumeFade.swift
                                 fading other sound while dictating: the setting, the fade's steps, when the volume comes back
   Support/
@@ -125,6 +126,7 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
     AUHAL.swift                 building and configuring the unit, each step's status checked
     RenderContext.swift         the realtime callback: render a slice, hand it to the InputSink
     DeviceWatcher.swift         the default input switching, the device's format changing or going away
+    InputSelection.swift        reads the devices InputChoice decides between: transport, playing, the internal microphone, the lid
     HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
     FadingMicrophone.swift      a Microphone that fades other sound down for as long as it records
     OutputFader.swift, OutputVolume.swift

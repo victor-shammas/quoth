@@ -79,6 +79,7 @@ final class FadingMicrophoneTests: XCTestCase {
         private(set) var calls: [String] = []
         var hasRouteChanged = false
         let lastFirstSampleDelay: TimeInterval? = nil
+        var recordingInput = RecordingInput()
 
         func start() throws {
             calls.append("start")
@@ -95,7 +96,7 @@ final class FadingMicrophoneTests: XCTestCase {
 
     private final class FakeFader: SoundFading {
         private(set) var calls: [String] = []
-        func fadeOut() { calls.append("out") }
+        func fadeOut(recordingBluetooth: Bool) { calls.append(recordingBluetooth ? "out bluetooth" : "out") }
         func fadeIn() { calls.append("in") }
     }
 
@@ -115,9 +116,10 @@ final class FadingMicrophoneTests: XCTestCase {
         XCTAssertEqual(fader.calls, [])
     }
 
-    func testTheSoundFadesBeforeTheMicrophoneOpensAndComesBackAfterAFinish() throws {
+    func testTheSoundFadesOnceTheMicrophoneIsOpenAndComesBackAfterAFinish() throws {
         let mic = fading()
         try mic.start()
+        XCTAssertEqual(microphone.calls, ["start"])
         XCTAssertEqual(fader.calls, ["out"])
         XCTAssertEqual(try mic.finish(keepBeforeRouteChange: false), [0.1])
         XCTAssertEqual(fader.calls, ["out", "in"])
@@ -130,11 +132,20 @@ final class FadingMicrophoneTests: XCTestCase {
         XCTAssertEqual(fader.calls, ["out", "in"])
     }
 
-    func testTheSoundComesBackWhenTheMicrophoneFailsToStart() {
+    func testAMicrophoneThatFailsToStartLeavesTheSoundAlone() {
         microphone.startError = Failure()
         let mic = fading()
         XCTAssertThrowsError(try mic.start())
-        XCTAssertEqual(fader.calls, ["out", "in"])
+        XCTAssertEqual(fader.calls, [])
+    }
+
+    func testTheFaderLearnsWhenAHeadsetRecordsThroughItsOwnMicrophone() throws {
+        // The fader leaves those alone (VolumeFade.canFade).
+        microphone.recordingInput = RecordingInput(isBluetooth: true)
+        let mic = fading()
+        try mic.start()
+        mic.stop()
+        XCTAssertEqual(fader.calls, ["out bluetooth", "in"])
     }
 
     func testTheSoundComesBackWhenAFinishThrows() throws {

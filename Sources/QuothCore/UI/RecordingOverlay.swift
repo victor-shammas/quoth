@@ -123,6 +123,7 @@ final class RecordingOverlay {
 
 extension RecordingOverlay: DictationObserver {
     func dictationStarted() { show(.recording) }
+    func dictationInput(_ input: RecordingInput) { model.macMicrophone = input.inPlaceOfHeadset }
     func dictationLocked() { show(.locked) }
     func dictationTranscribing() { show(.transcribing) }
     func dictationFinished(_ result: DictationResult) { hide() }
@@ -147,6 +148,9 @@ final class OverlayModel: ObservableObject {
     @Published var levels = [Float](repeating: 0, count: LevelMeter.barCount)
     /// Whether this recording has been louder than silence.
     @Published private(set) var heardVoice = false
+    /// Whether this recording uses the Mac's microphone in place of
+    /// Bluetooth headphones that are playing.
+    @Published var macMicrophone = false
     private var meter = LevelMeter()
 
     func pushLevel(_ level: Float) {

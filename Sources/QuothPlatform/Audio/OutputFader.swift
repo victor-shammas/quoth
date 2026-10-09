@@ -4,8 +4,9 @@ import QuothDomain
 
 /// Turns the Mac's other sound down while Quoth records and back up after.
 public protocol SoundFading: AnyObject {
-    /// Fades the sound down, as the microphone opens.
-    func fadeOut()
+    /// Fades the sound down, once the microphone is open.
+    /// `recordingBluetooth`: the microphone is a Bluetooth headset's.
+    func fadeOut(recordingBluetooth: Bool)
     /// Fades it back up, once the microphone has closed.
     func fadeIn()
 }
@@ -51,17 +52,16 @@ public final class OutputFader: SoundFading, @unchecked Sendable {
 
     public init() {}
 
-    public func fadeOut() {
+    public func fadeOut(recordingBluetooth: Bool) {
         queue.async { [self] in
             if fade == nil {
                 // A volume left faded by a Quoth that quit, now reconnected.
                 restoreSaved()
                 guard let device = OutputVolume.defaultOutputID() else { return }
                 let name = InputDevice.name(of: device) ?? "the output"
-                let input = InputDevice.defaultInputID()
                 guard VolumeFade.canFade(
-                    outputIsBluetooth: OutputVolume.isBluetooth(device),
-                    inputIsBluetooth: input.map(OutputVolume.isBluetooth) ?? false
+                    outputIsBluetooth: InputDevice.isBluetooth(device),
+                    inputIsBluetooth: recordingBluetooth
                 ) else {
                     Log.info("  sound: not faded; \(name) records too, and switches to call quality as it does")
                     return

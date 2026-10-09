@@ -54,6 +54,20 @@ final class HALInputTests: XCTestCase {
         XCTAssertEqual(classify(defaultInput: 42, isAlive: false, mic), .route)
     }
 
+    func testTheMacMicrophoneInPlaceOfHeadphonesOnlyMindsARealChange() {
+        // Recording the Mac's microphone (42) while the default input is the
+        // headphones' (7).
+        func classify(defaultInput: AudioDeviceID?) -> HALInput.Change {
+            HALInput.classify(built: mic, defaultInput: 7, current: DeviceWatcher.Snapshot(defaultInput: defaultInput, isAlive: true, device: mic))
+        }
+        XCTAssertEqual(classify(defaultInput: 7), .none)
+        // The headphones went away and the Mac's microphone became the default.
+        XCTAssertEqual(classify(defaultInput: 42), .none)
+        // The user chose another input.
+        XCTAssertEqual(classify(defaultInput: 43), .route)
+        XCTAssertEqual(classify(defaultInput: nil), .route)
+    }
+
     func testANewRateOrChannelCountOnTheSameDeviceIsFollowed() {
         var changed = mic
         changed.sampleRate = 44_100

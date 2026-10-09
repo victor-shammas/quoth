@@ -11,6 +11,9 @@ import QuothDomain
 protocol DictationObserver: AnyObject {
     /// Recording started.
     func dictationStarted()
+    /// What the recording that just started records from; right after
+    /// `dictationStarted`.
+    func dictationInput(_ input: RecordingInput)
     /// The recording was locked on with a double tap and continues hands-free.
     func dictationLocked()
     /// A problem worth showing while recording continues, such as a live
@@ -28,6 +31,7 @@ protocol DictationObserver: AnyObject {
 
 extension DictationObserver {
     func dictationStarted() {}
+    func dictationInput(_ input: RecordingInput) {}
     func dictationLocked() {}
     func dictationNotice(_ error: Error) {}
     func dictationTranscribing() {}

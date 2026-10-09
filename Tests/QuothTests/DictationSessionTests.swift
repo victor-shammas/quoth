@@ -18,6 +18,7 @@ final class DictationSessionTests: XCTestCase {
         private(set) var stopped = 0
         private(set) var keptBeforeRouteChange: Bool?
         let lastFirstSampleDelay: TimeInterval? = 0.05
+        var recordingInput = RecordingInput()
 
         func start() throws { if let startError { throw startError } }
         func finish(keepBeforeRouteChange: Bool) throws -> [Float] {
@@ -73,7 +74,9 @@ final class DictationSessionTests: XCTestCase {
     private final class Events: DictationObserver {
         private(set) var log: [String] = []
         private(set) var errors: [Error] = []
+        private(set) var inputs: [RecordingInput] = []
         func dictationStarted() { log.append("started") }
+        func dictationInput(_ input: RecordingInput) { inputs.append(input) }
         func dictationLocked() { log.append("locked") }
         func dictationTranscribing() { log.append("transcribing") }
         func dictationFinished(_ result: DictationResult) { log.append("finished") }
@@ -160,6 +163,24 @@ final class DictationSessionTests: XCTestCase {
         XCTAssertEqual(transcriber.calls, 0)
         XCTAssertEqual(events.log, ["started", "transcribing", "failed"])
         XCTAssertEqual(events.errors.first as? DictationError, .noAudio)
+    }
+
+    func testObserversLearnWhatTheRecordingUses() {
+        let session = makeSession()
+        microphone.recordingInput = RecordingInput(inPlaceOfHeadset: true)
+        session.handle(.pressed)
+        XCTAssertEqual(events.inputs, [RecordingInput(inPlaceOfHeadset: true)])
+    }
+
+    func testSilenceOnTheMacMicrophoneInPlaceOfHeadphonesSaysWhy() async {
+        let session = makeSession()
+        microphone.recording = silence
+        microphone.recordingInput = RecordingInput(inPlaceOfHeadset: true)
+        session.handle(.pressed)
+        session.handle(.released)
+        await settle(session)
+        XCTAssertEqual(events.errors.first as? MicrophoneNotice, .macMicrophoneHeardNothing)
+        XCTAssertNotNil(RecordingOverlay.message(for: MicrophoneNotice.macMicrophoneHeardNothing))
     }
 
     func testALostCaptureReportsWhy() async {

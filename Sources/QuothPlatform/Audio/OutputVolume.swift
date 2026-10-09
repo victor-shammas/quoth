@@ -56,19 +56,6 @@ enum OutputVolume {
         return AudioObjectSetPropertyData(id, &address, 0, nil, size, &value) == noErr
     }
 
-    /// Whether `id` connects over Bluetooth (Classic or LE).
-    static func isBluetooth(_ id: AudioDeviceID) -> Bool {
-        var type: UInt32 = 0
-        var size = UInt32(MemoryLayout<UInt32>.size)
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyTransportType,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &type) == noErr else { return false }
-        return type == kAudioDeviceTransportTypeBluetooth || type == kAudioDeviceTransportTypeBluetoothLE
-    }
-
     /// The device's persistent ID, which survives a restart; the
     /// `AudioDeviceID` doesn't.
     static func uid(of id: AudioDeviceID) -> String? {

@@ -1,8 +1,8 @@
 import CoreAudio
 import Foundation
 
-/// The default input device as Core Audio reports it, read before any
-/// capture path touches it.
+/// An input device as Core Audio reports it, read before any capture path
+/// touches it; `select` (InputSelection.swift) picks which one.
 ///
 /// With no input device, or one that reports 0 Hz or 0 channels,
 /// `AVAudioEngine` raises an Objective-C exception on `installTap` or
@@ -13,15 +13,6 @@ public struct InputDevice: Equatable {
     public var channels: UInt32
     /// The Core Audio device, or `kAudioObjectUnknown` when not read from one.
     public var id: AudioDeviceID = kAudioObjectUnknown
-
-    /// The current default input. Throws `CaptureError.noInputDevice` if there
-    /// is none, or `.invalidInputFormat` if it cannot be recorded.
-    public static func current() throws -> InputDevice {
-        guard let id = defaultInputID() else { throw CaptureError.noInputDevice }
-        let device = InputDevice(sampleRate: nominalSampleRate(id), channels: inputChannels(id), id: id)
-        try validate(sampleRate: device.sampleRate, channels: device.channels)
-        return device
-    }
 
     /// The device's name as the Sound settings show it, or nil.
     public static func name(of id: AudioDeviceID) -> String? {

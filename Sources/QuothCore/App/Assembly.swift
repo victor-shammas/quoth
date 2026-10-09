@@ -23,6 +23,7 @@ enum Assembly {
 
         let transcriber = WhisperKitTranscriber(model: model)
         let capture = AudioCapture()
+        capture.builtInWhileBluetoothPlays = settings.current.microphone.builtInWhileBluetoothPlays
         // Fades other sound down while the microphone is on, if Settings
         // asks; first, any volume a Quoth that quit mid-fade left down.
         let fader = OutputFader()
@@ -93,6 +94,7 @@ enum Assembly {
         // hand edit of settings.json.
         settings.observe { [unowned app] old, new in
             app.apply(from: old, to: new)
+            capture.builtInWhileBluetoothPlays = new.microphone.builtInWhileBluetoothPlays
             microphone.isEnabled = new.sound.fadeWhileDictating
         }
         settings.startWatching()

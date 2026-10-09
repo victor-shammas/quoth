@@ -7,6 +7,16 @@ noted where the history records it.
 
 ## Unreleased
 
+- While AirPods or other Bluetooth headphones are playing and their
+  microphone is the input, Quoth records the Mac's own microphone instead,
+  so the music stays at full quality. Opening the headphones' microphone
+  switches them to call quality from about 0.13 s after the press until
+  about 2.3 s after the dictation (measured on AirPods Pro). With nothing
+  playing, a MacBook's lid closed, or a Mac without its own microphone,
+  the headphones' microphone is used as before. The pill shows a laptop
+  while it happens, and a dictation that hears nothing through the Mac's
+  microphone says so and suggests pausing the music. Settings › General ›
+  Microphone and sound turns it off.
 - Settings › General › Sound: **Fade out sound while dictating** (off by
   default) lowers the Mac's volume in a quarter-second fade as dictation
   starts and fades it back up after. A device without a volume control is
