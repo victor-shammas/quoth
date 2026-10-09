@@ -40,9 +40,11 @@ release numbers (e.g. 1.0.2), or stay on its own track?
   Admin role at `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8`, and
   its key ID and issuer ID.
 
-TODO (author): which of the three Macs holds the Developer ID certificate,
-the Sparkle private key and the API key? If only one, releases must be cut
-there.
+The Sparkle private key is on the author's M5 Pro MacBook, so direct-edition
+releases (`scripts/release.sh`) must be run there.
+
+TODO (author): which Mac holds the Developer ID certificate and the App Store
+Connect API key?
 
 ## Checklist
 

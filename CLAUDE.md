@@ -138,6 +138,8 @@ Benchmark:
   half is `SUPublicEDKey` in `packaging/Info.plist`), the App Store Connect
   API key (`~/.appstoreconnect/private_keys/AuthKey_<ID>.p8`). `release/` is
   gitignored for keys and exports.
+- The Sparkle private key is on the author's M5 Pro MacBook; run direct
+  releases (`scripts/release.sh`) there (see `RELEASING.md`).
 
 ## Models and data on disk
 
