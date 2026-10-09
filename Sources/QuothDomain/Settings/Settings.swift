@@ -12,6 +12,7 @@ public struct Settings: Codable, Equatable {
     public var dictionary = DictionarySettings()
     public var language = LanguageSettings()
     public var model = ModelSettings()
+    public var sound = SoundSettings()
     public var onboarding = OnboardingSettings()
 
     public init() {}
@@ -22,6 +23,7 @@ public struct Settings: Codable, Equatable {
         dictionary = try c.value(.dictionary, or: dictionary)
         language = try c.value(.language, or: language)
         model = try c.value(.model, or: model)
+        sound = try c.value(.sound, or: sound)
         onboarding = try c.value(.onboarding, or: onboarding)
     }
 

@@ -3,8 +3,9 @@ import QuothDomain
 import QuothPlatform
 import SwiftUI
 
-/// General: how dictation starts (the hotkey, the lock, live text), opening
-/// at login, and in the App Store build the optional paste grant.
+/// General: how dictation starts (the hotkey, the lock, live text), other
+/// sound while dictating, opening at login, and in the App Store build the
+/// optional paste grant.
 struct GeneralPane: View {
     @ObservedObject var store: SettingsStore
 
@@ -77,6 +78,18 @@ struct GeneralPane: View {
                     .padding(.leading, 4)
             }
             }
+            }
+
+            SettingsSection("Sound") {
+                SettingRow(
+                    "Fade out sound while dictating",
+                    caption: "Lowers the Mac's volume while the microphone is on, and brings it back after. A Bluetooth headset recording with its own microphone is left alone."
+                ) {
+                    switchToggle("Fade out sound while dictating", isOn: Binding(
+                        get: { store.current.sound.fadeWhileDictating },
+                        set: { on in store.update { $0.sound.fadeWhileDictating = on } }
+                    ))
+                }
             }
 
             SettingsSection("Startup") {

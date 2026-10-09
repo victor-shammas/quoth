@@ -178,6 +178,10 @@ final class AppModel {
         if old.model != new.model {
             switcher.select(new.model.id)
         }
+        if old.sound != new.sound {
+            // Read at each press by FadingMicrophone; Assembly passes it on.
+            Log.info("fade out sound while dictating: \(new.sound.fadeWhileDictating ? "on" : "off"); applies at next press")
+        }
         if old.language != new.language {
             // Read per dictation by transcriptionContext.
             Log.info("language: \(new.language.code ?? "automatic"); applies at next press")

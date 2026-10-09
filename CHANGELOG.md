@@ -7,6 +7,13 @@ noted where the history records it.
 
 ## Unreleased
 
+- Settings › General › Sound: **Fade out sound while dictating** (off by
+  default) lowers the Mac's volume in a quarter-second fade as dictation
+  starts and fades it back up after. A device without a volume control is
+  left alone, and so is a Bluetooth headset whose own microphone records
+  (it switches to call quality faster than a fade). A volume turned up
+  meanwhile stays where it is, and a volume left down by a Quoth that quit
+  mid-dictation comes back at the next launch.
 - Website: Staple added to the app bar on every page, with its tagline
   (2026-10-09).
 - Docs: `CLAUDE.md`, `RELEASING.md` and this changelog.

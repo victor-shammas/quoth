@@ -41,6 +41,10 @@ public enum Paths {
     /// Where `QUOTH_DUMP_WAV=1` writes the most recent capture.
     public static var dumpWav: URL { caches.appendingPathComponent("last-capture.wav") }
 
+    /// The volume `OutputFader` faded from, while it is faded: if Quoth quits
+    /// before fading back up, the next launch restores it.
+    public static var fadedVolume: URL { appSupport.appendingPathComponent("faded-volume.json") }
+
     /// Held with `flock` by the running dictation loop, so two copies of
     /// Quoth never both listen to the hotkey. In Application Support, not
     /// Caches, which the system may clear.

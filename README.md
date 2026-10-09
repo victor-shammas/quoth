@@ -35,6 +35,8 @@ If the hotkey is `fn`, set **System Settings → Keyboard → Dictation → Shor
 
 **Voice commands** (English): "new paragraph", "new line", "bullet point", "comma", "question mark", "quote … unquote", and "scratch that" to remove what was just typed. Settings › General lists them all. If Quoth misspells a word, **Fix Last Dictation…** in **Settings › Dictionary** teaches it, and the same pane lists your words.
 
+**Fade out sound while dictating** in Settings lowers the Mac's volume while the microphone is on and brings it back after. It leaves a Bluetooth headset such as AirPods alone while its own microphone records: opening that microphone switches the headset to call quality faster than a fade can hide.
+
 Choose **Open at login** in **Settings** to start Quoth with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` changes the input source or shows emoji, set **System Settings → Keyboard → Press 🌐 key to** to **Do Nothing**.
 
 To dictate in another language, choose a multilingual model in Settings (⌘, from the menu), then either one Language or Automatic. Automatic detects which of the languages under **Languages** each dictation is in, and never picks one you haven't listed. The list starts as your Mac's languages.

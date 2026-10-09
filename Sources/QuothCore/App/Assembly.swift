@@ -23,6 +23,12 @@ enum Assembly {
 
         let transcriber = WhisperKitTranscriber(model: model)
         let capture = AudioCapture()
+        // Fades other sound down while the microphone is on, if Settings
+        // asks; first, any volume a Quoth that quit mid-fade left down.
+        let fader = OutputFader()
+        fader.recoverAfterQuit()
+        let microphone = FadingMicrophone(capture, fader: fader)
+        microphone.isEnabled = settings.current.sound.fadeWhileDictating
         let overlay = RecordingOverlay()
         capture.onLevel = { level in overlay.pushLevel(level) }
         // The dictionary: created on first run, reloaded when it changes.
@@ -51,7 +57,7 @@ enum Assembly {
         // The Quote Card follows the loop to show what it's doing, and to run
         // Insert or Copy once a dictation still running has finished.
         let session = DictationSession(
-            capture: capture,
+            capture: microphone,
             transcriber: transcriber,
             processors: [VoiceCommands(), DictionaryProcessor(store: dictionary)],
             observers: [overlay, app, LatencyLog(), card],
@@ -85,8 +91,15 @@ enum Assembly {
         }
         // Each setting applies itself when it changes, from the window or a
         // hand edit of settings.json.
-        settings.observe { [unowned app] old, new in app.apply(from: old, to: new) }
+        settings.observe { [unowned app] old, new in
+            app.apply(from: old, to: new)
+            microphone.isEnabled = new.sound.fadeWhileDictating
+        }
         settings.startWatching()
+        // Quitting mid-dictation doesn't leave the Mac's sound faded.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: nil
+        ) { _ in fader.restoreNow() }
         // HotkeyMonitor reports health on the main thread.
         monitor.onHealthChange = { [unowned app] health in
             MainActor.assumeIsolated { app.hotkeyHealth = health }

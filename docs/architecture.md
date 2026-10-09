@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: `2026.10.03`
+Last updated: `2026.10.09`
 
 > This document is the target structure. Contributors and agents read it first: it says where each kind of change belongs, so parallel work composes instead of colliding.
 
@@ -102,6 +102,8 @@ Sources/QuothDomain/            pure: Foundation only, no AppKit, Core Audio or 
     SilenceTrimmer.swift
     WAV.swift                   QUOTH_DUMP_WAV's files, and RMS
     LevelMeter.swift            microphone levels into the pill's six bars
+    SoundSettings.swift, VolumeFade.swift
+                                fading other sound while dictating: the setting, the fade's steps, when the volume comes back
   Support/
     Log.swift                   stderr logging; never logs transcript text
 
@@ -124,6 +126,9 @@ Sources/QuothPlatform/          macOS, behind small types; the only module besid
     RenderContext.swift         the realtime callback: render a slice, hand it to the InputSink
     DeviceWatcher.swift         the default input switching, the device's format changing or going away
     HostClock.swift, InputDevice.swift, MicrophoneAccess.swift, ConverterCache.swift
+    FadingMicrophone.swift      a Microphone that fades other sound down for as long as it records
+    OutputFader.swift, OutputVolume.swift
+                                the fade itself, on the default output's volume; restoring a volume left down
   Support/
     DictationServices.swift     Microphone, TextSink, FocusProbe: what DictationSession needs from the Mac
     Paths.swift                 every on-disk location Quoth uses
