@@ -201,7 +201,7 @@ footer a { color: var(--muted); }
 .app-bar { border-top: 1px solid var(--line); margin-top: 40px; padding: 28px 0 8px; }
 .app-bar + footer { margin-top: 0; border-top: 0; }
 .app-bar-title { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
-.app-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.app-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .app-tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; }
 .app-tile:hover { border-color: var(--accent); }
 .app-tile img { width: 44px; height: 44px; flex: none; }
@@ -210,5 +210,10 @@ footer a { color: var(--muted); }
 .app-tile small { color: var(--muted); font-size: 13px; }
 .app-tile em { color: var(--accent); font-size: 12px; font-style: normal; font-weight: 600; }
 .app-tile.current { box-shadow: inset 0 0 0 1px var(--accent); border-color: var(--accent); }
-@media (max-width: 900px) { .app-tiles { grid-template-columns: 1fr 1fr; } }
+/* Five across: stack icon over text so the names fit on one line. */
+@media (min-width: 1001px) {
+  .app-tile { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px; }
+}
+@media (max-width: 1000px) { .app-tiles { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px) { .app-tiles { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .app-tiles { grid-template-columns: 1fr; } }
